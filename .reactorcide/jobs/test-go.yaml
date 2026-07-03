@@ -40,7 +40,24 @@ job:
 
     echo "=== ./tools.sh test ==="
     ./tools.sh test
-  timeout: 900
+
+    echo "=== ./tools.sh test-integration ==="
+    # Requires the `docker` capability below: testcontainers-go (api's
+    # store/csilservices/github/server integration suites, plus task D2's
+    # api/e2e end-to-end suite) talks to the Docker Engine API directly
+    # through its own Go client library, keyed off $DOCKER_HOST — it never
+    # shells out to a `docker` CLI binary, so unlike
+    # longhouse's api-build-test.sh (which runs a literal `docker build` and
+    # therefore needs the CLI installed + a readiness-wait loop) there's
+    # nothing to install here. reactorcide's `docker` capability provides a
+    # ready DOCKER_HOST before this job's command even starts running (a
+    # DinD sidecar on Kubernetes workers, gated by a startup probe; the host
+    # docker socket on VM/local workers) — see
+    # reactorcide/docs/runtime-behavior.md's "Capabilities" section.
+    ./tools.sh test-integration
+  timeout: 1800
   priority: 10
   working_dir: /job
   raw_command: true
+  capabilities:
+    - docker
