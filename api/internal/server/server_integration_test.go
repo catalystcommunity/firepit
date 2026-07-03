@@ -20,6 +20,7 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/config"
 	"github.com/catalystcommunity/firepit/api/internal/csil"
 	"github.com/catalystcommunity/firepit/api/internal/csilservices"
+	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/server"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 	"github.com/catalystcommunity/firepit/api/internal/transport"
@@ -77,7 +78,7 @@ func TestServerEndToEnd(t *testing.T) {
 	svcs := server.Services{
 		Auth:         csilservices.NewAuthService(st),
 		Board:        csilservices.NewBoardService(st),
-		Thread:       csilservices.NewThreadService(st),
+		Thread:       csilservices.NewThreadService(st, notify.Noop{}),
 		Endorsement:  csilservices.NewEndorsementService(st),
 		Settings:     csilservices.NewSettingsService(st),
 		Social:       csilservices.NewSocialService(st),

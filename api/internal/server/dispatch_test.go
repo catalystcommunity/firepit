@@ -6,6 +6,7 @@ import (
 
 	"github.com/catalystcommunity/firepit/api/internal/csil"
 	"github.com/catalystcommunity/firepit/api/internal/csilservices"
+	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 	"github.com/catalystcommunity/firepit/api/internal/transport"
 )
@@ -18,7 +19,7 @@ func stubServices() Services {
 	return Services{
 		Auth:         csilservices.NewAuthService(st),
 		Board:        csilservices.NewBoardService(st),
-		Thread:       csilservices.NewThreadService(st),
+		Thread:       csilservices.NewThreadService(st, notify.Noop{}),
 		Endorsement:  csilservices.NewEndorsementService(st),
 		Settings:     csilservices.NewSettingsService(st),
 		Social:       csilservices.NewSocialService(st),
