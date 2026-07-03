@@ -33,7 +33,7 @@ import (
 // drives it purely over HTTP in CBOR:
 //
 //   - GET /healthz reports 200 once the database is reachable.
-//   - POST /csil/v1/rpc for a stubbed op (BoardService.create-board) round-trips
+//   - POST /csil/v1/rpc for an op returning an AppError (anonymous create-board) round-trips
 //     the declared ServiceError arm with the Unimplemented code, proving the
 //     dispatcher, the session middleware, and the stub wiring all work
 //     end-to-end over the wire — not just via direct Go calls. (Task B2 gave
@@ -107,7 +107,11 @@ func TestServerEndToEnd(t *testing.T) {
 		require.Equal(t, "ok", body["status"])
 	})
 
-	t.Run("stubbed op round-trips ServiceError over HTTP", func(t *testing.T) {
+	t.Run("AppError round-trips ServiceError over HTTP", func(t *testing.T) {
+		// An anonymous create-board is always Unauthenticated (admin-only op),
+		// so this assertion is stable no matter how many services get real
+		// implementations — what's under test is the typed-error round-trip,
+		// not any particular service's stub.
 		payload := csil.EncodeBoardCreateBoardRequest(csil.CreateBoardRequest{Slug: "general", Title: "General", Kind: "discussion"})
 		envelope, err := transport.NewRpcRequest("board", "create-board", payload).Encode()
 		require.NoError(t, err)
@@ -132,7 +136,6 @@ func TestServerEndToEnd(t *testing.T) {
 
 		svcErr, err := csil.DecodeServiceError(rpcResp.Payload)
 		require.NoError(t, err)
-		require.Equal(t, csilservices.CodeUnimplemented, svcErr.Code)
-		require.Contains(t, svcErr.Message, "create-board")
+		require.Equal(t, csilservices.CodeUnauthenticated, svcErr.Code)
 	})
 }
