@@ -7,8 +7,11 @@ flows into the same threads humans use. Full product spec, data model, API
 surface, and task breakdown: **PLANDOC.md** (read that first for anything
 beyond "how do I build/run this").
 
-**Status: early scaffold.** Nothing here implements product behavior yet —
-see PLANDOC.md §7 for the task plan.
+**Status: Wave B complete.** All eight Wave B services (auth, boards,
+threads, endorsements, settings/social, subscriptions/read, notifications,
+GitHub ingestion) are real implementations, wired into `firepit-api`, and
+covered by the unit + integration suites. See PLANDOC.md §7 for the task
+plan and what's still ahead (Wave C: `webapp`).
 
 ## Architecture
 
@@ -80,12 +83,12 @@ list. Verbs:
 
 | Verb | Does |
 |---|---|
-| `gen` | Regenerate CSIL-derived code (csilgen → `api/internal/csil`, `webapp/src/gen`, `clients/`). Stub until task A2 lands the schema. |
+| `gen` | Regenerate CSIL-derived code (csilgen → `api/internal/csil`, `webapp/src/gen`, `clients/`). Real since task A2; run after any `csil/*.csil` change. |
 | `test` | `go test ./...` for `api` and `coredb`, then `npm test` for `webapp`. Must stay green. |
-| `test-integration` | testcontainers-backed Postgres integration suite. Stub until A3/B1. |
+| `test-integration` | testcontainers-backed Postgres integration suite: `go test -tags=integration ./...` across every `api` package (store, csilservices, github, server). Requires `docker`. |
 | `lint` | `go vet` for `api`/`coredb`, `eslint` for `webapp` once configured. |
-| `migrate` | `goose` migrations against `$DB_URI`. Stub until A3. |
-| `dev` | `docker compose up` — local dev stack (postgres [+ linkkeys-rp, api, webapp once buildable]). |
+| `migrate` | `goose` migrations against `$DB_URI`. Real since task A3. |
+| `dev` | `docker compose up` — local dev stack (postgres + api; linkkeys-rp/webapp still commented placeholders). |
 | `build-images` | Build deployable container images. Stub until D1. |
 
 Every verb either does its job or exits non-zero with a clear "not yet
@@ -100,9 +103,10 @@ is the one verb that must always exit 0.
 ./tools.sh lint    # go vet + eslint
 ```
 
-`docker-compose.yaml` at the repo root defines the stack; only `postgres`
-actually builds/runs today (`api`/`webapp`/`linkkeys-rp` entries are
-commented placeholders until their images exist — see PLANDOC.md task D1).
+`docker-compose.yaml` at the repo root defines the stack; `postgres` and
+`api` (built from `api/Dockerfile`) both build/run today. `webapp`/
+`linkkeys-rp` entries are still commented placeholders until their images
+exist — see PLANDOC.md task D1.
 
 ## Conventions
 
