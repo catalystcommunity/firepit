@@ -66,6 +66,7 @@ const Endorsements: Component<EndorsementsProps> = (props) => {
     const optimistic: Endorsement = {
       id: `optimistic-${Date.now()}`,
       userId: props.viewer.id,
+      authorHandle: props.viewer.handle,
       targetType: props.targetType,
       targetId: props.targetId,
       createdAt: new Date(),
@@ -91,7 +92,7 @@ const Endorsements: Component<EndorsementsProps> = (props) => {
             {(e, i) => (
               <>
                 <span class="endorser">
-                  {describeAuthor(e.userId, "user", props.viewer).label}
+                  {describeAuthor(e.userId, e.authorHandle, "user", props.viewer).label}
                   <Show when={e.roleBadge}>{(badge) => <span class="role-badge">{badge()}</span>}</Show>
                 </span>
                 {i() < list().length - 1 ? ", " : ""}

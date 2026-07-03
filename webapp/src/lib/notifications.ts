@@ -12,17 +12,19 @@
 //    that, unifying the two into one generic poller is a reasonable
 //    merge-time follow-up; not attempted here since C2 isn't visible from
 //    this worktree.
-// 2. Post/board resolution for turning a bare `Notification` (which only
-//    carries ids) into something a UI can show and link to. CSIL has no
-//    "get post by id" or "resolve user id -> handle" op (see src/lib/mock/
-//    fixtures.ts's own note on the same gap for post authors/endorsers) —
+// 2. Post/board resolution for turning a bare `Notification` into something
+//    a UI can show and link to. CSIL has no "get post by id" op, so
 //    `createPostSummaryResolver` below is the best a client can do:
 //    ThreadService.getThread for the post's title + board id, then
 //    BoardService.listBoards (cached) to turn that board id into the slug
-//    the router needs. `actorLabel` is the equivalent honest fallback for
-//    "who did this" — there's no display name to show for anyone but the
-//    caller, so it shows "you", a truncated id, or "the project" (no actor
-//    at all — a system-authored event) rather than pretending otherwise.
+//    the router needs. `actorLabel` renders the actor's real handle/display
+//    name — denormalized onto `Notification` server-side (a CSIL schema
+//    follow-up: NotificationService.list-notifications resolves it via one
+//    batched lookup, never per-row — see
+//    api/internal/csilservices/notification.go) — falling back to "you"
+//    for the viewer's own actions, a short truncated id if a handle is
+//    somehow still absent, or "the project" for a system-authored event
+//    with no actor at all.
 import { createEffect, createSignal, onCleanup, type Accessor } from "solid-js";
 import type { Board, Notification, NotificationEvent } from "~/gen/types.gen";
 import { api } from "./api";
@@ -34,6 +36,7 @@ export const NOTIFICATION_GLYPH: Record<NotificationEvent, string> = {
   new_comment: "💬",
   mention: "@",
   github_event: "🐙",
+  endorsed: "⭐",
 };
 
 export const NOTIFICATION_LABEL: Record<NotificationEvent, string> = {
@@ -41,6 +44,7 @@ export const NOTIFICATION_LABEL: Record<NotificationEvent, string> = {
   new_comment: "New reply",
   mention: "Mention",
   github_event: "GitHub activity",
+  endorsed: "Endorsement",
 };
 
 /** Coarse, low-drama relative time — "just now" / "5m ago" / "3h ago" / "2d ago", falling
@@ -56,12 +60,20 @@ export function relativeTime(date: Date, now: Date = new Date()): string {
   return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
-/** "you" for the viewer's own actions, a short truncated id otherwise, "the project" when
- * there's no actor at all (a system-authored event). See the module doc: there is no
- * user-lookup op in CSIL yet, so a real display name genuinely isn't available. */
-export function actorLabel(actorId: string | undefined, viewerId: string | undefined): string {
+/** "you" for the viewer's own actions; otherwise the actor's real display name (preferred) or
+ * handle, denormalized onto the notification server-side (see the module doc comment); "the
+ * project" when there's no actor at all (a system-authored event); a short truncated id as a
+ * last-resort fallback if a handle/display name is somehow still absent. */
+export function actorLabel(
+  actorId: string | undefined,
+  viewerId: string | undefined,
+  actorHandle?: string,
+  actorDisplayName?: string,
+): string {
   if (!actorId) return "the project";
   if (viewerId && actorId === viewerId) return "you";
+  if (actorDisplayName) return actorDisplayName;
+  if (actorHandle) return `@${actorHandle}`;
   return actorId.length > 10 ? `${actorId.slice(0, 10)}…` : actorId;
 }
 

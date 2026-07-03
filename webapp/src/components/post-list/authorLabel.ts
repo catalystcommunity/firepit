@@ -1,11 +1,10 @@
-// Best-effort author display (task C2). `Post`/`Comment` only carry
-// `authorId` (a `UserID`) — there is no UserService in csil/firepit.csil v1
-// to resolve an id to a handle/display name, a gap the mock's own fixtures
-// call out (see `~/lib/mock/fixtures.ts`'s "users" section comment) and the
-// real API shares today. The one identity every client can always resolve
-// is the viewer's own (whoami's `UserProfile`); for anyone else, the most
-// honest thing to show — rather than inventing a fake lookup — is a short,
-// stable fragment derived from the id, clearly not styled as a real handle.
+// Author display for the board post list (task C2). `Post.authorHandle` is
+// now denormalized server-side (a CSIL schema follow-up — see
+// api/internal/csilservices/thread.go's ListPosts, which resolves it via one
+// batched lookup, never per-row), so this prefers that real handle. A
+// missing handle (tombstoned author, or — defensively — a `users` row
+// that's somehow gone) still falls back to a short, stable, clearly-not-a-
+// real-handle fragment derived from the id rather than showing nothing.
 import type { UserID, UserProfile } from "~/gen/types.gen";
 
 // A short deterministic digest, not a substring: the mock's own fixture ids
@@ -21,7 +20,8 @@ function shortDigest(id: string): string {
   return Math.abs(hash).toString(36).slice(0, 6).padStart(6, "0");
 }
 
-export function authorLabel(authorId: UserID, viewer: UserProfile | null): string {
+export function authorLabel(authorId: UserID, authorHandle: string | undefined, viewer: UserProfile | null): string {
   if (viewer && authorId === viewer.id) return viewer.handle;
+  if (authorHandle) return authorHandle;
   return `user-${shortDigest(authorId)}`;
 }

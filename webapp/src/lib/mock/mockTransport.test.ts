@@ -164,6 +164,6 @@ describe("mock transport", () => {
 
     const all = await api.notification.listNotifications({ limit: 200 });
     const events = new Set(all.notifications.map((n) => n.event));
-    expect(events).toEqual(new Set(["new_post", "new_comment", "mention", "github_event"]));
+    expect(events).toEqual(new Set(["new_post", "new_comment", "mention", "github_event", "endorsed"]));
   });
 });

@@ -1,12 +1,14 @@
 // /settings' friend-groups section (task C4, PLANDOC.md §4/§7): private
 // groupings the caller owns, used to order endorser names (friends first,
 // see PLANDOC.md §4's endorser-ordering design) — create/delete groups,
-// add/remove members. Same "no handle lookup" honesty note as
-// MentionGrantsSection.tsx: membership is by user ID.
+// add/remove members. Membership is still by UserID under the hood
+// (AddFriendRequest/RemoveFriendRequest), but adding a member now resolves a
+// typed handle via SocialService.resolve-user first, same as
+// MentionGrantsSection.tsx.
 import { createSignal, For, onMount, Show, type Component } from "solid-js";
 import type { FriendGroup } from "~/gen/types.gen";
 import { api } from "~/lib/api";
-import { FirepitServiceError } from "~/lib/errors";
+import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
 
 const FriendGroupsSection: Component = () => {
   const [groups, setGroups] = createSignal<FriendGroup[]>([]);
@@ -67,10 +69,22 @@ const FriendGroupsSection: Component = () => {
 
   const addMember = async (group: FriendGroup, e: SubmitEvent): Promise<void> => {
     e.preventDefault();
-    const userId = (memberInputs()[group.id] ?? "").trim();
-    if (!userId) return;
-    const prev = groups();
+    const typed = (memberInputs()[group.id] ?? "").trim().replace(/^@/, "");
+    if (!typed) return;
     setError(null);
+    let profile;
+    try {
+      profile = await api.social.resolveUser(typed);
+    } catch (err) {
+      setError(
+        err instanceof FirepitServiceError && err.code === ServiceErrorCode.NotFound
+          ? `No user found with handle "${typed}".`
+          : describe(err, "Couldn't look up that handle."),
+      );
+      return;
+    }
+    const userId = profile.id;
+    const prev = groups();
     setGroups((cur) => cur.map((g) => (g.id === group.id ? { ...g, members: [...g.members, userId] } : g)));
     try {
       await api.social.addFriend({ groupId: group.id, userId });
@@ -96,10 +110,7 @@ const FriendGroupsSection: Component = () => {
   return (
     <section class="settings-section">
       <h3>Friend groups</h3>
-      <p>
-        Private to you — used to order endorser names (friends first) on posts and comments. Membership is by
-        user ID for the same reason as mention grants above: no handle lookup yet.
-      </p>
+      <p>Private to you — used to order endorser names (friends first) on posts and comments.</p>
       <Show when={error()}>
         <p class="form-error" role="alert">
           {error()}
@@ -141,13 +152,14 @@ const FriendGroupsSection: Component = () => {
                   </ul>
                   <form class="inline-form" onSubmit={(e) => void addMember(group, e)}>
                     <label>
-                      Add member (user ID)
+                      Add member (handle)
                       <input
                         value={memberInputs()[group.id] ?? ""}
                         onInput={(e) => {
                           const value = e.currentTarget.value;
                           setMemberInputs((cur) => ({ ...cur, [group.id]: value }));
                         }}
+                        placeholder="bob"
                       />
                     </label>
                     <button type="submit">Add</button>

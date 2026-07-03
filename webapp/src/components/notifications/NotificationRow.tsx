@@ -32,7 +32,13 @@ const NotificationRow: Component<NotificationRowProps> = (props) => (
       </span>
       <span class="notif-text">
         <span class="notif-label">
-          {NOTIFICATION_LABEL[props.notification.event]} · {actorLabel(props.notification.actorId, props.viewerId)}
+          {NOTIFICATION_LABEL[props.notification.event]} ·{" "}
+          {actorLabel(
+            props.notification.actorId,
+            props.viewerId,
+            props.notification.actorHandle,
+            props.notification.actorDisplayName,
+          )}
         </span>
         <Show when={props.summary}>
           <span class="notif-target">{props.summary?.unresolved ? "(post unavailable)" : props.summary?.title}</span>

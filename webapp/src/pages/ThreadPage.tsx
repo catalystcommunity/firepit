@@ -161,6 +161,7 @@ const ThreadPage: Component = () => {
               title={thread().post.title}
               bodyMd={thread().post.bodyMd}
               authorId={thread().post.authorId}
+              authorHandle={thread().post.authorHandle}
               origin={thread().post.origin}
               originRef={thread().post.originRef}
               createdAt={thread().post.createdAt}

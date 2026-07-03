@@ -88,7 +88,7 @@ const PostList: Component<PostListProps> = (props) => {
                   </Show>
                 </A>
                 <p class="post-row-meta">
-                  {authorLabel(post.authorId, session.user())} · {post.commentCount}{" "}
+                  {authorLabel(post.authorId, post.authorHandle, session.user())} · {post.commentCount}{" "}
                   {post.commentCount === 1 ? "comment" : "comments"} · {relativeTime(post.lastActivityAt)}
                 </p>
               </li>

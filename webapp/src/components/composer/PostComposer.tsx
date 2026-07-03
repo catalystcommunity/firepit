@@ -9,9 +9,9 @@ import { createSignal, Show, type Component } from "solid-js";
 import type { Post } from "~/gen/types.gen";
 import { api } from "~/lib/api";
 import { FirepitServiceError } from "~/lib/errors";
+import { renderMarkdown } from "~/lib/markdown";
 import { useSession } from "~/lib/session";
 import "./composer.css";
-import { renderMarkdown } from "./markdown";
 
 export interface PostComposerProps {
   boardId: string;
@@ -131,7 +131,7 @@ const PostComposer: Component<PostComposerProps> = (props) => {
         <Show
           when={tab() === "write"}
           fallback={
-            // renderMarkdown (./markdown.ts) runs every body through DOMPurify with a tight tag/attr
+            // renderMarkdown (~/lib/markdown.ts) runs every body through DOMPurify with a tight tag/attr
             // allowlist before this ever renders; see that module's doc comment for the full
             // sanitization posture (mirrors longhouse's MarkdownEditor).
             // eslint-disable-next-line solid/no-innerhtml

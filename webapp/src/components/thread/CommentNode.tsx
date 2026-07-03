@@ -44,6 +44,7 @@ const CommentNode: Component<CommentNodeProps> = (props) => {
           id={props.comment.id}
           bodyMd={props.comment.bodyMd}
           authorId={props.comment.authorId}
+          authorHandle={props.comment.authorHandle}
           origin={props.comment.origin}
           originRef={props.comment.originRef}
           createdAt={props.comment.createdAt}

@@ -29,25 +29,30 @@ const ago = (days: number, hours = 0): Date => new Date(NOW.getTime() - days * D
 
 // --- users -----------------------------------------------------------------
 //
-// There is no UserService in csil/firepit.csil — authors/endorsers are
-// referenced by id only (Post.authorId, Endorsement.userId, ...), and CSIL
-// has no op to resolve one to a display name yet. The mock only needs full
-// profiles for the *caller* (whoami's return type); everyone else is just an
-// id + the handle baked into fixture content itself (e.g. "@carol" in body
-// markdown), same limitation the real API has today.
+// SocialService.resolve-user (added alongside CSIL's Post/Comment/Endorsement/
+// Notification handle denormalization) means the mock now needs full
+// profiles for more than just the caller (whoami's return type) — the
+// SocialService mock (src/lib/mock/store.ts) resolves a typed handle to one
+// of these, and every post/comment/endorsement/notification fixture below
+// carries the matching author/actor handle+display name directly, mirroring
+// what the real API now populates server-side rather than leaving the UI to
+// hash a bare id into a fake label.
 
 export const MOCK_USER_ID = "01FPMOCKUSERALICE0000000";
 // Exported (task C4, PLANDOC.md §7): the SettingsService/SocialService mock
 // (src/lib/mock/store.ts) needs *some* notion of "a user id that actually
-// exists" to validate grant-mention/add-friend the way the real backend's
-// GetUser check does — these three are the only other users the fixture
-// store knows about. Still no handle for any of them (see this module's own
-// doc comment above) — that limitation is unchanged, just now referenced
-// from two files instead of one.
+// exists" to validate grant-mention/add-friend/resolve-user the way the real
+// backend's GetUser/GetUserByHandle checks do — these three are the only
+// other users the fixture store knows about.
 export const BOB_ID = "01FPMOCKUSERBOB00000000";
 export const CAROL_ID = "01FPMOCKUSERCAROL0000000";
 export const DAVE_ID = "01FPMOCKUSERDAVE00000000";
 export const OTHER_USER_IDS = [BOB_ID, CAROL_ID, DAVE_ID] as const;
+
+// A per-integration system user (PLANDOC.md §4: "a system user per
+// mapping") — stands in for the GitHub webhook's authoring identity. See the
+// `comments` section below for where it's used.
+export const GITHUB_BOT_ID = "01FPMOCKUSERGHBOT0000000";
 
 export const MOCK_USER: UserProfile = {
   id: MOCK_USER_ID,
@@ -58,6 +63,39 @@ export const MOCK_USER: UserProfile = {
   roles: [],
   createdAt: ago(400),
 };
+
+export const BOB: UserProfile = {
+  id: BOB_ID,
+  linkkeysDomain: "todandlorna.com",
+  handle: "bob",
+  displayName: "Bob Baker",
+  kind: "human",
+  roles: [],
+  createdAt: ago(200),
+};
+
+export const CAROL: UserProfile = {
+  id: CAROL_ID,
+  linkkeysDomain: "todandlorna.com",
+  handle: "carol",
+  displayName: "Carol Chen",
+  kind: "human",
+  roles: [],
+  createdAt: ago(380),
+};
+
+export const DAVE: UserProfile = {
+  id: DAVE_ID,
+  linkkeysDomain: "todandlorna.com",
+  handle: "dave",
+  displayName: "Dave Diaz",
+  kind: "human",
+  roles: [],
+  createdAt: ago(150),
+};
+
+/** Every non-caller profile resolve-user can look up by handle (task C4/schema follow-up). */
+export const OTHER_USERS: readonly UserProfile[] = [BOB, CAROL, DAVE];
 
 // --- boards ------------------------------------------------------------------
 
@@ -112,6 +150,7 @@ export const posts: readonly Post[] = [
     id: POST_WELCOME,
     boardId: BOARD_FIREPIT,
     authorId: CAROL_ID,
+    authorHandle: CAROL.handle,
     title: "Welcome to Firepit",
     bodyMd:
       "This is the first post. Threaded replies go arbitrarily deep — try " +
@@ -125,6 +164,7 @@ export const posts: readonly Post[] = [
     id: POST_RELEASE,
     boardId: BOARD_ANNOUNCE,
     authorId: CAROL_ID,
+    authorHandle: CAROL.handle,
     title: "v0.1.0 released",
     bodyMd: "Skeleton milestone (M1) is deployed. Login works, stub API answers. Full changelog in the repo.",
     origin: "system",
@@ -137,6 +177,7 @@ export const posts: readonly Post[] = [
     id: POST_CSIL_QUESTION,
     boardId: BOARD_CSILGEN,
     authorId: DAVE_ID,
+    authorHandle: DAVE.handle,
     title: "Why kebab-case ops on the wire?",
     bodyMd: "Curious about the reasoning — is this documented anywhere beyond the transport conventions doc?",
     origin: "user",
@@ -154,6 +195,7 @@ export const posts: readonly Post[] = [
     id: POST_GH_ISSUE,
     boardId: BOARD_FIREPIT,
     authorId: DAVE_ID,
+    authorHandle: DAVE.handle,
     title: "flaky ltree GIST index test on CI",
     bodyMd: "Ingested from the firepit repo's issue tracker — see the linked issue for repro steps.",
     origin: "github",
@@ -166,6 +208,7 @@ export const posts: readonly Post[] = [
     id: POST_SECOND,
     boardId: BOARD_FIREPIT,
     authorId: BOB_ID,
+    authorHandle: BOB.handle,
     title: "Style guide for board descriptions?",
     bodyMd: "Should descriptions be a sentence or a short paragraph? Looking at csilgen's board for reference.",
     origin: "user",
@@ -184,15 +227,13 @@ const COMMENT_6 = "01FPMOCKCOMMENT000000006";
 const COMMENT_RELEASE_1 = "01FPMOCKCOMMENTRELEASE01";
 const COMMENT_GITHUB_1 = "01FPMOCKCOMMENTGITHUB001";
 
-// A per-integration system user (PLANDOC.md §4: "a system user per
-// mapping") — stands in for the GitHub webhook's authoring identity so the
-// welcome thread has one `origin: "github"` item to exercise the thread
-// view's "distinct quiet treatment (origin glyph + backlink)" (task C3
-// scope item 1), same as a real `issues`/`pull_request` mapping would
-// produce. No IntegrationService fixture data exists yet (task C4's board
-// admin work, not C3's) — this comment is enough to render/test the origin
-// styling without it.
-const GITHUB_BOT_ID = "01FPMOCKUSERGHBOT0000000";
+// GITHUB_BOT_ID (declared above, alongside the other user ids) stands in for
+// the GitHub webhook's authoring identity so the welcome thread has one
+// `origin: "github"` item to exercise the thread view's "distinct quiet
+// treatment (origin glyph + backlink)" (task C3 scope item 1), same as a
+// real `issues`/`pull_request` mapping would produce. No IntegrationService
+// fixture data exists yet (task C4's board admin work, not C3's) — this
+// comment is enough to render/test the origin styling without it.
 
 export const comments: readonly Comment[] = [
   {
@@ -212,6 +253,7 @@ export const comments: readonly Comment[] = [
     id: COMMENT_1,
     postId: POST_WELCOME,
     authorId: BOB_ID,
+    authorHandle: BOB.handle,
     bodyMd: "Glad to be here. First!",
     origin: "user",
     createdAt: ago(9, 20),
@@ -221,6 +263,7 @@ export const comments: readonly Comment[] = [
     postId: POST_WELCOME,
     parentCommentId: COMMENT_1,
     authorId: CAROL_ID,
+    authorHandle: CAROL.handle,
     bodyMd: "Welcome @bob — feel free to open the first real discussion thread.",
     origin: "user",
     createdAt: ago(9, 10),
@@ -230,6 +273,7 @@ export const comments: readonly Comment[] = [
     postId: POST_WELCOME,
     parentCommentId: COMMENT_2,
     authorId: DAVE_ID,
+    authorHandle: DAVE.handle,
     bodyMd: "Does mailing-list flat view show the same ordering as the tree?",
     origin: "user",
     createdAt: ago(8),
@@ -239,6 +283,7 @@ export const comments: readonly Comment[] = [
     postId: POST_WELCOME,
     parentCommentId: COMMENT_3,
     authorId: MOCK_USER_ID,
+    authorHandle: MOCK_USER.handle,
     bodyMd: "Yes — same depth-first order, just rendered without indentation.",
     origin: "user",
     createdAt: ago(6),
@@ -248,6 +293,7 @@ export const comments: readonly Comment[] = [
     postId: POST_WELCOME,
     parentCommentId: COMMENT_4,
     authorId: BOB_ID,
+    authorHandle: BOB.handle,
     bodyMd: "Nice, that matches how the old mailing lists read.",
     origin: "user",
     createdAt: ago(3),
@@ -257,6 +303,7 @@ export const comments: readonly Comment[] = [
     postId: POST_WELCOME,
     parentCommentId: COMMENT_5,
     authorId: CAROL_ID,
+    authorHandle: CAROL.handle,
     bodyMd: "Six levels deep and still legible — that's the bar.",
     origin: "user",
     // Edited an hour after posting (ago(0, 1) is *after* createdAt's
@@ -269,6 +316,7 @@ export const comments: readonly Comment[] = [
     id: COMMENT_RELEASE_1,
     postId: POST_RELEASE,
     authorId: BOB_ID,
+    authorHandle: BOB.handle,
     bodyMd: "Congrats on shipping!",
     origin: "user",
     createdAt: ago(1),
@@ -281,6 +329,7 @@ export const endorsements: readonly Endorsement[] = [
   {
     id: "01FPMOCKENDORSE00000001",
     userId: CAROL_ID,
+    authorHandle: CAROL.handle,
     targetType: "post",
     targetId: POST_WELCOME,
     roleBadge: "maintainer",
@@ -289,6 +338,7 @@ export const endorsements: readonly Endorsement[] = [
   {
     id: "01FPMOCKENDORSE00000002",
     userId: MOCK_USER_ID,
+    authorHandle: MOCK_USER.handle,
     targetType: "comment",
     targetId: COMMENT_2,
     createdAt: ago(8),
@@ -296,6 +346,7 @@ export const endorsements: readonly Endorsement[] = [
   {
     id: "01FPMOCKENDORSE00000003",
     userId: DAVE_ID,
+    authorHandle: DAVE.handle,
     targetType: "comment",
     targetId: COMMENT_4,
     createdAt: ago(5),
@@ -352,17 +403,19 @@ export const subscriptions: readonly Subscription[] = [
 
 // --- notifications (the mock caller's own inbox) -------------------------------
 //
-// One of every NotificationEvent (new_post/new_comment/mention/github_event
-// — csil/types/notifications.csil's enum; there is no separate "endorsed"
-// event today, endorsement notifications aren't modeled as their own kind
-// yet), a mix of read/unread, and enough rows (7) that NotificationsPage's
-// PAGE_SIZE (5) has something real to paginate through.
+// One of every NotificationEvent (new_post/new_comment/mention/github_event/
+// endorsed — csil/types/notifications.csil's enum, now including "endorsed"
+// alongside the schema's actor_handle/actor_display_name denormalization), a
+// mix of read/unread, and enough rows (8) that NotificationsPage's PAGE_SIZE
+// (5) has something real to paginate through.
 
 export const notifications: readonly Notification[] = [
   {
     id: "01FPMOCKNOTIFY0000000001",
     event: "new_comment",
     actorId: CAROL_ID,
+    actorHandle: CAROL.handle,
+    actorDisplayName: CAROL.displayName,
     targetType: "comment",
     targetId: COMMENT_6,
     postId: POST_WELCOME,
@@ -372,6 +425,8 @@ export const notifications: readonly Notification[] = [
     id: "01FPMOCKNOTIFY0000000002",
     event: "mention",
     actorId: DAVE_ID,
+    actorHandle: DAVE.handle,
+    actorDisplayName: DAVE.displayName,
     targetType: "comment",
     targetId: COMMENT_3,
     postId: POST_WELCOME,
@@ -390,6 +445,8 @@ export const notifications: readonly Notification[] = [
     id: "01FPMOCKNOTIFY0000000004",
     event: "new_post",
     actorId: DAVE_ID,
+    actorHandle: DAVE.handle,
+    actorDisplayName: DAVE.displayName,
     targetType: "post",
     targetId: POST_CSIL_QUESTION,
     postId: POST_CSIL_QUESTION,
@@ -399,6 +456,8 @@ export const notifications: readonly Notification[] = [
     id: "01FPMOCKNOTIFY0000000005",
     event: "new_comment",
     actorId: BOB_ID,
+    actorHandle: BOB.handle,
+    actorDisplayName: BOB.displayName,
     targetType: "comment",
     targetId: COMMENT_RELEASE_1,
     postId: POST_RELEASE,
@@ -409,6 +468,8 @@ export const notifications: readonly Notification[] = [
     id: "01FPMOCKNOTIFY0000000006",
     event: "mention",
     actorId: CAROL_ID,
+    actorHandle: CAROL.handle,
+    actorDisplayName: CAROL.displayName,
     targetType: "comment",
     targetId: COMMENT_2,
     postId: POST_WELCOME,
@@ -427,6 +488,21 @@ export const notifications: readonly Notification[] = [
     postId: POST_RELEASE,
     readAt: ago(1, 12),
     createdAt: ago(2, 1),
+  },
+  {
+    // Dave endorsed Alice's own comment (COMMENT_4, matching the
+    // `endorsements` fixture above) — the one "endorsed" row (schema
+    // follow-up: NotificationEvent previously had no member for this even
+    // though the DB/fan-out already produced it).
+    id: "01FPMOCKNOTIFY0000000008",
+    event: "endorsed",
+    actorId: DAVE_ID,
+    actorHandle: DAVE.handle,
+    actorDisplayName: DAVE.displayName,
+    targetType: "comment",
+    targetId: COMMENT_4,
+    postId: POST_WELCOME,
+    createdAt: ago(5),
   },
 ];
 

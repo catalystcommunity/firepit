@@ -1,19 +1,15 @@
-// Author/endorser identity display (task C3). KNOWN GAP, called out
-// explicitly rather than papered over: CSIL v1 (PLANDOC.md §5) has no op
-// that resolves a `UserID` to a handle/display name for anyone other than
-// the caller themself (`AuthService.whoami`). `Post.authorId`,
-// `Comment.authorId`, and `Endorsement.userId` are bare ids — there is no
-// `UserService.get-users`/batch-resolve op, in the real API or the mock
-// (src/lib/mock/fixtures.ts's own module doc notes the same limitation for
-// the mock). This mirrors the gap the task brief calls out for @mention
-// search ("a real user-search op is future work") — same root cause, same
-// fix needed later: a small UserService (or embedding an author snapshot on
-// Post/Comment/Endorsement) is a good follow-up CSIL change.
+// Author/endorser identity display (task C3). `Post.authorId`,
+// `Comment.authorId`, and `Endorsement.userId` now come with a denormalized
+// `author_handle` (a CSIL schema follow-up: ThreadService/EndorsementService
+// populate it server-side via a single batched lookup — see
+// api/internal/csilservices/thread.go's ListPosts/GetThread and
+// endorsement.go's ListEndorsements) — this module prefers that real handle
+// whenever the caller has it.
 //
-// Until then, this module is the one place that degrades gracefully: the
-// viewer's own id resolves to their real display name (from `whoami`); any
-// other id renders as a short, stable, readable stand-in so the thread is
-// still legible rather than a wall of ULIDs.
+// A handle can still legitimately be absent (a deleted/tombstoned author is
+// blanked, or — defensively — a users row that's somehow gone), so
+// `shortUserRef`'s hashed stand-in remains as the fallback rather than
+// rendering a raw/blank id.
 import type { OriginKind, UserProfile } from "~/gen/types.gen";
 
 export interface AuthorLabel {
@@ -25,12 +21,14 @@ export interface AuthorLabel {
 
 /**
  * A short, stable, readable stand-in for a user id we can't resolve to a
- * name. Hashed (FNV-1a) rather than a raw substring: this repo's own mock
- * fixture ids (see fixtures.ts) are hand-written, human-readable fake ULIDs
- * that all happen to share the same zero-padded tail (`...0000000`), so
- * slicing the last few characters made every distinct user render as the
- * identical "user-000000" — silently unreadable. Hashing the whole id
- * spreads different ids across visibly different labels instead.
+ * name (no `author_handle` on the response — see this module's doc comment
+ * for when that happens). Hashed (FNV-1a) rather than a raw substring: this
+ * repo's own mock fixture ids (see fixtures.ts) are hand-written,
+ * human-readable fake ULIDs that all happen to share the same zero-padded
+ * tail (`...0000000`), so slicing the last few characters made every
+ * distinct user render as the identical "user-000000" — silently
+ * unreadable. Hashing the whole id spreads different ids across visibly
+ * different labels instead.
  */
 export function shortUserRef(userId: string): string {
   let hash = 0x811c9dc5;
@@ -44,6 +42,7 @@ export function shortUserRef(userId: string): string {
 
 export function describeAuthor(
   authorId: string,
+  authorHandle: string | undefined,
   origin: OriginKind,
   viewer: UserProfile | null | undefined,
 ): AuthorLabel {
@@ -57,6 +56,9 @@ export function describeAuthor(
   }
   if (origin === "system") {
     return { label: "Firepit", isSelf: false };
+  }
+  if (authorHandle) {
+    return { label: `@${authorHandle}`, isSelf: false };
   }
   return { label: shortUserRef(authorId), isSelf: false };
 }

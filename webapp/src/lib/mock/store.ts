@@ -41,7 +41,7 @@ import type {
   UserSettings,
 } from "~/gen/types.gen";
 import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
-import { createSeed, MOCK_USER_ID, OTHER_USER_IDS, type Seed } from "./fixtures";
+import { createSeed, MOCK_USER_ID, OTHER_USER_IDS, OTHER_USERS, type Seed } from "./fixtures";
 
 // The mock's entire "does this user exist" universe (task C4): the caller
 // plus the three other named fixture users. Real GrantMention/AddFriend
@@ -228,6 +228,7 @@ export class FixtureStore {
       id: this.nextId("post"),
       boardId: req.boardId,
       authorId: caller.id,
+      authorHandle: caller.handle,
       title: req.title,
       bodyMd: req.bodyMd,
       origin: "user",
@@ -253,6 +254,7 @@ export class FixtureStore {
       postId: req.postId,
       parentCommentId: req.parentCommentId,
       authorId: caller.id,
+      authorHandle: caller.handle,
       bodyMd: req.bodyMd,
       origin: "user",
       createdAt: now,
@@ -353,6 +355,7 @@ export class FixtureStore {
     const endorsement: Endorsement = {
       id: this.nextId("endorse"),
       userId: caller.id,
+      authorHandle: caller.handle,
       targetType: target.targetType,
       targetId: target.targetId,
       createdAt: new Date(),
@@ -582,5 +585,22 @@ export class FixtureStore {
     if (!group) throw notFound("friend_group", `no friend group with id "${req.groupId}"`);
     group.members = group.members.filter((m) => m !== req.userId);
     return {};
+  }
+
+  // resolve-user (schema follow-up, added alongside Post/Comment/Endorsement/
+  // Notification handle denormalization): turns a typed handle into the
+  // matching UserProfile, exactly what grant-mention/add-friend's forms need
+  // instead of making the caller paste a raw ULID. Available to any
+  // authenticated user (mirrors the real backend's exact-match-then-NotFound
+  // contract) — the caller's own handle resolves too, same as a real
+  // `users.handle` lookup would.
+  resolveUser(handle: string): UserProfile {
+    this.requireAuth();
+    const trimmed = handle.trim();
+    if (!trimmed) throw validation("handle", "handle must not be blank");
+    if (this.seed.user.handle === trimmed) return structuredClone(this.seed.user);
+    const found = OTHER_USERS.find((u) => u.handle === trimmed);
+    if (!found) throw notFound("user", `no user with handle "${trimmed}"`);
+    return structuredClone(found);
   }
 }

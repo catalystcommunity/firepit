@@ -144,6 +144,10 @@ function buildRoutes(store: FixtureStore): Record<string, Record<string, Handler
       "delete-friend-group": (p) => toEmptyCbor(store.deleteFriendGroup(bareString(p))),
       "add-friend": (p) => toEmptyCbor(store.addFriend(fromAddFriendRequestCbor(p))),
       "remove-friend": (p) => toEmptyCbor(store.removeFriend(fromRemoveFriendRequestCbor(p))),
+      // Schema follow-up (grant-mention/add-friend by handle instead of a
+      // raw pasted ULID): resolve-user turns a typed handle into the
+      // matching UserProfile.
+      "resolve-user": (p) => toUserProfileCbor(store.resolveUser(bareString(p))),
     },
   };
 }

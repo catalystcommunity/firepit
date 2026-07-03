@@ -17,6 +17,7 @@ export interface ContentCardProps {
   title?: string;
   bodyMd: string;
   authorId: string;
+  authorHandle?: string;
   origin: OriginKind;
   originRef?: string;
   createdAt: Date;
@@ -77,6 +78,7 @@ const ContentCard: Component<ContentCardProps> = (props) => {
 
       <ContentMeta
         authorId={props.authorId}
+        authorHandle={props.authorHandle}
         origin={props.origin}
         originRef={props.originRef}
         createdAt={props.createdAt}

@@ -8,6 +8,7 @@ import { describeAuthor, parseOriginBacklink } from "./identity";
 
 export interface ContentMetaProps {
   authorId: string;
+  authorHandle?: string;
   origin: OriginKind;
   originRef?: string;
   createdAt: Date;
@@ -18,7 +19,7 @@ export interface ContentMetaProps {
 const stamp = (d: Date): string => d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
 const ContentMeta: Component<ContentMetaProps> = (props) => {
-  const author = () => describeAuthor(props.authorId, props.origin, props.viewer);
+  const author = () => describeAuthor(props.authorId, props.authorHandle, props.origin, props.viewer);
   const backlink = () => parseOriginBacklink(props.originRef);
 
   return (

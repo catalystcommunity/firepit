@@ -2,21 +2,20 @@
 // who may always @mention-notify the caller, independent of subscriptions
 // (extends "subscribed", powers "authorized" — PLANDOC.md §4/§9 decision 4).
 //
-// The task brief calls for "add by handle", but SettingsService.grant-mention
-// takes a UserID (a ULID), not a handle — there is no handle -> id lookup op
-// anywhere in CSIL (no UserService at all; see src/lib/mock/fixtures.ts's own
-// note on the identical gap for post/comment authors). Rather than fake a
-// resolution that doesn't exist, this form is honestly labeled "User ID".
+// SettingsService.grant-mention/revoke-mention still take a UserID (a ULID),
+// but the form itself now accepts a handle: SocialService.resolve-user (a
+// CSIL schema follow-up) turns the typed handle into the UserID before
+// calling grant-mention, so the caller never has to paste a raw id.
 import { createSignal, For, onMount, Show, type Component } from "solid-js";
 import type { MentionGrant } from "~/gen/types.gen";
 import { api } from "~/lib/api";
-import { FirepitServiceError } from "~/lib/errors";
+import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
 
 const MentionGrantsSection: Component = () => {
   const [grants, setGrants] = createSignal<MentionGrant[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
-  const [userId, setUserId] = createSignal("");
+  const [handle, setHandle] = createSignal("");
   const [submitting, setSubmitting] = createSignal(false);
   const [revokingId, setRevokingId] = createSignal<string | null>(null);
 
@@ -38,18 +37,27 @@ const MentionGrantsSection: Component = () => {
 
   const submit = async (e: SubmitEvent): Promise<void> => {
     e.preventDefault();
-    const id = userId().trim();
-    if (!id) return;
+    const typed = handle().trim().replace(/^@/, "");
+    if (!typed) return;
     setSubmitting(true);
     setError(null);
-    const prev = grants();
-    setGrants([...prev, { userId: id, createdAt: new Date() }]);
     try {
-      await api.settings.grantMention(id);
-      setUserId("");
+      const profile = await api.social.resolveUser(typed);
+      const prev = grants();
+      setGrants([...prev, { userId: profile.id, createdAt: new Date() }]);
+      try {
+        await api.settings.grantMention(profile.id);
+        setHandle("");
+      } catch (err) {
+        setGrants(prev);
+        setError(describe(err, "Couldn't grant mention access."));
+      }
     } catch (err) {
-      setGrants(prev);
-      setError(describe(err, "Couldn't grant mention access."));
+      setError(
+        err instanceof FirepitServiceError && err.code === ServiceErrorCode.NotFound
+          ? `No user found with handle "${typed}".`
+          : describe(err, "Couldn't look up that handle."),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -73,10 +81,7 @@ const MentionGrantsSection: Component = () => {
   return (
     <section class="settings-section">
       <h3>Mention permissions</h3>
-      <p>
-        People listed here can always @mention-notify you (as long as your policy above isn't "Never"). CSIL has
-        no handle lookup yet, so this takes a user ID rather than a handle.
-      </p>
+      <p>People listed here can always @mention-notify you (as long as your policy above isn't "Never").</p>
       <Show when={error()}>
         <p class="form-error" role="alert">
           {error()}
@@ -84,10 +89,10 @@ const MentionGrantsSection: Component = () => {
       </Show>
       <form class="inline-form" onSubmit={(e) => void submit(e)}>
         <label>
-          User ID
-          <input value={userId()} onInput={(e) => setUserId(e.currentTarget.value)} placeholder="01FPMOCKUSERBOB00000000" />
+          Handle
+          <input value={handle()} onInput={(e) => setHandle(e.currentTarget.value)} placeholder="bob" />
         </label>
-        <button type="submit" disabled={submitting() || !userId().trim()}>
+        <button type="submit" disabled={submitting() || !handle().trim()}>
           Grant
         </button>
       </form>
