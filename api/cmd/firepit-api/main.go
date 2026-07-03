@@ -19,6 +19,7 @@ import (
 
 	"github.com/catalystcommunity/firepit/api/internal/config"
 	"github.com/catalystcommunity/firepit/api/internal/csilservices"
+	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/server"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 	"github.com/catalystcommunity/firepit/coredb"
@@ -59,7 +60,7 @@ func run(ctx context.Context) error {
 		Auth:         csilservices.NewAuthService(st),
 		Board:        csilservices.NewBoardService(st),
 		Thread:       csilservices.NewThreadService(st),
-		Endorsement:  csilservices.NewEndorsementService(st),
+		Endorsement:  csilservices.NewEndorsementService(st, notify.Noop{}),
 		Settings:     csilservices.NewSettingsService(st),
 		Social:       csilservices.NewSocialService(st),
 		Subscription: csilservices.NewSubscriptionService(st),
