@@ -8,20 +8,25 @@
 // (service, op) <-> codec wiring on top of this; this file has no CBOR or
 // wire-format awareness at all.
 import type {
+  AddFriendRequest,
   Board,
   BoardPage,
   Comment,
   CreateBoardRequest,
   CreateCommentRequest,
+  CreateFriendGroupRequest,
   CreatePostRequest,
   Empty,
   Endorsement,
   EndorsementList,
+  FriendGroup,
+  FriendGroupList,
   ListNotificationsRequest,
   MentionGrantList,
   NotificationPage,
   Post,
   PostPage,
+  RemoveFriendRequest,
   RevisionList,
   Subscription,
   SubscriptionList,
@@ -35,7 +40,15 @@ import type {
   UserSettings,
 } from "~/gen/types.gen";
 import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
-import { createSeed, type Seed } from "./fixtures";
+import { createSeed, MOCK_USER_ID, OTHER_USER_IDS, type Seed } from "./fixtures";
+
+// The mock's entire "does this user exist" universe (task C4): the caller
+// plus the three other named fixture users. Real GrantMention/AddFriend
+// (api/internal/csilservices/settings.go, social.go) reject an unknown
+// target with NotFound the same way — mirrored here so a settings UI
+// exercising a bad id sees the same class of ServiceError against the mock
+// it would against the real API, not a silent no-op.
+const KNOWN_USER_IDS = new Set<string>([MOCK_USER_ID, ...OTHER_USER_IDS]);
 
 function serviceError(code: number, message: string, extra: { field?: string; resourceType?: string } = {}) {
   return new FirepitServiceError({ code, message, ...extra });
@@ -447,10 +460,21 @@ export class FixtureStore {
 
   listNotifications(req: ListNotificationsRequest): NotificationPage {
     this.requireAuth();
-    let list = [...this.seed.notifications].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    let list = [...this.seed.notifications].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id),
+    );
     if (req.unreadOnly) list = list.filter((n) => !n.readAt);
-    if (req.limit) list = list.slice(0, req.limit);
-    return { notifications: structuredClone(list) };
+    if (req.cursor) {
+      // Opaque cursor = the last-seen notification's id (see PageCursor's
+      // doc comment: clients only ever pass this back verbatim, never
+      // parse it) — resume immediately after it in the same sorted order.
+      const idx = list.findIndex((n) => n.id === req.cursor);
+      list = idx === -1 ? [] : list.slice(idx + 1);
+    }
+    const limit = req.limit ?? 50;
+    const page = list.slice(0, limit);
+    const nextCursor = list.length > limit ? page[page.length - 1]?.id : undefined;
+    return { notifications: structuredClone(page), nextCursor };
   }
 
   markNotificationRead(ids: readonly string[]): Empty {
@@ -490,7 +514,9 @@ export class FixtureStore {
   }
 
   grantMention(userId: string): Empty {
-    this.requireAuth();
+    const caller = this.requireAuth();
+    if (userId === caller.id) throw validation("user_id", "you can't grant yourself mention access");
+    if (!KNOWN_USER_IDS.has(userId)) throw notFound("user", `no user with id "${userId}"`);
     if (!this.seed.mentionGrants.some((g) => g.userId === userId)) {
       this.seed.mentionGrants.push({ userId, createdAt: new Date() });
     }
@@ -504,6 +530,48 @@ export class FixtureStore {
       this.seed.mentionGrants.length,
       ...this.seed.mentionGrants.filter((g) => g.userId !== userId),
     );
+    return {};
+  }
+
+  // --------------------------------------------------------------- social --
+
+  listFriendGroups(): FriendGroupList {
+    this.requireAuth();
+    return { groups: structuredClone(this.seed.friendGroups) };
+  }
+
+  createFriendGroup(req: CreateFriendGroupRequest): FriendGroup {
+    this.requireAuth();
+    const name = req.name.trim();
+    if (!name) throw validation("name", "name must not be blank");
+    const group: FriendGroup = { id: this.nextId("group"), name, members: [], createdAt: new Date() };
+    this.seed.friendGroups.push(group);
+    return structuredClone(group);
+  }
+
+  deleteFriendGroup(id: string): Empty {
+    this.requireAuth();
+    const idx = this.seed.friendGroups.findIndex((g) => g.id === id);
+    if (idx === -1) throw notFound("friend_group", `no friend group with id "${id}"`);
+    this.seed.friendGroups.splice(idx, 1);
+    return {};
+  }
+
+  addFriend(req: AddFriendRequest): Empty {
+    const caller = this.requireAuth();
+    const group = this.seed.friendGroups.find((g) => g.id === req.groupId);
+    if (!group) throw notFound("friend_group", `no friend group with id "${req.groupId}"`);
+    if (req.userId === caller.id) throw validation("user_id", "you can't add yourself to your own friend group");
+    if (!KNOWN_USER_IDS.has(req.userId)) throw notFound("user", `no user with id "${req.userId}"`);
+    if (!group.members.includes(req.userId)) group.members.push(req.userId);
+    return {};
+  }
+
+  removeFriend(req: RemoveFriendRequest): Empty {
+    this.requireAuth();
+    const group = this.seed.friendGroups.find((g) => g.id === req.groupId);
+    if (!group) throw notFound("friend_group", `no friend group with id "${req.groupId}"`);
+    group.members = group.members.filter((m) => m !== req.userId);
     return {};
   }
 }

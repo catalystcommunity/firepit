@@ -5,6 +5,7 @@
 // (see App.tsx) — `props.children` is whatever route matched.
 import { A } from "@solidjs/router";
 import { createResource, ErrorBoundary, For, Suspense, type ParentComponent } from "solid-js";
+import NotificationBell from "~/components/notifications/NotificationBell";
 import { api } from "~/lib/api";
 import { useSession } from "~/lib/session";
 
@@ -19,9 +20,7 @@ const AppShell: ParentComponent = (props) => {
           Firepit
         </A>
         <nav class="topbar-actions">
-          <A href="/notifications" class="bell" aria-label="Notifications" title="Notifications">
-            🔔
-          </A>
+          <NotificationBell />
           <Suspense fallback={<span class="auth-state">…</span>}>
             {session.loading() ? (
               <span class="auth-state">…</span>

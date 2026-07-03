@@ -5,7 +5,6 @@
 // settings — plus the auth flow the mock's login shortcut drives.
 import { beforeEach, describe, expect, it } from "vitest";
 import { AsyncApiClient } from "~/gen/client.async.gen";
-import { FirepitTransportError } from "~/lib/errors";
 import { createMockTransport } from "./mockTransport";
 import { FixtureStore } from "./store";
 
@@ -119,10 +118,52 @@ describe("mock transport", () => {
     expect(updated.notifyOnEndorse).toBe(false);
   });
 
-  it("throws a typed FirepitTransportError (not a crash) for a service the mock doesn't route", async () => {
-    // SocialService isn't in the mock's routing table (PLANDOC.md's C1 op
-    // list doesn't call for it) — mirrors dispatch.go's "unknown
-    // service/op" transport outcome rather than an opaque throw.
-    await expect(api.social.listFriendGroups({})).rejects.toBeInstanceOf(FirepitTransportError);
+  it("friend groups: create, add/remove members, delete round-trip (task C4 wires SocialService into the mock)", async () => {
+    await api.auth.beginLogin({ domain: "todandlorna.com" });
+    const me = await api.auth.whoami({});
+
+    const seeded = await api.social.listFriendGroups({});
+    expect(seeded.groups.length).toBeGreaterThan(0);
+
+    const group = await api.social.createFriendGroup({ name: "Reviewers" });
+    expect(group.members).toEqual([]);
+
+    await expect(api.social.addFriend({ groupId: group.id, userId: me.id })).rejects.toMatchObject({
+      name: "FirepitServiceError",
+      code: 2, // Validation — can't add yourself to your own friend group
+    });
+    await expect(api.social.addFriend({ groupId: group.id, userId: "no-such-user" })).rejects.toMatchObject({
+      resourceType: "user",
+    });
+
+    await api.social.addFriend({ groupId: group.id, userId: seeded.groups[0].members[0] });
+    let refreshed = await api.social.listFriendGroups({});
+    expect(refreshed.groups.find((g) => g.id === group.id)?.members).toEqual([seeded.groups[0].members[0]]);
+
+    await api.social.removeFriend({ groupId: group.id, userId: seeded.groups[0].members[0] });
+    refreshed = await api.social.listFriendGroups({});
+    expect(refreshed.groups.find((g) => g.id === group.id)?.members).toEqual([]);
+
+    await api.social.deleteFriendGroup(group.id);
+    refreshed = await api.social.listFriendGroups({});
+    expect(refreshed.groups.find((g) => g.id === group.id)).toBeUndefined();
+  });
+
+  it("notifications: cursor pagination resumes after the last-seen id, and every event type is seeded", async () => {
+    await api.auth.beginLogin({ domain: "todandlorna.com" });
+
+    const first = await api.notification.listNotifications({ limit: 5 });
+    expect(first.notifications.length).toBe(5);
+    expect(first.nextCursor).toBeDefined();
+
+    const second = await api.notification.listNotifications({ limit: 5, cursor: first.nextCursor });
+    expect(second.notifications.length).toBeGreaterThan(0);
+    expect(second.nextCursor).toBeUndefined();
+    const seenIds = new Set([...first.notifications, ...second.notifications].map((n) => n.id));
+    expect(seenIds.size).toBe(first.notifications.length + second.notifications.length);
+
+    const all = await api.notification.listNotifications({ limit: 200 });
+    const events = new Set(all.notifications.map((n) => n.event));
+    expect(events).toEqual(new Set(["new_post", "new_comment", "mention", "github_event"]));
   });
 });

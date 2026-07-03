@@ -13,6 +13,7 @@ import type {
   Board,
   Comment,
   Endorsement,
+  FriendGroup,
   MentionGrant,
   Notification,
   Post,
@@ -36,9 +37,17 @@ const ago = (days: number, hours = 0): Date => new Date(NOW.getTime() - days * D
 // markdown), same limitation the real API has today.
 
 export const MOCK_USER_ID = "01FPMOCKUSERALICE0000000";
-const BOB_ID = "01FPMOCKUSERBOB00000000";
-const CAROL_ID = "01FPMOCKUSERCAROL0000000";
-const DAVE_ID = "01FPMOCKUSERDAVE00000000";
+// Exported (task C4, PLANDOC.md §7): the SettingsService/SocialService mock
+// (src/lib/mock/store.ts) needs *some* notion of "a user id that actually
+// exists" to validate grant-mention/add-friend the way the real backend's
+// GetUser check does — these three are the only other users the fixture
+// store knows about. Still no handle for any of them (see this module's own
+// doc comment above) — that limitation is unchanged, just now referenced
+// from two files instead of one.
+export const BOB_ID = "01FPMOCKUSERBOB00000000";
+export const CAROL_ID = "01FPMOCKUSERCAROL0000000";
+export const DAVE_ID = "01FPMOCKUSERDAVE00000000";
+export const OTHER_USER_IDS = [BOB_ID, CAROL_ID, DAVE_ID] as const;
 
 export const MOCK_USER: UserProfile = {
   id: MOCK_USER_ID,
@@ -252,9 +261,26 @@ export const subscriptions: readonly Subscription[] = [
     muted: false,
     createdAt: ago(2),
   },
+  {
+    // A comment-subtree subscription, muted — task C4's subscriptions
+    // management (SettingsPage) needs at least one of every target_type to
+    // render its grouped sections, and a muted one to exercise the
+    // mute/unmute toggle from a non-default starting state.
+    id: "01FPMOCKSUBSCRIBE0000003",
+    targetType: "comment",
+    targetId: COMMENT_3,
+    muted: true,
+    createdAt: ago(7),
+  },
 ];
 
 // --- notifications (the mock caller's own inbox) -------------------------------
+//
+// One of every NotificationEvent (new_post/new_comment/mention/github_event
+// — csil/types/notifications.csil's enum; there is no separate "endorsed"
+// event today, endorsement notifications aren't modeled as their own kind
+// yet), a mix of read/unread, and enough rows (7) that NotificationsPage's
+// PAGE_SIZE (5) has something real to paginate through.
 
 export const notifications: readonly Notification[] = [
   {
@@ -284,6 +310,48 @@ export const notifications: readonly Notification[] = [
     readAt: ago(1),
     createdAt: ago(2),
   },
+  {
+    id: "01FPMOCKNOTIFY0000000004",
+    event: "new_post",
+    actorId: DAVE_ID,
+    targetType: "post",
+    targetId: POST_CSIL_QUESTION,
+    postId: POST_CSIL_QUESTION,
+    createdAt: ago(5),
+  },
+  {
+    id: "01FPMOCKNOTIFY0000000005",
+    event: "new_comment",
+    actorId: BOB_ID,
+    targetType: "comment",
+    targetId: COMMENT_RELEASE_1,
+    postId: POST_RELEASE,
+    readAt: ago(0, 20),
+    createdAt: ago(1),
+  },
+  {
+    id: "01FPMOCKNOTIFY0000000006",
+    event: "mention",
+    actorId: CAROL_ID,
+    targetType: "comment",
+    targetId: COMMENT_2,
+    postId: POST_WELCOME,
+    readAt: ago(6),
+    createdAt: ago(9),
+  },
+  {
+    // No actorId: a system-authored event (the release post itself has no
+    // single human actor) — exercises the "the project" fallback in
+    // src/lib/notifications.ts's actorLabel() rather than only ever
+    // rendering a real user id.
+    id: "01FPMOCKNOTIFY0000000007",
+    event: "new_post",
+    targetType: "post",
+    targetId: POST_RELEASE,
+    postId: POST_RELEASE,
+    readAt: ago(1, 12),
+    createdAt: ago(2, 1),
+  },
 ];
 
 // --- settings + mention grants (the mock caller's own) --------------------------
@@ -295,6 +363,19 @@ export const settings: UserSettings = {
 };
 
 export const mentionGrants: readonly MentionGrant[] = [{ userId: BOB_ID, createdAt: ago(20) }];
+
+// --- friend groups (the mock caller's own, private) -----------------------------
+
+export const FRIEND_GROUP_CORE = "01FPMOCKGROUPCORE0000000";
+
+export const friendGroups: readonly FriendGroup[] = [
+  {
+    id: FRIEND_GROUP_CORE,
+    name: "Core reviewers",
+    members: [CAROL_ID, DAVE_ID],
+    createdAt: ago(60),
+  },
+];
 
 /** A fresh, independent deep copy of every seed table — see the module doc. */
 export function createSeed() {
@@ -308,6 +389,7 @@ export function createSeed() {
     notifications: structuredClone(notifications) as Notification[],
     settings: structuredClone(settings) as UserSettings,
     mentionGrants: structuredClone(mentionGrants) as MentionGrant[],
+    friendGroups: structuredClone(friendGroups) as FriendGroup[],
     revisions: [] as Revision[],
   };
 }

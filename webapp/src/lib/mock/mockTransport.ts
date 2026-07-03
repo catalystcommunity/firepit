@@ -18,14 +18,17 @@ import {
   asArray,
   asString,
   decode,
+  fromAddFriendRequestCbor,
   fromBeginLoginRequestCbor,
   fromCreateBoardRequestCbor,
   fromCreateCommentRequestCbor,
+  fromCreateFriendGroupRequestCbor,
   fromCreatePostRequestCbor,
   fromEditCommentRequestCbor,
   fromEditPostRequestCbor,
   fromEndorseRequestCbor,
   fromListNotificationsRequestCbor,
+  fromRemoveFriendRequestCbor,
   fromSetMutedRequestCbor,
   fromTargetRefCbor,
   fromUpdateBoardRequestCbor,
@@ -37,6 +40,8 @@ import {
   toEmptyCbor,
   toEndorsementCbor,
   toEndorsementListCbor,
+  toFriendGroupCbor,
+  toFriendGroupListCbor,
   toMentionGrantListCbor,
   toNotificationPageCbor,
   toPostCbor,
@@ -127,6 +132,16 @@ function buildRoutes(store: FixtureStore): Record<string, Record<string, Handler
       "list-mention-grants": () => toMentionGrantListCbor(store.listMentionGrants()),
       "grant-mention": (p) => toEmptyCbor(store.grantMention(bareString(p))),
       "revoke-mention": (p) => toEmptyCbor(store.revokeMention(bareString(p))),
+    },
+    // Wired for task C4 (Settings' friend-groups management) — C1 had left
+    // this unrouted (see mockTransport.test.ts's now-updated "unknown
+    // service" test) since nothing needed it yet.
+    social: {
+      "list-friend-groups": () => toFriendGroupListCbor(store.listFriendGroups()),
+      "create-friend-group": (p) => toFriendGroupCbor(store.createFriendGroup(fromCreateFriendGroupRequestCbor(p))),
+      "delete-friend-group": (p) => toEmptyCbor(store.deleteFriendGroup(bareString(p))),
+      "add-friend": (p) => toEmptyCbor(store.addFriend(fromAddFriendRequestCbor(p))),
+      "remove-friend": (p) => toEmptyCbor(store.removeFriend(fromRemoveFriendRequestCbor(p))),
     },
   };
 }
