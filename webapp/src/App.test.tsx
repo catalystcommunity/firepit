@@ -24,7 +24,10 @@ describe("App", () => {
   });
 
   it("renders a 'not built yet' stub for a placeholder route", async () => {
-    window.history.pushState({}, "", "/notifications");
+    // /notifications and /settings are real screens as of task C4 — /b/:slug
+    // is still a C2 placeholder in this worktree, so it's the route left to
+    // exercise this assertion.
+    window.history.pushState({}, "", "/b/firepit");
     render(() => <App />);
 
     await waitFor(() => expect(screen.getByText(/Not built yet/)).toBeInTheDocument());
