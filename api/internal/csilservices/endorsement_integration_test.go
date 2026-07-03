@@ -17,16 +17,12 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/csil"
 	"github.com/catalystcommunity/firepit/api/internal/csilservices"
 	"github.com/catalystcommunity/firepit/api/internal/notify"
-	"github.com/catalystcommunity/firepit/api/internal/reqctx"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 	"github.com/catalystcommunity/firepit/coredb"
 )
 
-// nilUUID is syntactically valid for a uuid-typed id column but never
-// assigned by generate_ulid(), so it's a safe stand-in for "a well-formed
-// id that doesn't exist" in not-found assertions (same convention as
-// board_integration_test.go's nilUUID).
-const nilUUID = "00000000-0000-0000-0000-000000000000"
+// nilUUID (declared in board_integration_test.go) is reused here as the
+// stand-in for "a well-formed id that doesn't exist" in not-found assertions.
 
 // capturingPublisher records every notify.Event handed to it, so tests can
 // assert Endorse emits exactly one notify.KindEndorsed per actual new
@@ -139,11 +135,7 @@ func (env *endorsementTestEnv) reputationOf(t *testing.T, userID string) int {
 	return count
 }
 
-// asUser attaches u to ctx the same way the session middleware
-// (api/internal/server) does in production, via reqctx.WithUser.
-func asUser(u *store.User) context.Context {
-	return reqctx.WithUser(context.Background(), u)
-}
+// asUser / anonymous helpers are shared with board_integration_test.go.
 
 // TestEndorsementOrderingMatrix covers B5's acceptance criterion
 // verbatim: an ordering matrix of friend vs. maintainer vs. trusted-domain
