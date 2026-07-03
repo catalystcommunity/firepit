@@ -56,24 +56,12 @@ type OriginKind string
 type Empty struct {
 }
 
-// FirepitError represents a structured data type
-type FirepitError struct {
-	Code    uint64  `json:"code" yaml:"code"`
-	Message string  `json:"message" yaml:"message"`
-	Field   *string `json:"field,omitempty" yaml:"field,omitempty"`
-}
-
-// AuthError represents a structured data type
-type AuthError struct {
-	Code    uint64 `json:"code" yaml:"code"`
-	Message string `json:"message" yaml:"message"`
-}
-
-// NotFoundError represents a structured data type
-type NotFoundError struct {
-	Code         uint64 `json:"code" yaml:"code"`
-	Message      string `json:"message" yaml:"message"`
-	ResourceType string `json:"resource_type" yaml:"resource_type"`
+// ServiceError represents a structured data type
+type ServiceError struct {
+	Code         uint64  `json:"code" yaml:"code"`
+	Message      string  `json:"message" yaml:"message"`
+	Field        *string `json:"field,omitempty" yaml:"field,omitempty"`
+	ResourceType *string `json:"resource_type,omitempty" yaml:"resource_type,omitempty"`
 }
 
 // UserKind is a type alias

@@ -95,7 +95,7 @@ func (t *HTTPRpcCarrier) Call(ctx context.Context, service, op string, req []byt
 
 func main() {
 	client := api.NewAuthClient(&HTTPRpcCarrier{BaseURL: "http://localhost:5080"})
-	resp, err := client.Logout(context.Background(), api.Empty{})
+	resp, err := client.BeginLogin(context.Background(), api.BeginLoginRequest{Domain: "example"})
 	if err != nil {
 		panic(err)
 	}

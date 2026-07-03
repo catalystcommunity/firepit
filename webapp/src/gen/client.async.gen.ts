@@ -2,8 +2,8 @@
 // Source: <csil spec>
 // Target: typescript-client
 
-import type { AddFriendRequest, AuthError, BeginLoginRequest, BeginLoginResponse, Board, BoardID, BoardPage, BoardSlug, Comment, CommentID, CreateBoardRequest, CreateCommentRequest, CreateFriendGroupRequest, CreateMappingRequest, CreatePostRequest, Domain, DomainList, EditCommentRequest, EditPostRequest, Empty, EndorseRequest, Endorsement, EndorsementList, FirepitError, FriendGroup, FriendGroupList, GetThreadRequest, GithubMapping, GroupID, ListBoardsRequest, ListNotificationsRequest, ListPostsRequest, MappingID, MappingList, MentionGrantList, NotFoundError, NotificationIDs, NotificationPage, Post, PostID, PostPage, RemoveBoardMemberRequest, RemoveFriendRequest, RevisionList, SetBoardMemberRequest, SetMutedRequest, Subscription, SubscriptionList, TargetRef, Thread, UnreadSummary, UpdateBoardRequest, UpdateSettingsRequest, UserID, UserProfile, UserSettings } from "./types.gen";
-import { encodeValue, fromBoardPageCbor, fromDomainListCbor, fromEmptyCbor, fromEndorsementListCbor, fromFriendGroupListCbor, fromMappingListCbor, fromMentionGrantListCbor, fromNotificationPageCbor, fromPostPageCbor, fromRevisionListCbor, fromSubscriptionListCbor, fromThreadCbor, fromUnreadSummaryCbor, fromUserSettingsCbor, toEmptyCbor, toGetThreadRequestCbor, toListBoardsRequestCbor, toListNotificationsRequestCbor, toListPostsRequestCbor, toTargetRefCbor } from "./codec.gen";
+import type { AddFriendRequest, BeginLoginRequest, BeginLoginResponse, Board, BoardID, BoardPage, BoardSlug, Comment, CommentID, CreateBoardRequest, CreateCommentRequest, CreateFriendGroupRequest, CreateMappingRequest, CreatePostRequest, Domain, DomainList, EditCommentRequest, EditPostRequest, Empty, EndorseRequest, Endorsement, EndorsementList, FriendGroup, FriendGroupList, GetThreadRequest, GithubMapping, GroupID, ListBoardsRequest, ListNotificationsRequest, ListPostsRequest, MappingID, MappingList, MentionGrantList, NotificationIDs, NotificationPage, Post, PostID, PostPage, RemoveBoardMemberRequest, RemoveFriendRequest, RevisionList, SetBoardMemberRequest, SetMutedRequest, Subscription, SubscriptionList, TargetRef, Thread, UnreadSummary, UpdateBoardRequest, UpdateSettingsRequest, UserID, UserProfile, UserSettings } from "./types.gen";
+import { encodeValue, fromBeginLoginResponseCbor, fromBoardCbor, fromBoardPageCbor, fromCommentCbor, fromDomainListCbor, fromEmptyCbor, fromEndorsementCbor, fromEndorsementListCbor, fromFriendGroupCbor, fromFriendGroupListCbor, fromGithubMappingCbor, fromMappingListCbor, fromMentionGrantListCbor, fromNotificationPageCbor, fromPostCbor, fromPostPageCbor, fromRevisionListCbor, fromSubscriptionCbor, fromSubscriptionListCbor, fromThreadCbor, fromUnreadSummaryCbor, fromUserProfileCbor, fromUserSettingsCbor, toAddFriendRequestCbor, toBeginLoginRequestCbor, toCreateBoardRequestCbor, toCreateCommentRequestCbor, toCreateFriendGroupRequestCbor, toCreateMappingRequestCbor, toCreatePostRequestCbor, toEditCommentRequestCbor, toEditPostRequestCbor, toEmptyCbor, toEndorseRequestCbor, toGetThreadRequestCbor, toListBoardsRequestCbor, toListNotificationsRequestCbor, toListPostsRequestCbor, toRemoveBoardMemberRequestCbor, toRemoveFriendRequestCbor, toSetBoardMemberRequestCbor, toSetMutedRequestCbor, toTargetRefCbor, toUpdateBoardRequestCbor, toUpdateSettingsRequestCbor } from "./codec.gen";
 
 export interface AsyncServiceTransport {
   call(service: string, op: string, req: Uint8Array): Promise<Uint8Array>;
@@ -12,8 +12,17 @@ export interface AsyncServiceTransport {
 export class AuthAsyncClient {
   constructor(private readonly t: AsyncServiceTransport) {}
 
-
-  // operation 'begin-login' has a non-record payload; (de)serialize it manually
+  /**
+   * Start a login: server calls the linkkeys RP sidecar's sign-request,
+   * sets a nonce cookie, and returns the IDP URL to redirect the browser
+   * to.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async beginLogin(req: BeginLoginRequest): Promise<BeginLoginResponse> {
+    const csilResp = await this.t.call("auth", "BeginLogin", toBeginLoginRequestCbor(req));
+    return fromBeginLoginResponseCbor(csilResp);
+  }
 
   /**
    * Clear the caller's session cookie. Idempotent; never errors even if
@@ -26,8 +35,15 @@ export class AuthAsyncClient {
     return fromEmptyCbor(csilResp);
   }
 
-
-  // operation 'whoami' has a non-record payload; (de)serialize it manually
+  /**
+   * The caller's own profile, derived from their session cookie.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async whoami(req: Empty): Promise<UserProfile> {
+    const csilResp = await this.t.call("auth", "Whoami", toEmptyCbor(req));
+    return fromUserProfileCbor(csilResp);
+  }
 }
 
 export class BoardAsyncClient {
@@ -43,33 +59,91 @@ export class BoardAsyncClient {
     return fromBoardPageCbor(csilResp);
   }
 
+  /**
+   * Look up one board by its slug.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async getBoard(req: BoardSlug): Promise<Board> {
+    const csilResp = await this.t.call("board", "GetBoard", encodeValue(req));
+    return fromBoardCbor(csilResp);
+  }
 
-  // operation 'get-board' has a non-record payload; (de)serialize it manually
+  /**
+   * Admin-only: create a new board.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async createBoard(req: CreateBoardRequest): Promise<Board> {
+    const csilResp = await this.t.call("board", "CreateBoard", toCreateBoardRequestCbor(req));
+    return fromBoardCbor(csilResp);
+  }
 
+  /**
+   * Admin-only: update a board's title/description.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async updateBoard(req: UpdateBoardRequest): Promise<Board> {
+    const csilResp = await this.t.call("board", "UpdateBoard", toUpdateBoardRequestCbor(req));
+    return fromBoardCbor(csilResp);
+  }
 
-  // operation 'create-board' has a non-record payload; (de)serialize it manually
+  /**
+   * Admin-only: archive a board (read-only afterward, still browsable).
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async archiveBoard(req: BoardID): Promise<Empty> {
+    const csilResp = await this.t.call("board", "ArchiveBoard", encodeValue(req));
+    return fromEmptyCbor(csilResp);
+  }
 
+  /**
+   * Admin-only: assign or change a user's maintainer/moderator role on a
+   * board.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async setBoardMember(req: SetBoardMemberRequest): Promise<Empty> {
+    const csilResp = await this.t.call("board", "SetBoardMember", toSetBoardMemberRequestCbor(req));
+    return fromEmptyCbor(csilResp);
+  }
 
-  // operation 'update-board' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'archive-board' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'set-board-member' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'remove-board-member' has a non-record payload; (de)serialize it manually
+  /**
+   * Maintainer/moderator: remove a user's role on a board.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async removeBoardMember(req: RemoveBoardMemberRequest): Promise<Empty> {
+    const csilResp = await this.t.call("board", "RemoveBoardMember", toRemoveBoardMemberRequestCbor(req));
+    return fromEmptyCbor(csilResp);
+  }
 }
 
 export class EndorsementAsyncClient {
   constructor(private readonly t: AsyncServiceTransport) {}
 
+  /**
+   * Endorse a post or comment. Rejected if the caller already endorsed
+   * it, if it's the caller's own content, or if the content is deleted.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async endorse(req: EndorseRequest): Promise<Endorsement> {
+    const csilResp = await this.t.call("endorsement", "Endorse", toEndorseRequestCbor(req));
+    return fromEndorsementCbor(csilResp);
+  }
 
-  // operation 'endorse' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'retract' has a non-record payload; (de)serialize it manually
+  /**
+   * Retract the caller's own endorsement.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async retract(req: EndorseRequest): Promise<Empty> {
+    const csilResp = await this.t.call("endorsement", "Retract", toEndorseRequestCbor(req));
+    return fromEmptyCbor(csilResp);
+  }
 
   /**
    * The full endorser list for a target, pre-ordered per-viewer by the
@@ -86,8 +160,15 @@ export class EndorsementAsyncClient {
 export class IntegrationAsyncClient {
   constructor(private readonly t: AsyncServiceTransport) {}
 
-
-  // operation 'create-github-mapping' has a non-record payload; (de)serialize it manually
+  /**
+   * Create a per-repo webhook mapping into a board.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async createGithubMapping(req: CreateMappingRequest): Promise<GithubMapping> {
+    const csilResp = await this.t.call("integration", "CreateGithubMapping", toCreateMappingRequestCbor(req));
+    return fromGithubMappingCbor(csilResp);
+  }
 
   /**
    * All configured GitHub mappings.
@@ -99,14 +180,36 @@ export class IntegrationAsyncClient {
     return fromMappingListCbor(csilResp);
   }
 
+  /**
+   * Remove a GitHub mapping (stops ingestion for that repo; already
+   * ingested content is unaffected).
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async deleteGithubMapping(req: MappingID): Promise<Empty> {
+    const csilResp = await this.t.call("integration", "DeleteGithubMapping", encodeValue(req));
+    return fromEmptyCbor(csilResp);
+  }
 
-  // operation 'delete-github-mapping' has a non-record payload; (de)serialize it manually
+  /**
+   * Add a linkkeys domain to the trusted-domains registry.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async addTrustedDomain(req: Domain): Promise<Empty> {
+    const csilResp = await this.t.call("integration", "AddTrustedDomain", encodeValue(req));
+    return fromEmptyCbor(csilResp);
+  }
 
-
-  // operation 'add-trusted-domain' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'remove-trusted-domain' has a non-record payload; (de)serialize it manually
+  /**
+   * Remove a linkkeys domain from the trusted-domains registry.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async removeTrustedDomain(req: Domain): Promise<Empty> {
+    const csilResp = await this.t.call("integration", "RemoveTrustedDomain", encodeValue(req));
+    return fromEmptyCbor(csilResp);
+  }
 
   /**
    * All trusted domains.
@@ -203,8 +306,15 @@ export class SettingsAsyncClient {
     return fromUserSettingsCbor(csilResp);
   }
 
-
-  // operation 'update-settings' has a non-record payload; (de)serialize it manually
+  /**
+   * Partial update — only fields present in the request are changed.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async updateSettings(req: UpdateSettingsRequest): Promise<UserSettings> {
+    const csilResp = await this.t.call("settings", "UpdateSettings", toUpdateSettingsRequestCbor(req));
+    return fromUserSettingsCbor(csilResp);
+  }
 
   /**
    * Users the caller has granted permanent mention-notify permission to.
@@ -216,11 +326,26 @@ export class SettingsAsyncClient {
     return fromMentionGrantListCbor(csilResp);
   }
 
+  /**
+   * Grant a user permanent mention-notify permission, independent of
+   * shared subscriptions.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async grantMention(req: UserID): Promise<Empty> {
+    const csilResp = await this.t.call("settings", "GrantMention", encodeValue(req));
+    return fromEmptyCbor(csilResp);
+  }
 
-  // operation 'grant-mention' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'revoke-mention' has a non-record payload; (de)serialize it manually
+  /**
+   * Revoke a previously granted mention-notify permission.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async revokeMention(req: UserID): Promise<Empty> {
+    const csilResp = await this.t.call("settings", "RevokeMention", encodeValue(req));
+    return fromEmptyCbor(csilResp);
+  }
 }
 
 export class SocialAsyncClient {
@@ -236,30 +361,79 @@ export class SocialAsyncClient {
     return fromFriendGroupListCbor(csilResp);
   }
 
+  /**
+   * Create a new (initially empty) friend group.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async createFriendGroup(req: CreateFriendGroupRequest): Promise<FriendGroup> {
+    const csilResp = await this.t.call("social", "CreateFriendGroup", toCreateFriendGroupRequestCbor(req));
+    return fromFriendGroupCbor(csilResp);
+  }
 
-  // operation 'create-friend-group' has a non-record payload; (de)serialize it manually
+  /**
+   * Delete a friend group the caller owns, and its membership.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async deleteFriendGroup(req: GroupID): Promise<Empty> {
+    const csilResp = await this.t.call("social", "DeleteFriendGroup", encodeValue(req));
+    return fromEmptyCbor(csilResp);
+  }
 
+  /**
+   * Add a user to one of the caller's own friend groups.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async addFriend(req: AddFriendRequest): Promise<Empty> {
+    const csilResp = await this.t.call("social", "AddFriend", toAddFriendRequestCbor(req));
+    return fromEmptyCbor(csilResp);
+  }
 
-  // operation 'delete-friend-group' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'add-friend' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'remove-friend' has a non-record payload; (de)serialize it manually
+  /**
+   * Remove a user from one of the caller's own friend groups.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async removeFriend(req: RemoveFriendRequest): Promise<Empty> {
+    const csilResp = await this.t.call("social", "RemoveFriend", toRemoveFriendRequestCbor(req));
+    return fromEmptyCbor(csilResp);
+  }
 }
 
 export class SubscriptionAsyncClient {
   constructor(private readonly t: AsyncServiceTransport) {}
 
+  /**
+   * Subscribe to a board, post, or comment subtree.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async subscribe(req: TargetRef): Promise<Subscription> {
+    const csilResp = await this.t.call("subscription", "Subscribe", toTargetRefCbor(req));
+    return fromSubscriptionCbor(csilResp);
+  }
 
-  // operation 'subscribe' has a non-record payload; (de)serialize it manually
+  /**
+   * Remove a subscription entirely.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async unsubscribe(req: TargetRef): Promise<Empty> {
+    const csilResp = await this.t.call("subscription", "Unsubscribe", toTargetRefCbor(req));
+    return fromEmptyCbor(csilResp);
+  }
 
-
-  // operation 'unsubscribe' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'set-muted' has a non-record payload; (de)serialize it manually
+  /**
+   * Toggle mute on an existing subscription without removing it.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async setMuted(req: SetMutedRequest): Promise<Subscription> {
+    const csilResp = await this.t.call("subscription", "SetMuted", toSetMutedRequestCbor(req));
+    return fromSubscriptionCbor(csilResp);
+  }
 
   /**
    * All of the caller's subscriptions.
@@ -295,17 +469,46 @@ export class ThreadAsyncClient {
     return fromThreadCbor(csilResp);
   }
 
+  /**
+   * Start a new thread on a board.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async createPost(req: CreatePostRequest): Promise<Post> {
+    const csilResp = await this.t.call("thread", "CreatePost", toCreatePostRequestCbor(req));
+    return fromPostCbor(csilResp);
+  }
 
-  // operation 'create-post' has a non-record payload; (de)serialize it manually
+  /**
+   * Reply to a post, optionally nested under an existing comment.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async createComment(req: CreateCommentRequest): Promise<Comment> {
+    const csilResp = await this.t.call("thread", "CreateComment", toCreateCommentRequestCbor(req));
+    return fromCommentCbor(csilResp);
+  }
 
+  /**
+   * Edit a post's title/body; snapshots the prior state as a revision in
+   * the same transaction.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async editPost(req: EditPostRequest): Promise<Post> {
+    const csilResp = await this.t.call("thread", "EditPost", toEditPostRequestCbor(req));
+    return fromPostCbor(csilResp);
+  }
 
-  // operation 'create-comment' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'edit-post' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'edit-comment' has a non-record payload; (de)serialize it manually
+  /**
+   * Edit a comment's body; snapshots the prior state as a revision.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async editComment(req: EditCommentRequest): Promise<Comment> {
+    const csilResp = await this.t.call("thread", "EditComment", toEditCommentRequestCbor(req));
+    return fromCommentCbor(csilResp);
+  }
 
   /**
    * Full edit history for a post or comment, newest first.
@@ -317,11 +520,27 @@ export class ThreadAsyncClient {
     return fromRevisionListCbor(csilResp);
   }
 
+  /**
+   * Soft-delete a post (author or moderator/maintainer). The post
+   * becomes a tombstone; replies remain.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async deletePost(req: PostID): Promise<Empty> {
+    const csilResp = await this.t.call("thread", "DeletePost", encodeValue(req));
+    return fromEmptyCbor(csilResp);
+  }
 
-  // operation 'delete-post' has a non-record payload; (de)serialize it manually
-
-
-  // operation 'delete-comment' has a non-record payload; (de)serialize it manually
+  /**
+   * Soft-delete a comment (author or moderator/maintainer). The comment
+   * becomes a tombstone; its replies remain.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  async deleteComment(req: CommentID): Promise<Empty> {
+    const csilResp = await this.t.call("thread", "DeleteComment", encodeValue(req));
+    return fromEmptyCbor(csilResp);
+  }
 }
 
 export class AsyncApiClient {

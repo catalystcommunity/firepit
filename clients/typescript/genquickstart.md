@@ -53,7 +53,7 @@ class HttpRpcCarrier implements AsyncServiceTransport {
 
 async function main() {
   const client = new AsyncApiClient(new HttpRpcCarrier("http://localhost:5080"));
-  const resp = await client.auth.logout({});
+  const resp = await client.auth.beginLogin({ domain: undefined as any });
   console.log(resp);
 }
 

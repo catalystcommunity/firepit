@@ -213,57 +213,57 @@ Design notes:
 ## 5. API surface (CSIL, `csil/firepit.csil` + `csil/types/*.csil`)
 
 All ops CBOR over `POST /csil/v1/rpc` (HTTP carrier; WS carrier + CSIL-Events push is
-milestone M4). Every mutating op has a declared error arm (`-> Result / FirepitError`).
+milestone M4). Every mutating op has a declared error arm (`-> Result / ServiceError`).
 
 ```
 service AuthService {
-    begin-login:        BeginLoginRequest -> BeginLoginResponse / AuthError,
+    begin-login:        BeginLoginRequest -> BeginLoginResponse / ServiceError,
     logout:             Empty -> Empty,
-    whoami:             Empty -> UserProfile / AuthError,
+    whoami:             Empty -> UserProfile / ServiceError,
 }
 service BoardService {
     list-boards:        ListBoardsRequest -> BoardPage,
-    get-board:          BoardSlug -> Board / NotFoundError,
-    create-board:       CreateBoardRequest -> Board / FirepitError,       ;; admin-only
-    update-board:       UpdateBoardRequest -> Board / FirepitError,       ;; admin
-    archive-board:      BoardID -> Empty / FirepitError,                  ;; admin
-    set-board-member:   SetBoardMemberRequest -> Empty / FirepitError,    ;; admin: assign
-    remove-board-member: RemoveBoardMemberRequest -> Empty / FirepitError,;; maintainer/mod
+    get-board:          BoardSlug -> Board / ServiceError,
+    create-board:       CreateBoardRequest -> Board / ServiceError,       ;; admin-only
+    update-board:       UpdateBoardRequest -> Board / ServiceError,       ;; admin
+    archive-board:      BoardID -> Empty / ServiceError,                  ;; admin
+    set-board-member:   SetBoardMemberRequest -> Empty / ServiceError,    ;; admin: assign
+    remove-board-member: RemoveBoardMemberRequest -> Empty / ServiceError,;; maintainer/mod
 }
 service ThreadService {
     list-posts:         ListPostsRequest -> PostPage,          ;; board + cursor, by activity
     get-thread:         GetThreadRequest -> Thread,            ;; post + full comment tree
-    create-post:        CreatePostRequest -> Post / FirepitError,
-    create-comment:     CreateCommentRequest -> Comment / FirepitError,
-    edit-post:          EditPostRequest -> Post / FirepitError,   ;; snapshots a revision
-    edit-comment:       EditCommentRequest -> Comment / FirepitError,
+    create-post:        CreatePostRequest -> Post / ServiceError,
+    create-comment:     CreateCommentRequest -> Comment / ServiceError,
+    edit-post:          EditPostRequest -> Post / ServiceError,   ;; snapshots a revision
+    edit-comment:       EditCommentRequest -> Comment / ServiceError,
     list-revisions:     TargetRef -> RevisionList,
-    delete-post:        PostID -> Empty / FirepitError,        ;; soft; author or mod
-    delete-comment:     CommentID -> Empty / FirepitError,
+    delete-post:        PostID -> Empty / ServiceError,        ;; soft; author or mod
+    delete-comment:     CommentID -> Empty / ServiceError,
 }
 service EndorsementService {
-    endorse:            EndorseRequest -> Endorsement / FirepitError,
-    retract:            EndorseRequest -> Empty / FirepitError,
+    endorse:            EndorseRequest -> Endorsement / ServiceError,
+    retract:            EndorseRequest -> Empty / ServiceError,
     list-endorsements:  TargetRef -> EndorsementList,   ;; names, not numbers; ordered
 }                                                       ;; per-viewer (friends, then rep)
 service SettingsService {
     get-settings:       Empty -> UserSettings,
-    update-settings:    UpdateSettingsRequest -> UserSettings / FirepitError,
+    update-settings:    UpdateSettingsRequest -> UserSettings / ServiceError,
     list-mention-grants: Empty -> MentionGrantList,
-    grant-mention:      UserID -> Empty / FirepitError,
-    revoke-mention:     UserID -> Empty / FirepitError,
+    grant-mention:      UserID -> Empty / ServiceError,
+    revoke-mention:     UserID -> Empty / ServiceError,
 }
 service SocialService {
     list-friend-groups:  Empty -> FriendGroupList,
-    create-friend-group: CreateFriendGroupRequest -> FriendGroup / FirepitError,
-    delete-friend-group: GroupID -> Empty / FirepitError,
-    add-friend:          AddFriendRequest -> Empty / FirepitError,    ;; group + user
-    remove-friend:       RemoveFriendRequest -> Empty / FirepitError,
+    create-friend-group: CreateFriendGroupRequest -> FriendGroup / ServiceError,
+    delete-friend-group: GroupID -> Empty / ServiceError,
+    add-friend:          AddFriendRequest -> Empty / ServiceError,    ;; group + user
+    remove-friend:       RemoveFriendRequest -> Empty / ServiceError,
 }
 service SubscriptionService {
-    subscribe:          TargetRef -> Subscription / FirepitError,
-    unsubscribe:        TargetRef -> Empty / FirepitError,
-    set-muted:          SetMutedRequest -> Subscription / FirepitError,
+    subscribe:          TargetRef -> Subscription / ServiceError,
+    unsubscribe:        TargetRef -> Empty / ServiceError,
+    set-muted:          SetMutedRequest -> Subscription / ServiceError,
     list-subscriptions: Empty -> SubscriptionList,
 }
 service ReadService {
@@ -277,11 +277,11 @@ service NotificationService {
     mark-all-read:      Empty -> Empty,
 }
 service IntegrationService {                                   ;; admin
-    create-github-mapping: CreateMappingRequest -> GithubMapping / FirepitError,
+    create-github-mapping: CreateMappingRequest -> GithubMapping / ServiceError,
     list-github-mappings:  Empty -> MappingList,
-    delete-github-mapping: MappingID -> Empty / FirepitError,
-    add-trusted-domain:    Domain -> Empty / FirepitError,
-    remove-trusted-domain: Domain -> Empty / FirepitError,
+    delete-github-mapping: MappingID -> Empty / ServiceError,
+    add-trusted-domain:    Domain -> Empty / ServiceError,
+    remove-trusted-domain: Domain -> Empty / ServiceError,
     list-trusted-domains:  Empty -> DomainList,
 }
 ```

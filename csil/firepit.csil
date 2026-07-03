@@ -57,7 +57,7 @@ service AuthService {
     ;;; sets a nonce cookie, and returns the IDP URL to redirect the browser
     ;;; to.
     @wire-id(0)
-    begin-login: BeginLoginRequest -> BeginLoginResponse / AuthError,
+    begin-login: BeginLoginRequest -> BeginLoginResponse / ServiceError,
 
     ;;; Clear the caller's session cookie. Idempotent; never errors even if
     ;;; already logged out.
@@ -66,7 +66,7 @@ service AuthService {
 
     ;;; The caller's own profile, derived from their session cookie.
     @wire-id(2)
-    whoami: Empty -> UserProfile / AuthError
+    whoami: Empty -> UserProfile / ServiceError
 }
 
 ;;; Boards: per-project/topic containers for posts. Creation is admin-only;
@@ -80,28 +80,28 @@ service BoardService {
 
     ;;; Look up one board by its slug.
     @wire-id(1)
-    get-board: BoardSlug -> Board / NotFoundError,
+    get-board: BoardSlug -> Board / ServiceError,
 
     ;;; Admin-only: create a new board.
     @wire-id(2)
-    create-board: CreateBoardRequest -> Board / FirepitError,
+    create-board: CreateBoardRequest -> Board / ServiceError,
 
     ;;; Admin-only: update a board's title/description.
     @wire-id(3)
-    update-board: UpdateBoardRequest -> Board / FirepitError,
+    update-board: UpdateBoardRequest -> Board / ServiceError,
 
     ;;; Admin-only: archive a board (read-only afterward, still browsable).
     @wire-id(4)
-    archive-board: BoardID -> Empty / FirepitError,
+    archive-board: BoardID -> Empty / ServiceError,
 
     ;;; Admin-only: assign or change a user's maintainer/moderator role on a
     ;;; board.
     @wire-id(5)
-    set-board-member: SetBoardMemberRequest -> Empty / FirepitError,
+    set-board-member: SetBoardMemberRequest -> Empty / ServiceError,
 
     ;;; Maintainer/moderator: remove a user's role on a board.
     @wire-id(6)
-    remove-board-member: RemoveBoardMemberRequest -> Empty / FirepitError
+    remove-board-member: RemoveBoardMemberRequest -> Empty / ServiceError
 }
 
 ;;; Posts (thread roots) and threaded comments of arbitrary depth,
@@ -119,20 +119,20 @@ service ThreadService {
 
     ;;; Start a new thread on a board.
     @wire-id(2)
-    create-post: CreatePostRequest -> Post / FirepitError,
+    create-post: CreatePostRequest -> Post / ServiceError,
 
     ;;; Reply to a post, optionally nested under an existing comment.
     @wire-id(3)
-    create-comment: CreateCommentRequest -> Comment / FirepitError,
+    create-comment: CreateCommentRequest -> Comment / ServiceError,
 
     ;;; Edit a post's title/body; snapshots the prior state as a revision in
     ;;; the same transaction.
     @wire-id(4)
-    edit-post: EditPostRequest -> Post / FirepitError,
+    edit-post: EditPostRequest -> Post / ServiceError,
 
     ;;; Edit a comment's body; snapshots the prior state as a revision.
     @wire-id(5)
-    edit-comment: EditCommentRequest -> Comment / FirepitError,
+    edit-comment: EditCommentRequest -> Comment / ServiceError,
 
     ;;; Full edit history for a post or comment, newest first.
     @wire-id(6)
@@ -141,12 +141,12 @@ service ThreadService {
     ;;; Soft-delete a post (author or moderator/maintainer). The post
     ;;; becomes a tombstone; replies remain.
     @wire-id(7)
-    delete-post: PostID -> Empty / FirepitError,
+    delete-post: PostID -> Empty / ServiceError,
 
     ;;; Soft-delete a comment (author or moderator/maintainer). The comment
     ;;; becomes a tombstone; its replies remain.
     @wire-id(8)
-    delete-comment: CommentID -> Empty / FirepitError
+    delete-comment: CommentID -> Empty / ServiceError
 }
 
 ;;; Endorsements: a public, named "I stand behind this" on a post or
@@ -157,11 +157,11 @@ service EndorsementService {
     ;;; Endorse a post or comment. Rejected if the caller already endorsed
     ;;; it, if it's the caller's own content, or if the content is deleted.
     @wire-id(0)
-    endorse: EndorseRequest -> Endorsement / FirepitError,
+    endorse: EndorseRequest -> Endorsement / ServiceError,
 
     ;;; Retract the caller's own endorsement.
     @wire-id(1)
-    retract: EndorseRequest -> Empty / FirepitError,
+    retract: EndorseRequest -> Empty / ServiceError,
 
     ;;; The full endorser list for a target, pre-ordered per-viewer by the
     ;;; server (friends first, then reputation).
@@ -180,7 +180,7 @@ service SettingsService {
 
     ;;; Partial update — only fields present in the request are changed.
     @wire-id(1)
-    update-settings: UpdateSettingsRequest -> UserSettings / FirepitError,
+    update-settings: UpdateSettingsRequest -> UserSettings / ServiceError,
 
     ;;; Users the caller has granted permanent mention-notify permission to.
     @wire-id(2)
@@ -189,11 +189,11 @@ service SettingsService {
     ;;; Grant a user permanent mention-notify permission, independent of
     ;;; shared subscriptions.
     @wire-id(3)
-    grant-mention: UserID -> Empty / FirepitError,
+    grant-mention: UserID -> Empty / ServiceError,
 
     ;;; Revoke a previously granted mention-notify permission.
     @wire-id(4)
-    revoke-mention: UserID -> Empty / FirepitError
+    revoke-mention: UserID -> Empty / ServiceError
 }
 
 ;;; Friend groups: private groupings the caller owns, used only to order the
@@ -207,19 +207,19 @@ service SocialService {
 
     ;;; Create a new (initially empty) friend group.
     @wire-id(1)
-    create-friend-group: CreateFriendGroupRequest -> FriendGroup / FirepitError,
+    create-friend-group: CreateFriendGroupRequest -> FriendGroup / ServiceError,
 
     ;;; Delete a friend group the caller owns, and its membership.
     @wire-id(2)
-    delete-friend-group: GroupID -> Empty / FirepitError,
+    delete-friend-group: GroupID -> Empty / ServiceError,
 
     ;;; Add a user to one of the caller's own friend groups.
     @wire-id(3)
-    add-friend: AddFriendRequest -> Empty / FirepitError,
+    add-friend: AddFriendRequest -> Empty / ServiceError,
 
     ;;; Remove a user from one of the caller's own friend groups.
     @wire-id(4)
-    remove-friend: RemoveFriendRequest -> Empty / FirepitError
+    remove-friend: RemoveFriendRequest -> Empty / ServiceError
 }
 
 ;;; Subscriptions to a board, a post, or a specific comment subtree — the
@@ -229,15 +229,15 @@ service SocialService {
 service SubscriptionService {
     ;;; Subscribe to a board, post, or comment subtree.
     @wire-id(0)
-    subscribe: TargetRef -> Subscription / FirepitError,
+    subscribe: TargetRef -> Subscription / ServiceError,
 
     ;;; Remove a subscription entirely.
     @wire-id(1)
-    unsubscribe: TargetRef -> Empty / FirepitError,
+    unsubscribe: TargetRef -> Empty / ServiceError,
 
     ;;; Toggle mute on an existing subscription without removing it.
     @wire-id(2)
-    set-muted: SetMutedRequest -> Subscription / FirepitError,
+    set-muted: SetMutedRequest -> Subscription / ServiceError,
 
     ;;; All of the caller's subscriptions.
     @wire-id(3)
@@ -292,7 +292,7 @@ service NotificationService {
 service IntegrationService {
     ;;; Create a per-repo webhook mapping into a board.
     @wire-id(0)
-    create-github-mapping: CreateMappingRequest -> GithubMapping / FirepitError,
+    create-github-mapping: CreateMappingRequest -> GithubMapping / ServiceError,
 
     ;;; All configured GitHub mappings.
     @wire-id(1)
@@ -301,15 +301,15 @@ service IntegrationService {
     ;;; Remove a GitHub mapping (stops ingestion for that repo; already
     ;;; ingested content is unaffected).
     @wire-id(2)
-    delete-github-mapping: MappingID -> Empty / FirepitError,
+    delete-github-mapping: MappingID -> Empty / ServiceError,
 
     ;;; Add a linkkeys domain to the trusted-domains registry.
     @wire-id(3)
-    add-trusted-domain: Domain -> Empty / FirepitError,
+    add-trusted-domain: Domain -> Empty / ServiceError,
 
     ;;; Remove a linkkeys domain from the trusted-domains registry.
     @wire-id(4)
-    remove-trusted-domain: Domain -> Empty / FirepitError,
+    remove-trusted-domain: Domain -> Empty / ServiceError,
 
     ;;; All trusted domains.
     @wire-id(5)

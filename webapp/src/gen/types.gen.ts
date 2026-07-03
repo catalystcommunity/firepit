@@ -2,11 +2,6 @@
 // Source: <csil spec>
 // Target: typescript-typesonly
 
-export interface ServiceError {
-  code: number;
-  message: string;
-}
-
 /**
  * A user's id (ULID).
  */
@@ -104,12 +99,20 @@ export interface Empty {
 }
 
 /**
- * The general-purpose application error: validation failures, authorization
- * denials (not admin/maintainer/moderator, endorsing your own content,
- * endorsing deleted content, etc.), and conflicts. Every mutating op that
- * isn't specifically an auth or not-found case declares this arm.
+ * The single declared error type for every op that can fail. Covers:
+ * 
+ * - General application errors: validation failures, authorization denials
+ * (not admin/maintainer/moderator, endorsing your own content, endorsing
+ * deleted content, etc.), and conflicts.
+ * - Auth errors: the caller has no valid session, the linkkeys assertion
+ * failed verification, or the login flow's nonce/state was invalid or
+ * expired.
+ * - Not-found errors: a referenced board/post/comment/etc. does not exist,
+ * is soft-deleted, or the caller isn't permitted to know it exists (a
+ * private board reads as not-found to a non-member, never as forbidden —
+ * firepit doesn't leak existence of content a caller can't see).
  */
-export interface FirepitError {
+export interface ServiceError {
   /**
    * Application error code (see docs/OPERATING.md's error code table).
    */
@@ -124,33 +127,13 @@ export interface FirepitError {
    * validation failure (e.g. a slug that fails the format regex).
    */
   field?: string;
-}
-
-/**
- * Returned by AuthService ops when the caller has no valid session, the
- * linkkeys assertion failed verification, or the login flow's nonce/state
- * was invalid or expired.
- */
-export interface AuthError {
-  code: number;
-  message: string;
-}
-
-/**
- * Returned when a referenced board/post/comment/etc. does not exist, is
- * soft-deleted, or the caller isn't permitted to know it exists (a private
- * board reads as not-found to a non-member, never as forbidden — firepit
- * doesn't leak existence of content a caller can't see).
- */
-export interface NotFoundError {
-  code: number;
-  message: string;
   /**
    * What kind of resource was being looked up ("board", "post",
-   * "comment", "user", …) — lets a generic client render a consistent
-   * "this board doesn't exist" vs "this post doesn't exist" message.
+   * "comment", "user", …), when the error is a not-found case — lets a
+   * generic client render a consistent "this board doesn't exist" vs
+   * "this post doesn't exist" message.
    */
-  resourceType: string;
+  resourceType?: string;
 }
 
 /**

@@ -2,7 +2,7 @@
 // Source: <csil spec>
 // Target: typescript-codec
 
-import type { AddFriendRequest, AuthError, BeginLoginRequest, BeginLoginResponse, Board, BoardID, BoardKind, BoardPage, BoardRole, BoardUnread, Comment, CommentID, CreateBoardRequest, CreateCommentRequest, CreateFriendGroupRequest, CreateMappingRequest, CreatePostRequest, DomainEntry, DomainList, EditCommentRequest, EditPostRequest, Empty, EndorseRequest, Endorsement, EndorsementID, EndorsementList, FirepitError, FriendGroup, FriendGroupList, GetThreadRequest, GithubMapping, GroupID, ListBoardsRequest, ListNotificationsRequest, ListPostsRequest, MappingID, MappingList, MentionGrant, MentionGrantList, MentionPolicy, NotFoundError, Notification, NotificationEvent, NotificationID, NotificationPage, OriginKind, PageCursor, Post, PostID, PostPage, RemoveBoardMemberRequest, RemoveFriendRequest, Revision, RevisionID, RevisionList, SetBoardMemberRequest, SetMutedRequest, Subscription, SubscriptionID, SubscriptionList, TargetRef, TargetType, Thread, ThreadMode, UnreadSummary, UpdateBoardRequest, UpdateSettingsRequest, UserID, UserKind, UserProfile, UserSettings } from "./types.gen";
+import type { AddFriendRequest, BeginLoginRequest, BeginLoginResponse, Board, BoardID, BoardKind, BoardPage, BoardRole, BoardUnread, Comment, CommentID, CreateBoardRequest, CreateCommentRequest, CreateFriendGroupRequest, CreateMappingRequest, CreatePostRequest, DomainEntry, DomainList, EditCommentRequest, EditPostRequest, Empty, EndorseRequest, Endorsement, EndorsementID, EndorsementList, FriendGroup, FriendGroupList, GetThreadRequest, GithubMapping, GroupID, ListBoardsRequest, ListNotificationsRequest, ListPostsRequest, MappingID, MappingList, MentionGrant, MentionGrantList, MentionPolicy, Notification, NotificationEvent, NotificationID, NotificationPage, OriginKind, PageCursor, Post, PostID, PostPage, RemoveBoardMemberRequest, RemoveFriendRequest, Revision, RevisionID, RevisionList, ServiceError, SetBoardMemberRequest, SetMutedRequest, Subscription, SubscriptionID, SubscriptionList, TargetRef, TargetType, Thread, ThreadMode, UnreadSummary, UpdateBoardRequest, UpdateSettingsRequest, UserID, UserKind, UserProfile, UserSettings } from "./types.gen";
 
 /** A CBOR semantic tag wrapping an inner value (e.g. tag 0 timestamp, tag 4 decimal). */
 export type CborTag = { readonly tag: number; readonly value: CborValue };
@@ -330,74 +330,30 @@ export function fromEmptyCbor(bytes: Uint8Array): Empty {
   return fromEmptyCborValue(decode(bytes));
 }
 
-export function toFirepitErrorCborValue(v: FirepitError): CborValue {
+export function toServiceErrorCborValue(v: ServiceError): CborValue {
   const csilMap = new Map<CborValue, CborValue>();
   csilMap.set("code", v.code);
   if (v.field !== undefined) csilMap.set("field", v.field);
   csilMap.set("message", v.message);
+  if (v.resourceType !== undefined) csilMap.set("resource_type", v.resourceType);
   return csilMap;
 }
 
-export function fromFirepitErrorCborValue(value: CborValue): FirepitError {
+export function fromServiceErrorCborValue(value: CborValue): ServiceError {
   return {
     code: asNumber(requireKey(value, "code")),
     message: asString(requireKey(value, "message")),
     field: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "field")),
+    resourceType: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "resource_type")),
   };
 }
 
-export function toFirepitErrorCbor(v: FirepitError): Uint8Array {
-  return encodeValue(toFirepitErrorCborValue(v));
+export function toServiceErrorCbor(v: ServiceError): Uint8Array {
+  return encodeValue(toServiceErrorCborValue(v));
 }
 
-export function fromFirepitErrorCbor(bytes: Uint8Array): FirepitError {
-  return fromFirepitErrorCborValue(decode(bytes));
-}
-
-export function toAuthErrorCborValue(v: AuthError): CborValue {
-  const csilMap = new Map<CborValue, CborValue>();
-  csilMap.set("code", v.code);
-  csilMap.set("message", v.message);
-  return csilMap;
-}
-
-export function fromAuthErrorCborValue(value: CborValue): AuthError {
-  return {
-    code: asNumber(requireKey(value, "code")),
-    message: asString(requireKey(value, "message")),
-  };
-}
-
-export function toAuthErrorCbor(v: AuthError): Uint8Array {
-  return encodeValue(toAuthErrorCborValue(v));
-}
-
-export function fromAuthErrorCbor(bytes: Uint8Array): AuthError {
-  return fromAuthErrorCborValue(decode(bytes));
-}
-
-export function toNotFoundErrorCborValue(v: NotFoundError): CborValue {
-  const csilMap = new Map<CborValue, CborValue>();
-  csilMap.set("code", v.code);
-  csilMap.set("message", v.message);
-  csilMap.set("resource_type", v.resourceType);
-  return csilMap;
-}
-
-export function fromNotFoundErrorCborValue(value: CborValue): NotFoundError {
-  return {
-    code: asNumber(requireKey(value, "code")),
-    message: asString(requireKey(value, "message")),
-    resourceType: asString(requireKey(value, "resource_type")),
-  };
-}
-
-export function toNotFoundErrorCbor(v: NotFoundError): Uint8Array {
-  return encodeValue(toNotFoundErrorCborValue(v));
-}
-
-export function fromNotFoundErrorCbor(bytes: Uint8Array): NotFoundError {
-  return fromNotFoundErrorCborValue(decode(bytes));
+export function fromServiceErrorCbor(bytes: Uint8Array): ServiceError {
+  return fromServiceErrorCborValue(decode(bytes));
 }
 
 export function toBeginLoginRequestCborValue(v: BeginLoginRequest): CborValue {

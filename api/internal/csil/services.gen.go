@@ -9,9 +9,9 @@ import (
 
 // AuthService defines the service interface
 type AuthService interface {
-	BeginLogin(ctx context.Context, req BeginLoginRequest) (interface{}, error)
+	BeginLogin(ctx context.Context, req BeginLoginRequest) (BeginLoginResponse, error)
 	Logout(ctx context.Context, req Empty) (Empty, error)
-	Whoami(ctx context.Context, req Empty) (interface{}, error)
+	Whoami(ctx context.Context, req Empty) (UserProfile, error)
 }
 
 // Wire-id ordinals for the AuthService service (transport compact profiles).
@@ -23,12 +23,12 @@ const AuthServiceOpWhoamiWireID uint64 = 2
 // BoardService defines the service interface
 type BoardService interface {
 	ListBoards(ctx context.Context, req ListBoardsRequest) (BoardPage, error)
-	GetBoard(ctx context.Context, req BoardSlug) (interface{}, error)
-	CreateBoard(ctx context.Context, req CreateBoardRequest) (interface{}, error)
-	UpdateBoard(ctx context.Context, req UpdateBoardRequest) (interface{}, error)
-	ArchiveBoard(ctx context.Context, req BoardID) (interface{}, error)
-	SetBoardMember(ctx context.Context, req SetBoardMemberRequest) (interface{}, error)
-	RemoveBoardMember(ctx context.Context, req RemoveBoardMemberRequest) (interface{}, error)
+	GetBoard(ctx context.Context, req BoardSlug) (Board, error)
+	CreateBoard(ctx context.Context, req CreateBoardRequest) (Board, error)
+	UpdateBoard(ctx context.Context, req UpdateBoardRequest) (Board, error)
+	ArchiveBoard(ctx context.Context, req BoardID) (Empty, error)
+	SetBoardMember(ctx context.Context, req SetBoardMemberRequest) (Empty, error)
+	RemoveBoardMember(ctx context.Context, req RemoveBoardMemberRequest) (Empty, error)
 }
 
 // Wire-id ordinals for the BoardService service (transport compact profiles).
@@ -45,13 +45,13 @@ const BoardServiceOpRemoveBoardMemberWireID uint64 = 6
 type ThreadService interface {
 	ListPosts(ctx context.Context, req ListPostsRequest) (PostPage, error)
 	GetThread(ctx context.Context, req GetThreadRequest) (Thread, error)
-	CreatePost(ctx context.Context, req CreatePostRequest) (interface{}, error)
-	CreateComment(ctx context.Context, req CreateCommentRequest) (interface{}, error)
-	EditPost(ctx context.Context, req EditPostRequest) (interface{}, error)
-	EditComment(ctx context.Context, req EditCommentRequest) (interface{}, error)
+	CreatePost(ctx context.Context, req CreatePostRequest) (Post, error)
+	CreateComment(ctx context.Context, req CreateCommentRequest) (Comment, error)
+	EditPost(ctx context.Context, req EditPostRequest) (Post, error)
+	EditComment(ctx context.Context, req EditCommentRequest) (Comment, error)
 	ListRevisions(ctx context.Context, req TargetRef) (RevisionList, error)
-	DeletePost(ctx context.Context, req PostID) (interface{}, error)
-	DeleteComment(ctx context.Context, req CommentID) (interface{}, error)
+	DeletePost(ctx context.Context, req PostID) (Empty, error)
+	DeleteComment(ctx context.Context, req CommentID) (Empty, error)
 }
 
 // Wire-id ordinals for the ThreadService service (transport compact profiles).
@@ -68,8 +68,8 @@ const ThreadServiceOpDeleteCommentWireID uint64 = 8
 
 // EndorsementService defines the service interface
 type EndorsementService interface {
-	Endorse(ctx context.Context, req EndorseRequest) (interface{}, error)
-	Retract(ctx context.Context, req EndorseRequest) (interface{}, error)
+	Endorse(ctx context.Context, req EndorseRequest) (Endorsement, error)
+	Retract(ctx context.Context, req EndorseRequest) (Empty, error)
 	ListEndorsements(ctx context.Context, req TargetRef) (EndorsementList, error)
 }
 
@@ -82,10 +82,10 @@ const EndorsementServiceOpListEndorsementsWireID uint64 = 2
 // SettingsService defines the service interface
 type SettingsService interface {
 	GetSettings(ctx context.Context, req Empty) (UserSettings, error)
-	UpdateSettings(ctx context.Context, req UpdateSettingsRequest) (interface{}, error)
+	UpdateSettings(ctx context.Context, req UpdateSettingsRequest) (UserSettings, error)
 	ListMentionGrants(ctx context.Context, req Empty) (MentionGrantList, error)
-	GrantMention(ctx context.Context, req UserID) (interface{}, error)
-	RevokeMention(ctx context.Context, req UserID) (interface{}, error)
+	GrantMention(ctx context.Context, req UserID) (Empty, error)
+	RevokeMention(ctx context.Context, req UserID) (Empty, error)
 }
 
 // Wire-id ordinals for the SettingsService service (transport compact profiles).
@@ -99,10 +99,10 @@ const SettingsServiceOpRevokeMentionWireID uint64 = 4
 // SocialService defines the service interface
 type SocialService interface {
 	ListFriendGroups(ctx context.Context, req Empty) (FriendGroupList, error)
-	CreateFriendGroup(ctx context.Context, req CreateFriendGroupRequest) (interface{}, error)
-	DeleteFriendGroup(ctx context.Context, req GroupID) (interface{}, error)
-	AddFriend(ctx context.Context, req AddFriendRequest) (interface{}, error)
-	RemoveFriend(ctx context.Context, req RemoveFriendRequest) (interface{}, error)
+	CreateFriendGroup(ctx context.Context, req CreateFriendGroupRequest) (FriendGroup, error)
+	DeleteFriendGroup(ctx context.Context, req GroupID) (Empty, error)
+	AddFriend(ctx context.Context, req AddFriendRequest) (Empty, error)
+	RemoveFriend(ctx context.Context, req RemoveFriendRequest) (Empty, error)
 }
 
 // Wire-id ordinals for the SocialService service (transport compact profiles).
@@ -115,9 +115,9 @@ const SocialServiceOpRemoveFriendWireID uint64 = 4
 
 // SubscriptionService defines the service interface
 type SubscriptionService interface {
-	Subscribe(ctx context.Context, req TargetRef) (interface{}, error)
-	Unsubscribe(ctx context.Context, req TargetRef) (interface{}, error)
-	SetMuted(ctx context.Context, req SetMutedRequest) (interface{}, error)
+	Subscribe(ctx context.Context, req TargetRef) (Subscription, error)
+	Unsubscribe(ctx context.Context, req TargetRef) (Empty, error)
+	SetMuted(ctx context.Context, req SetMutedRequest) (Subscription, error)
 	ListSubscriptions(ctx context.Context, req Empty) (SubscriptionList, error)
 }
 
@@ -156,11 +156,11 @@ const NotificationServiceOpMarkAllReadWireID uint64 = 2
 
 // IntegrationService defines the service interface
 type IntegrationService interface {
-	CreateGithubMapping(ctx context.Context, req CreateMappingRequest) (interface{}, error)
+	CreateGithubMapping(ctx context.Context, req CreateMappingRequest) (GithubMapping, error)
 	ListGithubMappings(ctx context.Context, req Empty) (MappingList, error)
-	DeleteGithubMapping(ctx context.Context, req MappingID) (interface{}, error)
-	AddTrustedDomain(ctx context.Context, req Domain) (interface{}, error)
-	RemoveTrustedDomain(ctx context.Context, req Domain) (interface{}, error)
+	DeleteGithubMapping(ctx context.Context, req MappingID) (Empty, error)
+	AddTrustedDomain(ctx context.Context, req Domain) (Empty, error)
+	RemoveTrustedDomain(ctx context.Context, req Domain) (Empty, error)
 	ListTrustedDomains(ctx context.Context, req Empty) (DomainList, error)
 }
 

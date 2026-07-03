@@ -41,7 +41,14 @@ func NewAuthClient(transport Transport) *AuthClient {
 	return &AuthClient{transport: transport}
 }
 
-// operation begin-login has a payload csilgen can't (de)serialize; handle it manually
+func (c *AuthClient) BeginLogin(ctx context.Context, req BeginLoginRequest) (BeginLoginResponse, error) {
+	var csilZero BeginLoginResponse
+	csilResp, csilErr := c.transport.Call(ctx, "auth", "BeginLogin", EncodeBeginLoginRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeBeginLoginResponse(csilResp)
+}
 
 func (c *AuthClient) Logout(ctx context.Context, req Empty) (Empty, error) {
 	var csilZero Empty
@@ -52,7 +59,14 @@ func (c *AuthClient) Logout(ctx context.Context, req Empty) (Empty, error) {
 	return DecodeEmpty(csilResp)
 }
 
-// operation whoami has a payload csilgen can't (de)serialize; handle it manually
+func (c *AuthClient) Whoami(ctx context.Context, req Empty) (UserProfile, error) {
+	var csilZero UserProfile
+	csilResp, csilErr := c.transport.Call(ctx, "auth", "Whoami", EncodeEmpty(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeUserProfile(csilResp)
+}
 
 // BoardClient is a typed client for the BoardService service. The client owns
 // (de)serialization via the generated codec; the transport only moves bytes.
@@ -73,17 +87,59 @@ func (c *BoardClient) ListBoards(ctx context.Context, req ListBoardsRequest) (Bo
 	return DecodeBoardPage(csilResp)
 }
 
-// operation get-board has a payload csilgen can't (de)serialize; handle it manually
+func (c *BoardClient) GetBoard(ctx context.Context, req BoardSlug) (Board, error) {
+	var csilZero Board
+	csilResp, csilErr := c.transport.Call(ctx, "board", "GetBoard", EncodeBoardGetBoardRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeBoard(csilResp)
+}
 
-// operation create-board has a payload csilgen can't (de)serialize; handle it manually
+func (c *BoardClient) CreateBoard(ctx context.Context, req CreateBoardRequest) (Board, error) {
+	var csilZero Board
+	csilResp, csilErr := c.transport.Call(ctx, "board", "CreateBoard", EncodeCreateBoardRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeBoard(csilResp)
+}
 
-// operation update-board has a payload csilgen can't (de)serialize; handle it manually
+func (c *BoardClient) UpdateBoard(ctx context.Context, req UpdateBoardRequest) (Board, error) {
+	var csilZero Board
+	csilResp, csilErr := c.transport.Call(ctx, "board", "UpdateBoard", EncodeUpdateBoardRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeBoard(csilResp)
+}
 
-// operation archive-board has a payload csilgen can't (de)serialize; handle it manually
+func (c *BoardClient) ArchiveBoard(ctx context.Context, req BoardID) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "board", "ArchiveBoard", EncodeBoardArchiveBoardRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
-// operation set-board-member has a payload csilgen can't (de)serialize; handle it manually
+func (c *BoardClient) SetBoardMember(ctx context.Context, req SetBoardMemberRequest) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "board", "SetBoardMember", EncodeSetBoardMemberRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
-// operation remove-board-member has a payload csilgen can't (de)serialize; handle it manually
+func (c *BoardClient) RemoveBoardMember(ctx context.Context, req RemoveBoardMemberRequest) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "board", "RemoveBoardMember", EncodeRemoveBoardMemberRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
 // ThreadClient is a typed client for the ThreadService service. The client owns
 // (de)serialization via the generated codec; the transport only moves bytes.
@@ -113,13 +169,41 @@ func (c *ThreadClient) GetThread(ctx context.Context, req GetThreadRequest) (Thr
 	return DecodeThread(csilResp)
 }
 
-// operation create-post has a payload csilgen can't (de)serialize; handle it manually
+func (c *ThreadClient) CreatePost(ctx context.Context, req CreatePostRequest) (Post, error) {
+	var csilZero Post
+	csilResp, csilErr := c.transport.Call(ctx, "thread", "CreatePost", EncodeCreatePostRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodePost(csilResp)
+}
 
-// operation create-comment has a payload csilgen can't (de)serialize; handle it manually
+func (c *ThreadClient) CreateComment(ctx context.Context, req CreateCommentRequest) (Comment, error) {
+	var csilZero Comment
+	csilResp, csilErr := c.transport.Call(ctx, "thread", "CreateComment", EncodeCreateCommentRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeComment(csilResp)
+}
 
-// operation edit-post has a payload csilgen can't (de)serialize; handle it manually
+func (c *ThreadClient) EditPost(ctx context.Context, req EditPostRequest) (Post, error) {
+	var csilZero Post
+	csilResp, csilErr := c.transport.Call(ctx, "thread", "EditPost", EncodeEditPostRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodePost(csilResp)
+}
 
-// operation edit-comment has a payload csilgen can't (de)serialize; handle it manually
+func (c *ThreadClient) EditComment(ctx context.Context, req EditCommentRequest) (Comment, error) {
+	var csilZero Comment
+	csilResp, csilErr := c.transport.Call(ctx, "thread", "EditComment", EncodeEditCommentRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeComment(csilResp)
+}
 
 func (c *ThreadClient) ListRevisions(ctx context.Context, req TargetRef) (RevisionList, error) {
 	var csilZero RevisionList
@@ -130,9 +214,23 @@ func (c *ThreadClient) ListRevisions(ctx context.Context, req TargetRef) (Revisi
 	return DecodeRevisionList(csilResp)
 }
 
-// operation delete-post has a payload csilgen can't (de)serialize; handle it manually
+func (c *ThreadClient) DeletePost(ctx context.Context, req PostID) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "thread", "DeletePost", EncodeThreadDeletePostRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
-// operation delete-comment has a payload csilgen can't (de)serialize; handle it manually
+func (c *ThreadClient) DeleteComment(ctx context.Context, req CommentID) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "thread", "DeleteComment", EncodeThreadDeleteCommentRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
 // EndorsementClient is a typed client for the EndorsementService service. The client owns
 // (de)serialization via the generated codec; the transport only moves bytes.
@@ -144,9 +242,23 @@ func NewEndorsementClient(transport Transport) *EndorsementClient {
 	return &EndorsementClient{transport: transport}
 }
 
-// operation endorse has a payload csilgen can't (de)serialize; handle it manually
+func (c *EndorsementClient) Endorse(ctx context.Context, req EndorseRequest) (Endorsement, error) {
+	var csilZero Endorsement
+	csilResp, csilErr := c.transport.Call(ctx, "endorsement", "Endorse", EncodeEndorseRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEndorsement(csilResp)
+}
 
-// operation retract has a payload csilgen can't (de)serialize; handle it manually
+func (c *EndorsementClient) Retract(ctx context.Context, req EndorseRequest) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "endorsement", "Retract", EncodeEndorseRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
 func (c *EndorsementClient) ListEndorsements(ctx context.Context, req TargetRef) (EndorsementList, error) {
 	var csilZero EndorsementList
@@ -176,7 +288,14 @@ func (c *SettingsClient) GetSettings(ctx context.Context, req Empty) (UserSettin
 	return DecodeUserSettings(csilResp)
 }
 
-// operation update-settings has a payload csilgen can't (de)serialize; handle it manually
+func (c *SettingsClient) UpdateSettings(ctx context.Context, req UpdateSettingsRequest) (UserSettings, error) {
+	var csilZero UserSettings
+	csilResp, csilErr := c.transport.Call(ctx, "settings", "UpdateSettings", EncodeUpdateSettingsRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeUserSettings(csilResp)
+}
 
 func (c *SettingsClient) ListMentionGrants(ctx context.Context, req Empty) (MentionGrantList, error) {
 	var csilZero MentionGrantList
@@ -187,9 +306,23 @@ func (c *SettingsClient) ListMentionGrants(ctx context.Context, req Empty) (Ment
 	return DecodeMentionGrantList(csilResp)
 }
 
-// operation grant-mention has a payload csilgen can't (de)serialize; handle it manually
+func (c *SettingsClient) GrantMention(ctx context.Context, req UserID) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "settings", "GrantMention", EncodeSettingsGrantMentionRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
-// operation revoke-mention has a payload csilgen can't (de)serialize; handle it manually
+func (c *SettingsClient) RevokeMention(ctx context.Context, req UserID) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "settings", "RevokeMention", EncodeSettingsRevokeMentionRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
 // SocialClient is a typed client for the SocialService service. The client owns
 // (de)serialization via the generated codec; the transport only moves bytes.
@@ -210,13 +343,41 @@ func (c *SocialClient) ListFriendGroups(ctx context.Context, req Empty) (FriendG
 	return DecodeFriendGroupList(csilResp)
 }
 
-// operation create-friend-group has a payload csilgen can't (de)serialize; handle it manually
+func (c *SocialClient) CreateFriendGroup(ctx context.Context, req CreateFriendGroupRequest) (FriendGroup, error) {
+	var csilZero FriendGroup
+	csilResp, csilErr := c.transport.Call(ctx, "social", "CreateFriendGroup", EncodeCreateFriendGroupRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeFriendGroup(csilResp)
+}
 
-// operation delete-friend-group has a payload csilgen can't (de)serialize; handle it manually
+func (c *SocialClient) DeleteFriendGroup(ctx context.Context, req GroupID) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "social", "DeleteFriendGroup", EncodeSocialDeleteFriendGroupRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
-// operation add-friend has a payload csilgen can't (de)serialize; handle it manually
+func (c *SocialClient) AddFriend(ctx context.Context, req AddFriendRequest) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "social", "AddFriend", EncodeAddFriendRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
-// operation remove-friend has a payload csilgen can't (de)serialize; handle it manually
+func (c *SocialClient) RemoveFriend(ctx context.Context, req RemoveFriendRequest) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "social", "RemoveFriend", EncodeRemoveFriendRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
 // SubscriptionClient is a typed client for the SubscriptionService service. The client owns
 // (de)serialization via the generated codec; the transport only moves bytes.
@@ -228,11 +389,32 @@ func NewSubscriptionClient(transport Transport) *SubscriptionClient {
 	return &SubscriptionClient{transport: transport}
 }
 
-// operation subscribe has a payload csilgen can't (de)serialize; handle it manually
+func (c *SubscriptionClient) Subscribe(ctx context.Context, req TargetRef) (Subscription, error) {
+	var csilZero Subscription
+	csilResp, csilErr := c.transport.Call(ctx, "subscription", "Subscribe", EncodeTargetRef(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeSubscription(csilResp)
+}
 
-// operation unsubscribe has a payload csilgen can't (de)serialize; handle it manually
+func (c *SubscriptionClient) Unsubscribe(ctx context.Context, req TargetRef) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "subscription", "Unsubscribe", EncodeTargetRef(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
-// operation set-muted has a payload csilgen can't (de)serialize; handle it manually
+func (c *SubscriptionClient) SetMuted(ctx context.Context, req SetMutedRequest) (Subscription, error) {
+	var csilZero Subscription
+	csilResp, csilErr := c.transport.Call(ctx, "subscription", "SetMuted", EncodeSetMutedRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeSubscription(csilResp)
+}
 
 func (c *SubscriptionClient) ListSubscriptions(ctx context.Context, req Empty) (SubscriptionList, error) {
 	var csilZero SubscriptionList
@@ -327,7 +509,14 @@ func NewIntegrationClient(transport Transport) *IntegrationClient {
 	return &IntegrationClient{transport: transport}
 }
 
-// operation create-github-mapping has a payload csilgen can't (de)serialize; handle it manually
+func (c *IntegrationClient) CreateGithubMapping(ctx context.Context, req CreateMappingRequest) (GithubMapping, error) {
+	var csilZero GithubMapping
+	csilResp, csilErr := c.transport.Call(ctx, "integration", "CreateGithubMapping", EncodeCreateMappingRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeGithubMapping(csilResp)
+}
 
 func (c *IntegrationClient) ListGithubMappings(ctx context.Context, req Empty) (MappingList, error) {
 	var csilZero MappingList
@@ -338,11 +527,32 @@ func (c *IntegrationClient) ListGithubMappings(ctx context.Context, req Empty) (
 	return DecodeMappingList(csilResp)
 }
 
-// operation delete-github-mapping has a payload csilgen can't (de)serialize; handle it manually
+func (c *IntegrationClient) DeleteGithubMapping(ctx context.Context, req MappingID) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "integration", "DeleteGithubMapping", EncodeIntegrationDeleteGithubMappingRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
-// operation add-trusted-domain has a payload csilgen can't (de)serialize; handle it manually
+func (c *IntegrationClient) AddTrustedDomain(ctx context.Context, req Domain) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "integration", "AddTrustedDomain", EncodeIntegrationAddTrustedDomainRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
-// operation remove-trusted-domain has a payload csilgen can't (de)serialize; handle it manually
+func (c *IntegrationClient) RemoveTrustedDomain(ctx context.Context, req Domain) (Empty, error) {
+	var csilZero Empty
+	csilResp, csilErr := c.transport.Call(ctx, "integration", "RemoveTrustedDomain", EncodeIntegrationRemoveTrustedDomainRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeEmpty(csilResp)
+}
 
 func (c *IntegrationClient) ListTrustedDomains(ctx context.Context, req Empty) (DomainList, error) {
 	var csilZero DomainList
