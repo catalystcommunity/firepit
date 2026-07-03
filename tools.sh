@@ -8,6 +8,9 @@
 #   ./tools.sh test-integration   # testcontainers-backed integration suite
 #   ./tools.sh lint                # go vet (api + coredb) + eslint (webapp, if configured)
 #   ./tools.sh migrate [up|down|status]   # goose migrate against DB_URI (default: docker-compose postgres)
+#   ./tools.sh seed [--demo] [--admin domain:user_id ...] [--github-mappings]
+#                                    # idempotent data seeder (api/cmd/firepit-seed) against
+#                                    # FIREPIT_DB_URI/DB_URI (default: docker-compose postgres)
 #   ./tools.sh dev                  # docker compose up (postgres [+ linkkeys-rp] + api + webapp)
 #   ./tools.sh build-images          # build deployable container images
 #
@@ -39,6 +42,10 @@ Commands:
   lint               go vet (api, coredb) + eslint (webapp, if configured)
   migrate [verb]     Run goose against \$DB_URI (default: docker-compose postgres).
                      verb is one of up|down|status (default: up).
+  seed [flags...]    Run the idempotent seeder (api/cmd/firepit-seed) against
+                     \$FIREPIT_DB_URI / \$DB_URI (default: docker-compose postgres).
+                     Flags: --demo, --admin domain:user_id (repeatable),
+                     --github-mappings. Run migrate first.
   dev                Boot the local dev stack via docker compose
   build-images       Build deployable container images (api, webapp)
 EOF
@@ -227,6 +234,17 @@ cmd_migrate() {
     ( cd "$SCRIPT_DIR/coredb" && go run ./cmd/migrate "$verb" )
 }
 
+cmd_seed() {
+    log_status "seed"
+    # api/cmd/firepit-seed reads FIREPIT_DB_URI (falling back to DB_URI, then
+    # the same docker-compose default cmd_migrate's `go run ./cmd/migrate`
+    # uses) itself — this verb just forwards every flag after "seed" to it,
+    # same as cmd_migrate forwards its own verb argument. Run `./tools.sh
+    # migrate` first; this does not run migrations.
+    shift || true
+    ( cd "$SCRIPT_DIR/api" && go run ./cmd/firepit-seed "$@" )
+}
+
 cmd_dev() {
     log_status "dev"
     command -v docker >/dev/null 2>&1 || { err "docker is required for './tools.sh dev'"; exit 1; }
@@ -274,6 +292,7 @@ case "${1:-}" in
     test-integration)  cmd_test_integration ;;
     lint)              cmd_lint ;;
     migrate)           cmd_migrate "$@" ;;
+    seed)              cmd_seed "$@" ;;
     dev)               cmd_dev ;;
     build-images)      cmd_build_images ;;
     ""|-h|--help|help) usage ;;
