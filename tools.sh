@@ -7,7 +7,7 @@
 #   ./tools.sh test               # go test (api + coredb) + npm test (webapp)
 #   ./tools.sh test-integration   # testcontainers-backed integration suite
 #   ./tools.sh lint                # go vet (api + coredb) + eslint (webapp, if configured)
-#   ./tools.sh migrate             # goose migrate against DB_URI
+#   ./tools.sh migrate [up|down|status]   # goose migrate against DB_URI (default: docker-compose postgres)
 #   ./tools.sh dev                  # docker compose up (postgres [+ linkkeys-rp] + api + webapp)
 #   ./tools.sh build-images          # build deployable container images
 #
@@ -37,7 +37,8 @@ Commands:
   test               Run all tests: go test (api, coredb) + npm test (webapp)
   test-integration   Run the testcontainers-backed integration suite
   lint               go vet (api, coredb) + eslint (webapp, if configured)
-  migrate            Run goose migrations against \$DB_URI
+  migrate [verb]     Run goose against \$DB_URI (default: docker-compose postgres).
+                     verb is one of up|down|status (default: up).
   dev                Boot the local dev stack via docker compose
   build-images       Build deployable container images (api, webapp)
 EOF
@@ -69,7 +70,12 @@ cmd_test() {
 
 cmd_test_integration() {
     log_status "test-integration"
-    not_implemented "test-integration (testcontainers Postgres suite lands with task A3/B1)"
+    command -v docker >/dev/null 2>&1 || { err "docker is required for './tools.sh test-integration' (testcontainers)"; exit 1; }
+
+    log_status "go test -tags=integration (api/internal/store)"
+    ( cd "$SCRIPT_DIR/api" && go test -tags=integration ./internal/store/... )
+
+    log_status "test-integration passed"
 }
 
 cmd_lint() {
@@ -93,7 +99,12 @@ cmd_lint() {
 
 cmd_migrate() {
     log_status "migrate"
-    not_implemented "migrate (goose wiring lands with task A3)"
+    local verb="${2:-up}"
+    case "$verb" in
+        up|down|status) ;;
+        *) err "unknown migrate verb: $verb (expected up|down|status)"; exit 1 ;;
+    esac
+    ( cd "$SCRIPT_DIR/coredb" && go run ./cmd/migrate "$verb" )
 }
 
 cmd_dev() {
@@ -112,7 +123,7 @@ case "${1:-}" in
     test)              cmd_test ;;
     test-integration)  cmd_test_integration ;;
     lint)              cmd_lint ;;
-    migrate)           cmd_migrate ;;
+    migrate)           cmd_migrate "$@" ;;
     dev)               cmd_dev ;;
     build-images)      cmd_build_images ;;
     ""|-h|--help|help) usage ;;
