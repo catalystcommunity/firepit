@@ -1,0 +1,45 @@
+{
+  "action": "closed",
+  "number": 8,
+  "pull_request": {
+    "id": 2046592999,
+    "node_id": "PR_kwDOJj8Ks85_efgh",
+    "number": 8,
+    "title": "WIP: experiment with a different ltree scheme",
+    "user": {
+      "login": "octocat",
+      "id": 583231,
+      "type": "User"
+    },
+    "body": "Abandoning this approach.",
+    "state": "closed",
+    "locked": false,
+    "merged": false,
+    "merged_at": null,
+    "html_url": "https://github.com/catalystcommunity/firepit/pull/8",
+    "base": {
+      "ref": "main"
+    },
+    "head": {
+      "ref": "experiment-ltree"
+    }
+  },
+  "repository": {
+    "id": 1296269,
+    "node_id": "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
+    "name": "firepit",
+    "full_name": "catalystcommunity/firepit",
+    "private": false,
+    "owner": {
+      "login": "catalystcommunity",
+      "id": 583231,
+      "type": "Organization"
+    },
+    "html_url": "https://github.com/catalystcommunity/firepit"
+  },
+  "sender": {
+    "login": "octocat",
+    "id": 583231,
+    "type": "User"
+  }
+}

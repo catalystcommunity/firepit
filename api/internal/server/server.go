@@ -57,6 +57,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST "+rpcMountPath, s.handleRPC)
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
+	s.registerGithubWebhookRoutes(mux)
 
 	var handler http.Handler = mux
 	handler = sessionMiddleware(s.store)(handler)

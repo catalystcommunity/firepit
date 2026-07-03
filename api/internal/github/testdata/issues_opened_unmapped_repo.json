@@ -1,0 +1,38 @@
+{
+  "action": "opened",
+  "issue": {
+    "id": 1935423999,
+    "node_id": "I_kwDOJj8Ks85xwiqZ",
+    "number": 1,
+    "title": "Some issue in a repo firepit doesn't know about",
+    "user": {
+      "login": "octocat",
+      "id": 583231,
+      "type": "User"
+    },
+    "labels": [],
+    "state": "open",
+    "locked": false,
+    "comments": 0,
+    "body": "This repo has no github_mappings row.",
+    "html_url": "https://github.com/someoneelse/other-repo/issues/1"
+  },
+  "repository": {
+    "id": 9999999,
+    "node_id": "MDEwOlJlcG9zaXRvcnk5OTk5OTk5",
+    "name": "other-repo",
+    "full_name": "someoneelse/other-repo",
+    "private": false,
+    "owner": {
+      "login": "someoneelse",
+      "id": 1,
+      "type": "Organization"
+    },
+    "html_url": "https://github.com/someoneelse/other-repo"
+  },
+  "sender": {
+    "login": "octocat",
+    "id": 583231,
+    "type": "User"
+  }
+}
