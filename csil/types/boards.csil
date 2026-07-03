@@ -1,0 +1,101 @@
+;; Types for BoardService — per-project/topic discussion boards, membership
+;; roles, and (admin-only) creation/archival (PLANDOC.md §4, §5).
+
+;; NOTE: does not `include "common.csil"` directly — csilgen has a
+;; generator bug where a type reachable via more than one `include`
+;; edge in a single compilation is emitted twice (duplicate Go/TS
+;; symbols); see the workaround note in csil/firepit.csil. This file
+;; uses common.csil's types (UserID, BoardID, ..., TargetType, Empty)
+;; relying on firepit.csil including common.csil exactly once, before
+;; this file — CSIL resolves names in one flat namespace across a
+;; compilation, so include order/location doesn't matter, only count.
+
+;;; A board's discussion style. `discussion` is open two-way threading;
+;;; `announce` is intended for boards where only maintainers/mods post
+;;; roots but anyone can still comment (enforced by ThreadService, not by
+;;; this type).
+BoardKind = "discussion" / "announce"
+
+;;; A per-board role granted to a user via set-board-member.
+;;; `maintainer` represents the upstream project's owner; `moderator` is a
+;;; delegated moderation role. Both may endorse with a badge (see
+;;; EndorsementService) and both may edit board metadata / manage the
+;;; other role; only `maintainer` may remove another maintainer.
+BoardRole = "maintainer" / "moderator"
+
+;;; A board's slug, used as the get-board lookup key (bare-typed request —
+;;; no wrapper group needed for a single-scalar payload).
+BoardSlug = text
+
+;;; A board: the top-level container posts live in.
+Board = {
+    @receive-only
+    id: BoardID,
+
+    ;;; URL-safe, unique, immutable after creation.
+    slug: text .size (1..64) .regex "^[a-z0-9]+(-[a-z0-9]+)*$",
+
+    title: text .size (1..256),
+
+    ? description: text .size (0..2000),
+
+    kind: BoardKind,
+
+    @receive-only
+    created_by: UserID,
+
+    ;;; Set when an admin has archived the board (read-only afterward, still
+    ;;; browsable). Absent while the board is active.
+    @receive-only
+    ? archived_at: timestamp,
+
+    @receive-only
+    created_at: timestamp
+}
+
+;;; Cursor-paginated board listing. Boards are ordered by `title` — there is
+;;; no activity-based ordering at the board level (only posts within a board
+;;; are activity-ordered).
+ListBoardsRequest = {
+    ? cursor: PageCursor,
+    ? limit: uint .default 50 .le 200
+}
+
+BoardPage = {
+    boards: [* Board],
+    ? next_cursor: PageCursor
+}
+
+;;; Admin-only: create-board. `slug` must be unique; `kind` defaults are the
+;;; caller's choice (no server default — an empty board with no stated
+;;; purpose is a modeling error worth catching at creation).
+CreateBoardRequest = {
+    slug: text .size (1..64) .regex "^[a-z0-9]+(-[a-z0-9]+)*$",
+    title: text .size (1..256),
+    ? description: text .size (0..2000),
+    kind: BoardKind
+}
+
+;;; Admin-only: update-board. Only the fields present are changed; `slug`
+;;; and `kind` are immutable post-creation (not present here at all — to
+;;; change a board's slug, archive it and create a new one).
+UpdateBoardRequest = {
+    id: BoardID,
+    ? title: text .size (1..256),
+    ? description: text .size (0..2000)
+}
+
+;;; Admin: assign or change a user's role on a board. Idempotent — setting
+;;; the same role twice is a no-op; setting a different role replaces it.
+SetBoardMemberRequest = {
+    board_id: BoardID,
+    user_id: UserID,
+    role: BoardRole
+}
+
+;;; Maintainer/moderator: remove a user's board role entirely (they remain a
+;;; regular member with no special privileges on the board).
+RemoveBoardMemberRequest = {
+    board_id: BoardID,
+    user_id: UserID
+}

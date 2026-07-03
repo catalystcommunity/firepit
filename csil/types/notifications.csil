@@ -1,0 +1,64 @@
+;; Types for NotificationService — the fan-out target every subscription,
+;; mention, and endorsement notification lands in (PLANDOC.md §4, §5).
+
+;; NOTE: does not `include "common.csil"` directly — csilgen has a
+;; generator bug where a type reachable via more than one `include`
+;; edge in a single compilation is emitted twice (duplicate Go/TS
+;; symbols); see the workaround note in csil/firepit.csil. This file
+;; uses common.csil's types (UserID, BoardID, ..., TargetType, Empty)
+;; relying on firepit.csil including common.csil exactly once, before
+;; this file — CSIL resolves names in one flat namespace across a
+;; compilation, so include order/location doesn't matter, only count.
+
+;;; What kind of event produced a notification.
+NotificationEvent = "new_post" / "new_comment" / "mention" / "github_event"
+
+;;; One recipient's copy of a fan-out event. Denormalized enough to render
+;;; without a follow-up fetch in the common case; `target_type`/`target_id`
+;;; are metadata for deep-linking, not guaranteed to still resolve (the
+;;; underlying content may since have been deleted).
+Notification = {
+    @receive-only
+    id: NotificationID,
+
+    @receive-only
+    event: NotificationEvent,
+
+    ;;; Absent for events with no single actor (there generally always is
+    ;;; one in v1, but this stays optional for forward compatibility with
+    ;;; system-generated notifications that have none).
+    @receive-only
+    ? actor_id: UserID,
+
+    @receive-only
+    target_type: TargetType,
+
+    @receive-only
+    target_id: text,
+
+    ;;; The post the target lives under (itself, if target_type is "post"),
+    ;;; so the UI can deep-link straight into the thread.
+    @receive-only
+    post_id: PostID,
+
+    @receive-only
+    ? read_at: timestamp,
+
+    @receive-only
+    created_at: timestamp
+}
+
+ListNotificationsRequest = {
+    ? cursor: PageCursor,
+    ? limit: uint .default 50 .le 200,
+    ? unread_only: bool .default false
+}
+
+NotificationPage = {
+    notifications: [* Notification],
+    ? next_cursor: PageCursor
+}
+
+;;; mark-notification-read's request: the set of notification ids to mark
+;;; read in one call (bare array — no wrapper group needed).
+NotificationIDs = [* NotificationID]

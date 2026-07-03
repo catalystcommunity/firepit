@@ -1,0 +1,51 @@
+;; Types for SettingsService — per-user mention policy, endorsement
+;; notification opt-out, and the mention-grants list (PLANDOC.md §4, §5).
+
+;; NOTE: does not `include "common.csil"` directly — csilgen has a
+;; generator bug where a type reachable via more than one `include`
+;; edge in a single compilation is emitted twice (duplicate Go/TS
+;; symbols); see the workaround note in csil/firepit.csil. This file
+;; uses common.csil's types (UserID, BoardID, ..., TargetType, Empty)
+;; relying on firepit.csil including common.csil exactly once, before
+;; this file — CSIL resolves names in one flat namespace across a
+;; compilation, so include order/location doesn't matter, only count.
+
+;;; Who may @mention-notify the caller, beyond contexts they subscribe to.
+;;; `subscribed` (default): a mention notifies only inside a board/post/
+;;; comment subtree the caller already subscribes to, OR when the author
+;;; holds a mention_grants row from the caller. `everyone`: any mention
+;;; notifies. `authorized`: only users the caller has explicitly granted
+;;; (mention_grants), regardless of subscriptions. `nobody`: mentions never
+;;; notify (the @handle still renders as text).
+MentionPolicy = "subscribed" / "everyone" / "authorized" / "nobody"
+
+;;; The caller's own settings, as returned by get-settings/update-settings.
+UserSettings = {
+    mention_policy: MentionPolicy .default "subscribed",
+
+    ;;; Whether endorsing the caller's content notifies them. Opt-out, not
+    ;;; opt-in — defaults true.
+    notify_on_endorse: bool .default true,
+
+    @receive-only
+    ? updated_at: timestamp
+}
+
+;;; Partial update — only the fields present are changed.
+UpdateSettingsRequest = {
+    ? mention_policy: MentionPolicy,
+    ? notify_on_endorse: bool
+}
+
+;;; One user the caller has granted permanent mention-notify permission to
+;;; (independent of subscriptions — see MentionPolicy "subscribed").
+MentionGrant = {
+    user_id: UserID,
+
+    @receive-only
+    created_at: timestamp
+}
+
+MentionGrantList = {
+    grants: [* MentionGrant]
+}

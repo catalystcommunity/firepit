@@ -1,0 +1,29 @@
+;; Types for ReadService — the poll endpoint (unread-summary) plus the
+;; mark-read/mark-unread ops, which reuse the shared TargetRef from
+;; common.csil directly (no service-specific request type needed for those
+;; two). See PLANDOC.md §4 "Read model is hybrid": a per-post watermark plus
+;; manual unread_overrides pins.
+
+;; NOTE: does not `include "common.csil"` directly — csilgen has a
+;; generator bug where a type reachable via more than one `include`
+;; edge in a single compilation is emitted twice (duplicate Go/TS
+;; symbols); see the workaround note in csil/firepit.csil. This file
+;; uses common.csil's types (UserID, BoardID, ..., TargetType, Empty)
+;; relying on firepit.csil including common.csil exactly once, before
+;; this file — CSIL resolves names in one flat namespace across a
+;; compilation, so include order/location doesn't matter, only count.
+
+;;; One board's contribution to the unread summary: a count plus the
+;;; specific posts carrying unread activity, so the UI can badge both the
+;;; board list and individual posts from one poll.
+BoardUnread = {
+    board_id: BoardID,
+    unread_count: uint,
+    unread_post_ids: [* PostID]
+}
+
+;;; The full per-viewer unread picture, polled by the UI to drive badges.
+;;; Boards with zero unread are omitted rather than sent with a zero count.
+UnreadSummary = {
+    boards: [* BoardUnread]
+}
