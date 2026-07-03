@@ -2,7 +2,10 @@ module github.com/catalystcommunity/firepit/api
 
 go 1.26.4
 
-require github.com/sirupsen/logrus v1.9.4
+require (
+	github.com/rs/cors v1.11.1
+	github.com/sirupsen/logrus v1.9.4
+)
 
 require (
 	github.com/mfridman/interpolate v0.0.2 // indirect

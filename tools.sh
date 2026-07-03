@@ -195,6 +195,9 @@ cmd_test_integration() {
     log_status "go test -tags=integration (api/internal/store)"
     ( cd "$SCRIPT_DIR/api" && go test -tags=integration ./internal/store/... )
 
+    log_status "go test -tags=integration (api/internal/server)"
+    ( cd "$SCRIPT_DIR/api" && go test -tags=integration ./internal/server/... )
+
     log_status "test-integration passed"
 }
 

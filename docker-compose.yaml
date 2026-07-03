@@ -2,9 +2,10 @@
 #
 # Usage: ./tools.sh dev   (or `docker compose up` directly)
 #
-# Only postgres actually runs today — api/webapp build nothing yet (Wave B/C).
-# Their entries are placeholders so the shape of the eventual stack is
-# visible; uncomment as those images become buildable (task D1).
+# postgres + api run today (task B1's Dockerfile at api/Dockerfile). webapp
+# builds nothing yet (Wave C) — its entry is a placeholder so the shape of
+# the eventual stack is visible; uncomment as that image becomes buildable
+# (task D1).
 services:
   postgres:
     image: postgres:17
@@ -38,25 +39,26 @@ services:
   #   networks:
   #     - firepit
 
-  # firepit-api (Go). No Dockerfile/image yet — task B1 stands up the
-  # server, task D1 adds the build. Uncomment once `./tools.sh build-images`
-  # produces something runnable.
-  # api:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.api
-  #   image: firepit/api:dev
-  #   container_name: firepit-api-dev
-  #   environment:
-  #     FIREPIT_DB_URI: "postgresql://firepit:devpass123@postgres:5432/firepit_db?sslmode=disable"
-  #     FIREPIT_API_PORT: "8080"
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   networks:
-  #     - firepit
+  # firepit-api (Go). Built from the repo root so api/Dockerfile can reach
+  # the sibling coredb/ module api/go.mod replaces onto ../coredb.
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: firepit/api:dev
+    container_name: firepit-api-dev
+    environment:
+      FIREPIT_DB_URI: "postgresql://firepit:devpass123@postgres:5432/firepit_db?sslmode=disable"
+      FIREPIT_PORT: "8080"
+      FIREPIT_MIGRATE_ON_BOOT: "true"
+      FIREPIT_CORS_ORIGINS: "*"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - firepit
 
   # webapp (SolidJS SPA via Vite). No Dockerfile/image yet — placeholder
   # until task D1.

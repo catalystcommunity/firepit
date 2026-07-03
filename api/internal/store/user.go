@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"time"
 )
 
@@ -17,6 +18,16 @@ type User struct {
 }
 
 func (User) TableName() string { return "users" }
+
+// GetUser looks up a user by id, returning gorm.ErrRecordNotFound (see
+// IsNotFound in session.go) if there is none.
+func (s *Store) GetUser(ctx context.Context, id string) (*User, error) {
+	var user User
+	if err := s.DB.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
 
 // UserSettings mirrors the `user_settings` table (1:1 with User).
 type UserSettings struct {
