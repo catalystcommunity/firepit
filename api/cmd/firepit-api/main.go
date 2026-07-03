@@ -56,6 +56,24 @@ func run(ctx context.Context) error {
 	}
 	st := store.New(gdb)
 
+	// notify.NewDBPublisher (api/internal/notify/publisher.go, task B7) is
+	// the real fan-out Publisher: ThreadService.CreatePost/CreateComment/
+	// EditPost/EditComment and EndorsementService.Endorse are each meant to
+	// call Publish inside their own write transaction (notify.go's
+	// contract), so NewThreadService/NewEndorsementService need to accept a
+	// notify.Publisher. As of this branch those two constructors still only
+	// take *store.Store (B4/B5 land that constructor change separately, in
+	// their own worktrees) — wiring `pub` into their New* calls here would
+	// reference a parameter that doesn't exist yet and fail to compile, so
+	// it's deliberately left as this comment rather than a broken edit.
+	// Once B4/B5 add that parameter (each presumably defaulting it to
+	// notify.Noop{} in the interim, per notify.go's doc comment), replace
+	// their Noop with this pub at the merge that combines those branches:
+	//
+	//	pub := notify.NewDBPublisher()
+	//	...
+	//	Thread:      csilservices.NewThreadService(st, pub),
+	//	Endorsement: csilservices.NewEndorsementService(st, pub),
 	svcs := server.Services{
 		Auth:         csilservices.NewAuthService(st, cfg),
 		Board:        csilservices.NewBoardService(st),
