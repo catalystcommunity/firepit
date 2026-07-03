@@ -1,0 +1,43 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+/api/firepit-api
+
+# Node / webapp (webapp/ also has its own .gitignore; duplicated here so
+# root-level tooling that walks the whole tree doesn't pick these up either)
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Generated code (checked in once task A2 wires codegen — until then these
+# dirs only hold .gitkeep; ignore build byproducts codegen may drop here)
+webapp/src/gen/*
+!webapp/src/gen/.gitkeep
+
+# IDE / editor
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.dev
+
+# Local dev runtime
+/logs/

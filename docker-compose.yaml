@@ -1,0 +1,83 @@
+# Local dev stack for firepit. See PLANDOC.md §3 and CLAUDE.md.
+#
+# Usage: ./tools.sh dev   (or `docker compose up` directly)
+#
+# Only postgres actually runs today — api/webapp build nothing yet (Wave B/C).
+# Their entries are placeholders so the shape of the eventual stack is
+# visible; uncomment as those images become buildable (task D1).
+services:
+  postgres:
+    image: postgres:17
+    container_name: firepit-postgres-dev
+    environment:
+      POSTGRES_USER: firepit
+      POSTGRES_PASSWORD: devpass123
+      POSTGRES_DB: firepit_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - firepit_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U firepit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - firepit
+
+  # linkkeys sidecar in RP (relying-party) mode, per PLANDOC.md §2/§3. Wired
+  # up alongside AuthService in task B2 — the api needs FIREPIT_LINKKEYS_*
+  # config pointed at it before this is worth uncommenting.
+  # linkkeys-rp:
+  #   image: containers.catalystsquad.com/public/linkkeys:latest
+  #   container_name: firepit-linkkeys-rp-dev
+  #   environment:
+  #     ENABLE_RP_ENDPOINTS: "true"
+  #   ports:
+  #     - "8082:8080"
+  #   networks:
+  #     - firepit
+
+  # firepit-api (Go). No Dockerfile/image yet — task B1 stands up the
+  # server, task D1 adds the build. Uncomment once `./tools.sh build-images`
+  # produces something runnable.
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.api
+  #   image: firepit/api:dev
+  #   container_name: firepit-api-dev
+  #   environment:
+  #     FIREPIT_DB_URI: "postgresql://firepit:devpass123@postgres:5432/firepit_db?sslmode=disable"
+  #     FIREPIT_API_PORT: "8080"
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - firepit
+
+  # webapp (SolidJS SPA via Vite). No Dockerfile/image yet — placeholder
+  # until task D1.
+  # webapp:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.webapp
+  #   image: firepit/webapp:dev
+  #   container_name: firepit-webapp-dev
+  #   environment:
+  #     FIREPIT_API_URL: "http://api:8080"
+  #   ports:
+  #     - "5173:5173"
+  #   depends_on:
+  #     - api
+  #   networks:
+  #     - firepit
+
+networks:
+  firepit:
+    driver: bridge
+
+volumes:
+  firepit_postgres_data:

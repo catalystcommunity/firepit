@@ -1,0 +1,49 @@
+name: firepit-test-web
+description: "Typecheck and test the SolidJS webapp via tools.sh"
+triggers:
+  events:
+    - pull_request_opened
+    - pull_request_updated
+  branches:
+    - main
+paths:
+  # csil/** and clients/** included because the SPA will consume the
+  # generated TS client (once task A2 lands) via a path alias, same as
+  # longhouse's webapp-test.yaml convention.
+  include: ["webapp/**", "clients/**", "csil/**", "tools.sh"]
+job:
+  image: containers.catalystsquad.com/public/reactorcide/runnerbase:dev
+  command: |
+    set -e
+    export HOME="${HOME:-/tmp/home}"
+    mkdir -p "$HOME/.local"
+
+    echo "=== Installing Node toolchain ==="
+    NODE_VERSION="26.1.0"
+    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" -o /tmp/node.tar.xz
+    tar -xJf /tmp/node.tar.xz -C "$HOME/.local"
+    mv "$HOME/.local/node-v${NODE_VERSION}-linux-x64" "$HOME/.local/node"
+    rm /tmp/node.tar.xz
+    export PATH="$HOME/.local/node/bin:$PATH"
+
+    # tools.sh's `test`/`lint` verbs currently also exercise the Go modules
+    # (no per-module split yet) — install Go too so the shared verbs work
+    # from this job as well.
+    echo "=== Installing Go toolchain ==="
+    curl -fsSL https://go.dev/dl/go1.26.4.linux-amd64.tar.gz -o /tmp/go.tar.gz
+    tar -C "$HOME/.local" -xzf /tmp/go.tar.gz
+    rm /tmp/go.tar.gz
+    export PATH="$HOME/.local/go/bin:$HOME/go/bin:$PATH"
+
+    cd /job/src
+    ( cd webapp && npm ci )
+
+    echo "=== ./tools.sh lint ==="
+    ./tools.sh lint
+
+    echo "=== ./tools.sh test ==="
+    ./tools.sh test
+  timeout: 900
+  priority: 10
+  working_dir: /job
+  raw_command: true
