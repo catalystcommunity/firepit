@@ -1,0 +1,317 @@
+;; Firepit CSIL entry point — THE contract (PLANDOC.md §5, §6). Every client
+;; (the SolidJS SPA, and later a TUI/mobile/bot) is a generated consumer of
+;; this file; nothing talks to firepit-api except CSIL-RPC (CBOR over
+;; `POST /csil/v1/rpc`) dispatched by (service, op) exactly as declared here.
+;;
+;; Layout: this file includes the shared types under csil/types/*.csil (an
+;; acyclic DAG — common.csil and errors.csil have no imports of their own;
+;; every domain-types file includes only common.csil) and declares every
+;; service. Regenerate everything derived from this file with `./tools.sh
+;; gen` — never hand-edit generated output (api/internal/csil,
+;; webapp/src/gen, clients/go, clients/typescript).
+;;
+;; `@wire-id` ordinals: CSIL's compact-profile ordinal system (see
+;; csilgen/docs/csil-transport-conventions.md §3) attaches only to *service*
+;; and *operation* declarations, not to struct fields — CSIL has no
+;; per-field wire-id annotation, unlike protobuf's per-field numbers. Every
+;; service and every operation below carries one, assigned once and never
+;; renumbered (csilgen enforces all-or-nothing + uniqueness + stability at
+;; generation/breaking-change-check time), which is the closest this IDL
+;; gets to "protobuf field numbers": append new services/ops with new
+;; ordinals, never reuse or renumber an existing one. Service ordinal `0` is
+;; reserved for the transport control plane, so application services start
+;; at `1`; operation ordinals start at `0` within their own service. Firepit
+;; ships v1 entirely over CSIL-RPC's HTTP carrier (no compact/binary profile
+;; yet), so these ordinals aren't on the wire today — they exist so a later
+;; move to a compact profile (or CSIL-Events/Datagrams) is additive, not a
+;; breaking renumbering exercise.
+
+include "types/common.csil"
+include "types/errors.csil"
+include "types/auth.csil"
+include "types/boards.csil"
+include "types/threads.csil"
+include "types/endorsements.csil"
+include "types/settings.csil"
+include "types/social.csil"
+include "types/subscriptions.csil"
+include "types/read.csil"
+include "types/notifications.csil"
+include "types/integrations.csil"
+
+options {
+    package: "firepit",
+    version: "v1alpha",
+    package_name: "csil",
+    go_package: "github.com/catalystcommunity/firepit/api/internal/csil"
+}
+
+;;; Login via linkkeys (`user@domain` identity) and session lifecycle. See
+;;; PLANDOC.md §3 for the full begin-login -> IDP -> /auth/callback ->
+;;; session-cookie flow; only begin-login/logout/whoami ride CSIL-RPC, the
+;;; callback itself is an HTTP-native route (`GET /auth/callback`) outside
+;;; this schema.
+@wire-id(1)
+service AuthService {
+    ;;; Start a login: server calls the linkkeys RP sidecar's sign-request,
+    ;;; sets a nonce cookie, and returns the IDP URL to redirect the browser
+    ;;; to.
+    @wire-id(0)
+    begin-login: BeginLoginRequest -> BeginLoginResponse / AuthError,
+
+    ;;; Clear the caller's session cookie. Idempotent; never errors even if
+    ;;; already logged out.
+    @wire-id(1)
+    logout: Empty -> Empty,
+
+    ;;; The caller's own profile, derived from their session cookie.
+    @wire-id(2)
+    whoami: Empty -> UserProfile / AuthError
+}
+
+;;; Boards: per-project/topic containers for posts. Creation is admin-only;
+;;; maintainer/moderator roles are assigned per board (PLANDOC.md §9
+;;; decision 2).
+@wire-id(2)
+service BoardService {
+    ;;; Cursor-paginated listing of all boards, ordered by title.
+    @wire-id(0)
+    list-boards: ListBoardsRequest -> BoardPage,
+
+    ;;; Look up one board by its slug.
+    @wire-id(1)
+    get-board: BoardSlug -> Board / NotFoundError,
+
+    ;;; Admin-only: create a new board.
+    @wire-id(2)
+    create-board: CreateBoardRequest -> Board / FirepitError,
+
+    ;;; Admin-only: update a board's title/description.
+    @wire-id(3)
+    update-board: UpdateBoardRequest -> Board / FirepitError,
+
+    ;;; Admin-only: archive a board (read-only afterward, still browsable).
+    @wire-id(4)
+    archive-board: BoardID -> Empty / FirepitError,
+
+    ;;; Admin-only: assign or change a user's maintainer/moderator role on a
+    ;;; board.
+    @wire-id(5)
+    set-board-member: SetBoardMemberRequest -> Empty / FirepitError,
+
+    ;;; Maintainer/moderator: remove a user's role on a board.
+    @wire-id(6)
+    remove-board-member: RemoveBoardMemberRequest -> Empty / FirepitError
+}
+
+;;; Posts (thread roots) and threaded comments of arbitrary depth,
+;;; mailing-list style. Edits snapshot full revision history; deletes are
+;;; soft (tombstones keep thread shape) (PLANDOC.md §4).
+@wire-id(3)
+service ThreadService {
+    ;;; Cursor-paginated listing of a board's posts, newest activity first.
+    @wire-id(0)
+    list-posts: ListPostsRequest -> PostPage,
+
+    ;;; The full post plus its whole comment tree, depth-first ordered.
+    @wire-id(1)
+    get-thread: GetThreadRequest -> Thread,
+
+    ;;; Start a new thread on a board.
+    @wire-id(2)
+    create-post: CreatePostRequest -> Post / FirepitError,
+
+    ;;; Reply to a post, optionally nested under an existing comment.
+    @wire-id(3)
+    create-comment: CreateCommentRequest -> Comment / FirepitError,
+
+    ;;; Edit a post's title/body; snapshots the prior state as a revision in
+    ;;; the same transaction.
+    @wire-id(4)
+    edit-post: EditPostRequest -> Post / FirepitError,
+
+    ;;; Edit a comment's body; snapshots the prior state as a revision.
+    @wire-id(5)
+    edit-comment: EditCommentRequest -> Comment / FirepitError,
+
+    ;;; Full edit history for a post or comment, newest first.
+    @wire-id(6)
+    list-revisions: TargetRef -> RevisionList,
+
+    ;;; Soft-delete a post (author or moderator/maintainer). The post
+    ;;; becomes a tombstone; replies remain.
+    @wire-id(7)
+    delete-post: PostID -> Empty / FirepitError,
+
+    ;;; Soft-delete a comment (author or moderator/maintainer). The comment
+    ;;; becomes a tombstone; its replies remain.
+    @wire-id(8)
+    delete-comment: CommentID -> Empty / FirepitError
+}
+
+;;; Endorsements: a public, named "I stand behind this" on a post or
+;;; comment. Retractable; never ranks content; endorser list is ordered
+;;; per-viewer, never by count (PLANDOC.md §1, §9 decision 3).
+@wire-id(4)
+service EndorsementService {
+    ;;; Endorse a post or comment. Rejected if the caller already endorsed
+    ;;; it, if it's the caller's own content, or if the content is deleted.
+    @wire-id(0)
+    endorse: EndorseRequest -> Endorsement / FirepitError,
+
+    ;;; Retract the caller's own endorsement.
+    @wire-id(1)
+    retract: EndorseRequest -> Empty / FirepitError,
+
+    ;;; The full endorser list for a target, pre-ordered per-viewer by the
+    ;;; server (friends first, then reputation).
+    @wire-id(2)
+    list-endorsements: TargetRef -> EndorsementList
+}
+
+;;; Per-user settings: mention policy, endorsement-notification opt-out, and
+;;; the mention-grants list that extends the default "subscribed" mention
+;;; policy per-person (PLANDOC.md §4, §9 decision 4).
+@wire-id(5)
+service SettingsService {
+    ;;; The caller's own settings (defaults filled in).
+    @wire-id(0)
+    get-settings: Empty -> UserSettings,
+
+    ;;; Partial update — only fields present in the request are changed.
+    @wire-id(1)
+    update-settings: UpdateSettingsRequest -> UserSettings / FirepitError,
+
+    ;;; Users the caller has granted permanent mention-notify permission to.
+    @wire-id(2)
+    list-mention-grants: Empty -> MentionGrantList,
+
+    ;;; Grant a user permanent mention-notify permission, independent of
+    ;;; shared subscriptions.
+    @wire-id(3)
+    grant-mention: UserID -> Empty / FirepitError,
+
+    ;;; Revoke a previously granted mention-notify permission.
+    @wire-id(4)
+    revoke-mention: UserID -> Empty / FirepitError
+}
+
+;;; Friend groups: private groupings the caller owns, used only to order the
+;;; endorser list per-viewer (PLANDOC.md §4) — not a sharing/visibility
+;;; mechanism.
+@wire-id(6)
+service SocialService {
+    ;;; The caller's own friend groups and their membership.
+    @wire-id(0)
+    list-friend-groups: Empty -> FriendGroupList,
+
+    ;;; Create a new (initially empty) friend group.
+    @wire-id(1)
+    create-friend-group: CreateFriendGroupRequest -> FriendGroup / FirepitError,
+
+    ;;; Delete a friend group the caller owns, and its membership.
+    @wire-id(2)
+    delete-friend-group: GroupID -> Empty / FirepitError,
+
+    ;;; Add a user to one of the caller's own friend groups.
+    @wire-id(3)
+    add-friend: AddFriendRequest -> Empty / FirepitError,
+
+    ;;; Remove a user from one of the caller's own friend groups.
+    @wire-id(4)
+    remove-friend: RemoveFriendRequest -> Empty / FirepitError
+}
+
+;;; Subscriptions to a board, a post, or a specific comment subtree — the
+;;; only source of notifications (PLANDOC.md §1 "never firehose"). Mute
+;;; carves a hole out of a broader subscription without removing it.
+@wire-id(7)
+service SubscriptionService {
+    ;;; Subscribe to a board, post, or comment subtree.
+    @wire-id(0)
+    subscribe: TargetRef -> Subscription / FirepitError,
+
+    ;;; Remove a subscription entirely.
+    @wire-id(1)
+    unsubscribe: TargetRef -> Empty / FirepitError,
+
+    ;;; Toggle mute on an existing subscription without removing it.
+    @wire-id(2)
+    set-muted: SetMutedRequest -> Subscription / FirepitError,
+
+    ;;; All of the caller's subscriptions.
+    @wire-id(3)
+    list-subscriptions: Empty -> SubscriptionList
+}
+
+;;; Read/unread tracking: a per-post watermark advanced on view, plus manual
+;;; mark-read/mark-unread pins that beat the watermark (PLANDOC.md §4
+;;; "Read model is hybrid").
+@wire-id(8)
+service ReadService {
+    ;;; Mark an item (or a whole post) read: advances the watermark and/or
+    ;;; clears any unread override pinning it unread.
+    @wire-id(0)
+    mark-read: TargetRef -> Empty,
+
+    ;;; Pin an item unread regardless of the watermark, until it's
+    ;;; explicitly mark-read again.
+    @wire-id(1)
+    mark-unread: TargetRef -> Empty,
+
+    ;;; Per-board/post unread counts for the caller — the poll endpoint the
+    ;;; UI hits to drive unread badges.
+    @wire-id(2)
+    unread-summary: Empty -> UnreadSummary
+}
+
+;;; The notification inbox: fan-out target for new posts/comments in
+;;; subscribed contexts, @mentions (gated by SettingsService's
+;;; mention_policy), and endorsements (gated by notify_on_endorse)
+;;; (PLANDOC.md §4).
+@wire-id(9)
+service NotificationService {
+    ;;; Cursor-paginated notification inbox, newest first.
+    @wire-id(0)
+    list-notifications: ListNotificationsRequest -> NotificationPage,
+
+    ;;; Mark a specific set of notifications read.
+    @wire-id(1)
+    mark-notification-read: NotificationIDs -> Empty,
+
+    ;;; Mark every one of the caller's notifications read.
+    @wire-id(2)
+    mark-all-read: Empty -> Empty
+}
+
+;;; Admin-only: GitHub webhook-to-board mappings and the trusted-domains
+;;; registry that feeds endorsement reputation (PLANDOC.md §4, §9 decision
+;;; 6). `POST /webhooks/github` itself is an HTTP-native route outside this
+;;; schema; this service is the CRUD surface around its configuration.
+@wire-id(10)
+service IntegrationService {
+    ;;; Create a per-repo webhook mapping into a board.
+    @wire-id(0)
+    create-github-mapping: CreateMappingRequest -> GithubMapping / FirepitError,
+
+    ;;; All configured GitHub mappings.
+    @wire-id(1)
+    list-github-mappings: Empty -> MappingList,
+
+    ;;; Remove a GitHub mapping (stops ingestion for that repo; already
+    ;;; ingested content is unaffected).
+    @wire-id(2)
+    delete-github-mapping: MappingID -> Empty / FirepitError,
+
+    ;;; Add a linkkeys domain to the trusted-domains registry.
+    @wire-id(3)
+    add-trusted-domain: Domain -> Empty / FirepitError,
+
+    ;;; Remove a linkkeys domain from the trusted-domains registry.
+    @wire-id(4)
+    remove-trusted-domain: Domain -> Empty / FirepitError,
+
+    ;;; All trusted domains.
+    @wire-id(5)
+    list-trusted-domains: Empty -> DomainList
+}

@@ -1,0 +1,66 @@
+;; Types for AuthService — linkkeys-backed login (PLANDOC.md §3, §5).
+;;
+;; Flow: SPA calls begin-login with the linkkeys domain the user is
+;; authenticating with; the server calls the linkkeys RP sidecar's
+;; sign-request, sets a nonce cookie, and returns the IDP URL for the SPA to
+;; navigate the browser to. The IDP redirects back to the HTTP-native
+;; (non-CSIL) `GET /auth/callback` route, which decrypts/verifies the
+;; assertion, upserts the `users` row, and mints firepit's own session
+;; cookie — whoami then reflects that cookie's identity.
+
+;; NOTE: does not `include "common.csil"` directly — csilgen has a
+;; generator bug where a type reachable via more than one `include`
+;; edge in a single compilation is emitted twice (duplicate Go/TS
+;; symbols); see the workaround note in csil/firepit.csil. This file
+;; uses common.csil's types (UserID, BoardID, ..., TargetType, Empty)
+;; relying on firepit.csil including common.csil exactly once, before
+;; this file — CSIL resolves names in one flat namespace across a
+;; compilation, so include order/location doesn't matter, only count.
+
+;;; Who/what a `users` row represents. `human` is a linkkeys-authenticated
+;;; person; `system` is a per-integration actor (e.g. one per GitHub mapping)
+;;; that authors ingested content — see IntegrationService.
+UserKind = "human" / "system"
+
+;;; Request to start a login: the linkkeys domain half of the user's
+;;; `user@domain` identity, so the server knows which IDP to redirect to.
+BeginLoginRequest = {
+    ;;; The linkkeys domain to authenticate against (e.g. "todandlorna.com").
+    domain: text .size (1..253)
+}
+
+;;; Where the SPA should navigate the browser next to continue the login
+;;; flow at the user's IDP. The server has already set the nonce cookie by
+;;; the time this is returned.
+BeginLoginResponse = {
+    ;;; Absolute URL of the identity provider's login page.
+    redirect_url: text
+}
+
+;;; The caller's own profile, as returned by whoami. Every field is
+;;; server-derived — there is no "update my profile" op in v1 beyond what
+;;; SettingsService covers, so the whole shape is receive-only.
+UserProfile = {
+    @receive-only
+    id: UserID,
+
+    @receive-only
+    linkkeys_domain: text,
+
+    @receive-only
+    handle: text,
+
+    @receive-only
+    display_name: text,
+
+    @receive-only
+    kind: UserKind,
+
+    ;;; Instance-level roles (currently just "admin"; board-level
+    ;;; maintainer/moderator roles live on BoardMember, not here).
+    @receive-only
+    roles: [* text],
+
+    @receive-only
+    created_at: timestamp
+}

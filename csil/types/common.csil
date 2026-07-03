@@ -1,0 +1,77 @@
+;; Shared scalar types used across every firepit service. No imports — this is
+;; the bottom of the CSIL import DAG (everything else in csil/types/ includes
+;; this file; nothing in here includes anything).
+;;
+;; Convention (PLANDOC.md §4): every entity id is a ULID minted by
+;; `generate_ulid()` in coredb, carried on the wire as opaque `text` (not a
+;; numeric type — ULIDs are lexicographically-sortable strings, not integers).
+;; Timestamps use the CSIL core `timestamp` type (CBOR tag 0, RFC3339 UTC —
+;; see docs/cbor-wire-contract.md), not plain text, so generated code gets a
+;; real `time.Time`/`Date` instead of a string callers must parse by hand.
+;; Pagination cursors are opaque `text` the server mints and the client must
+;; not parse — every list op's response optionally carries a `next_cursor`.
+
+;;; A user's id (ULID).
+UserID = text
+
+;;; A board's id (ULID).
+BoardID = text
+
+;;; A post's id (ULID).
+PostID = text
+
+;;; A comment's id (ULID).
+CommentID = text
+
+;;; A revision's id (ULID).
+RevisionID = text
+
+;;; An endorsement's id (ULID).
+EndorsementID = text
+
+;;; A subscription's id (ULID).
+SubscriptionID = text
+
+;;; A friend group's id (ULID).
+GroupID = text
+
+;;; A notification's id (ULID).
+NotificationID = text
+
+;;; A GitHub board mapping's id (ULID).
+MappingID = text
+
+;;; An opaque, server-minted pagination cursor. Clients pass it back verbatim
+;;; on the next page request; they must never construct or parse one. Named
+;;; `PageCursor`, not the more obvious `Cursor` — the TypeScript generator's
+;;; own CBOR decoder emits an internal `type Cursor = { b: ..., pos: ... }`
+;;; byte-position helper in codec.gen.ts unconditionally, and it collides
+;;; with (rather than being namespaced away from) a user-defined `Cursor`
+;;; type (`TS2440: Import declaration conflicts with local declaration`).
+;;; Worked around here rather than in csilgen.
+PageCursor = text
+
+;;; What kind of thing a reference/subscription/mention target points at.
+;;; `board` is valid only for subscriptions (you can't endorse or mark a
+;;; board read/unread); `post` and `comment` are valid everywhere a
+;;; TargetRef appears.
+TargetType = "board" / "post" / "comment"
+
+;;; A polymorphic pointer at a board, post, or comment — the shared payload
+;;; shape for subscribe/unsubscribe, mark-read/mark-unread, endorse/retract,
+;;; and list-revisions. `target_id` is the id of the referenced row (a
+;;; BoardID/PostID/CommentID depending on `target_type`); CSIL has no
+;;; dependent-typing so the pairing is documented, not enforced by the type.
+TargetRef = {
+    target_type: TargetType,
+    target_id: text
+}
+
+;;; Who or what authored a post/comment. `user` is a human-authored item;
+;;; `github` is ingested from a webhook (see IntegrationService);  `system`
+;;; is any other machine actor (e.g. reactorcide job results, later).
+OriginKind = "user" / "github" / "system"
+
+;;; Empty request/response payload — used by ops that take or return no data
+;;; beyond the transport envelope itself (e.g. logout, mark-read).
+Empty = {}

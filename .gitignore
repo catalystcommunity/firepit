@@ -17,10 +17,12 @@ dist/
 dist-ssr/
 *.local
 
-# Generated code (checked in once task A2 wires codegen — until then these
-# dirs only hold .gitkeep; ignore build byproducts codegen may drop here)
-webapp/src/gen/*
-!webapp/src/gen/.gitkeep
+# Generated code under webapp/src/gen, api/internal/csil, and clients/ is
+# CHECKED IN (task A2 wires `./tools.sh gen`; see csil/firepit.csil) — do not
+# ignore it. clients/typescript is a standalone npm package generated
+# alongside the others; ignore only its own build byproducts.
+clients/typescript/node_modules/
+clients/typescript/package-lock.json
 
 # IDE / editor
 .idea/

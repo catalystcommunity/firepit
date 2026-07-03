@@ -1,0 +1,42 @@
+;; Types for SubscriptionService — subscribe to a board, a post, or a
+;; specific comment subtree; mute carves a hole out of a broader
+;; subscription (PLANDOC.md §1, §4, §5).
+
+;; NOTE: does not `include "common.csil"` directly — csilgen has a
+;; generator bug where a type reachable via more than one `include`
+;; edge in a single compilation is emitted twice (duplicate Go/TS
+;; symbols); see the workaround note in csil/firepit.csil. This file
+;; uses common.csil's types (UserID, BoardID, ..., TargetType, Empty)
+;; relying on firepit.csil including common.csil exactly once, before
+;; this file — CSIL resolves names in one flat namespace across a
+;; compilation, so include order/location doesn't matter, only count.
+
+;;; One subscription. `target_type` "comment" means the comment's whole
+;;; subtree, not just that one comment.
+Subscription = {
+    @receive-only
+    id: SubscriptionID,
+
+    target_type: TargetType,
+    target_id: text,
+
+    ;;; Silences notifications from this subscription without removing it —
+    ;;; used to carve a mute out of a broader one (e.g. subscribed to a
+    ;;; board, mute one noisy post within it).
+    muted: bool .default false,
+
+    @receive-only
+    created_at: timestamp
+}
+
+;;; Toggle mute on an existing subscription, identified by its target (not
+;;; its SubscriptionID) so the caller doesn't need to look the id up first.
+SetMutedRequest = {
+    target_type: TargetType,
+    target_id: text,
+    muted: bool
+}
+
+SubscriptionList = {
+    subscriptions: [* Subscription]
+}

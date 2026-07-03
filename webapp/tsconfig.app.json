@@ -6,6 +6,7 @@
     "lib": ["ES2023", "DOM"],
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "allowArbitraryExtensions": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
 
     /* Bundler mode */
@@ -18,10 +19,25 @@
     "jsxImportSource": "solid-js",
 
     /* Linting */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    /* noUnusedLocals/noUnusedParameters/erasableSyntaxOnly are off (matching
+     * longhouse's webapp/tsconfig.json) because src/gen is machine-generated
+     * by csilgen (task A2, `./tools.sh gen`) and never hand-edited: its
+     * barrel-style `import type { ...every type... }` lines are unused in
+     * most individual files, and its client classes use constructor
+     * parameter-property syntax (`constructor(private readonly t: X)`),
+     * which erasableSyntaxOnly rejects (TS1294) since it isn't type-erasable.
+     * These three are style/lint checks only — real type-checking is
+     * unaffected. */
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "erasableSyntaxOnly": false,
+    "noFallthroughCasesInSwitch": true,
+
+    /* No "baseUrl" — deprecated as of TS 6 (TS5101); "paths" alone resolves
+     * relative to this file under moduleResolution "bundler". */
+    "paths": {
+      "~/*": ["./src/*"]
+    }
   },
   "include": ["src"]
 }

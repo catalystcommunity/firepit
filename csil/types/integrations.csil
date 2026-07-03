@@ -1,0 +1,88 @@
+;; Types for IntegrationService (admin-only) — GitHub webhook-to-board
+;; mappings and the trusted-domains registry that feeds endorsement
+;; reputation (PLANDOC.md §4, §5, §9 decision 6).
+
+;; NOTE: does not `include "common.csil"` directly — csilgen has a
+;; generator bug where a type reachable via more than one `include`
+;; edge in a single compilation is emitted twice (duplicate Go/TS
+;; symbols); see the workaround note in csil/firepit.csil. This file
+;; uses common.csil's types (UserID, BoardID, ..., TargetType, Empty)
+;; relying on firepit.csil including common.csil exactly once, before
+;; this file — CSIL resolves names in one flat namespace across a
+;; compilation, so include order/location doesn't matter, only count.
+
+;;; How an ingested GitHub event maps onto forum content for one mapping.
+;;; PLANDOC.md §4 documents the `github_mappings.thread_mode` column as
+;;; `'post_per_issue'|'post_per_release'|...`, leaving the full enumeration
+;;; open; per PLANDOC.md §7 B8 ("release -> new post; issues opened -> new
+;;; post, closed -> comment; pull_request merged -> comment or post per
+;;; mapping") this schema resolves the "..." as a third explicit mode for
+;;; pull requests, `post_per_pull_request`, so B8 has a named mode to key
+;;; its pull_request handling on instead of inventing one un-reviewed.
+ThreadMode = "post_per_issue" / "post_per_release" / "post_per_pull_request"
+
+;;; A per-repo webhook mapping: which board a repo's events post into, which
+;;; event types are ingested, and how they thread. `secret_ref` is an
+;;; indirection to wherever the HMAC secret is actually stored (never the
+;;; secret itself on this read path).
+GithubMapping = {
+    @receive-only
+    id: MappingID,
+
+    board_id: BoardID,
+
+    ;;; "owner/name", e.g. "catalystcommunity/firepit".
+    repo: text .size (3..256) .regex "^[^/]+/[^/]+$",
+
+    ;;; GitHub webhook event names this mapping ingests (e.g. "release",
+    ;;; "issues", "pull_request"). Unmapped/unknown event types are dropped.
+    events: [* text],
+
+    thread_mode: ThreadMode,
+
+    @receive-only
+    created_by: UserID,
+
+    @receive-only
+    created_at: timestamp
+}
+
+CreateMappingRequest = {
+    board_id: BoardID,
+    repo: text .size (3..256) .regex "^[^/]+/[^/]+$",
+    events: [* text] .size (1..20),
+
+    ;;; Where to look up the HMAC secret for this mapping's webhook
+    ;;; verification (an external reference, e.g. a vault path — never the
+    ;;; raw secret over the wire).
+    secret_ref: text,
+
+    thread_mode: ThreadMode
+}
+
+MappingList = {
+    mappings: [* GithubMapping]
+}
+
+;;; A bare linkkeys domain string — the add/remove-trusted-domain request
+;;; payload (bare-typed; the domain itself is the primary key).
+Domain = text
+
+;;; A trusted-domains entry: a linkkeys domain whose endorsements count
+;;; toward endorser reputation ordering (PLANDOC.md §4's endorser-ordering
+;;; design). Domain strings ARE the primary key (coredb `trusted_domains`
+;;; has no surrogate id), so add/remove/list all key on the domain text
+;;; itself rather than a MappingID-style id.
+DomainEntry = {
+    domain: text .size (1..253),
+
+    @receive-only
+    added_by: UserID,
+
+    @receive-only
+    created_at: timestamp
+}
+
+DomainList = {
+    domains: [* DomainEntry]
+}

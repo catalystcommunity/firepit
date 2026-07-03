@@ -1,0 +1,48 @@
+;; Types for EndorsementService — public, named, retractable "I stand behind
+;; this" on posts and comments. Never a count, never ranks content
+;; (PLANDOC.md §1, §4, §9 decision 3).
+
+;; NOTE: does not `include "common.csil"` directly — csilgen has a
+;; generator bug where a type reachable via more than one `include`
+;; edge in a single compilation is emitted twice (duplicate Go/TS
+;; symbols); see the workaround note in csil/firepit.csil. This file
+;; uses common.csil's types (UserID, BoardID, ..., TargetType, Empty)
+;; relying on firepit.csil including common.csil exactly once, before
+;; this file — CSIL resolves names in one flat namespace across a
+;; compilation, so include order/location doesn't matter, only count.
+
+;;; endorse/retract target — valid only for `target_type` "post" or
+;;; "comment" (endorsing a board is meaningless and rejected by the server).
+EndorseRequest = {
+    target_type: TargetType,
+    target_id: text
+}
+
+;;; One named endorsement. `role_badge` is present when the endorser held
+;;; `maintainer` or `moderator` on the target's board at endorsement time,
+;;; so the UI can badge it distinctly — it is a snapshot, not a live lookup.
+Endorsement = {
+    @receive-only
+    id: EndorsementID,
+
+    @receive-only
+    user_id: UserID,
+
+    target_type: TargetType,
+    target_id: text,
+
+    @receive-only
+    ? role_badge: text,
+
+    @receive-only
+    created_at: timestamp
+}
+
+;;; The full endorser list for one target, already ordered per-viewer by the
+;;; server: the viewer's friends first, then by reputation (board
+;;; maintainer/moderator status, then endorsements received from
+;;; trusted-domain linkkeys identities). Clients render this order as-is —
+;;; never re-sort, and never treat the list length as a score.
+EndorsementList = {
+    endorsements: [* Endorsement]
+}

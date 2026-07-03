@@ -1,0 +1,173 @@
+;; Types for ThreadService — posts (thread roots) and threaded comments of
+;; arbitrary depth, edits with revision history, and soft-delete tombstones
+;; (PLANDOC.md §4, §5). Threading structure (`parent_comment_id` + the
+;; server-side `ltree` path) is a storage/query detail, not part of the wire
+;; contract — clients receive a flat comment list per thread and build the
+;; tree client-side from `parent_comment_id`.
+
+;; NOTE: does not `include "common.csil"` directly — csilgen has a
+;; generator bug where a type reachable via more than one `include`
+;; edge in a single compilation is emitted twice (duplicate Go/TS
+;; symbols); see the workaround note in csil/firepit.csil. This file
+;; uses common.csil's types (UserID, BoardID, ..., TargetType, Empty)
+;; relying on firepit.csil including common.csil exactly once, before
+;; this file — CSIL resolves names in one flat namespace across a
+;; compilation, so include order/location doesn't matter, only count.
+
+;;; A thread root. `body_md` is raw markdown, stored and transmitted as-is —
+;;; rendering (and sanitizing) happens client-side.
+Post = {
+    @receive-only
+    id: PostID,
+
+    board_id: BoardID,
+
+    @receive-only
+    author_id: UserID,
+
+    title: text .size (1..512),
+
+    body_md: text .size (1..100000),
+
+    @receive-only
+    origin: OriginKind,
+
+    ;;; Opaque pointer back to the originating event for `origin != "user"`
+    ;;; content (e.g. a GitHub webhook delivery id). JSON-encoded text — CSIL
+    ;;; has no native map/jsonb type, matching the `origin_ref jsonb` column.
+    @receive-only
+    ? origin_ref: text,
+
+    @receive-only
+    comment_count: uint,
+
+    ;;; Bumped on the post itself or any descendant comment; the ordering
+    ;;; key for list-posts.
+    @receive-only
+    last_activity_at: timestamp,
+
+    ;;; Set on every edit-post call (a revision is snapshotted at the same
+    ;;; time — see list-revisions). Absent on a never-edited post.
+    @receive-only
+    ? edited_at: timestamp,
+
+    ;;; Set by delete-post (soft-delete/tombstone — the row and its replies
+    ;;; remain to preserve thread shape). Absent on a live post.
+    @receive-only
+    ? deleted_at: timestamp,
+
+    @receive-only
+    created_at: timestamp
+}
+
+;;; One comment in a post's thread. `parent_comment_id` absent means a
+;;; top-level reply to the post itself.
+Comment = {
+    @receive-only
+    id: CommentID,
+
+    post_id: PostID,
+
+    @receive-only
+    ? parent_comment_id: CommentID,
+
+    @receive-only
+    author_id: UserID,
+
+    body_md: text .size (1..100000),
+
+    @receive-only
+    origin: OriginKind,
+
+    @receive-only
+    ? origin_ref: text,
+
+    @receive-only
+    ? edited_at: timestamp,
+
+    @receive-only
+    ? deleted_at: timestamp,
+
+    @receive-only
+    created_at: timestamp
+}
+
+;;; Cursor-paginated, activity-ordered listing of a board's posts (newest
+;;; activity first).
+ListPostsRequest = {
+    board_id: BoardID,
+    ? cursor: PageCursor,
+    ? limit: uint .default 50 .le 200
+}
+
+PostPage = {
+    posts: [* Post],
+    ? next_cursor: PageCursor
+}
+
+;;; get-thread's request: the post whose full comment tree to fetch.
+GetThreadRequest = {
+    post_id: PostID
+}
+
+;;; A whole thread: the post plus every comment in depth-first order (the
+;;; server does the one-query `ltree` fetch; the client renders either a
+;;; nested tree or a flat "mailing-list" view from the same list).
+Thread = {
+    post: Post,
+    comments: [* Comment]
+}
+
+CreatePostRequest = {
+    board_id: BoardID,
+    title: text .size (1..512),
+    body_md: text .size (1..100000)
+}
+
+CreateCommentRequest = {
+    post_id: PostID,
+    ? parent_comment_id: CommentID,
+    body_md: text .size (1..100000)
+}
+
+;;; Snapshots the prior title/body into a Revision (list-revisions) before
+;;; applying, in the same transaction.
+EditPostRequest = {
+    id: PostID,
+    title: text .size (1..512),
+    body_md: text .size (1..100000)
+}
+
+;;; Snapshots the prior body into a Revision before applying.
+EditCommentRequest = {
+    id: CommentID,
+    body_md: text .size (1..100000)
+}
+
+;;; One prior version of a post or comment, snapshotted immediately BEFORE
+;;; the edit that superseded it (so the current live row is always the
+;;; latest state; revisions hold everything before that).
+Revision = {
+    @receive-only
+    id: RevisionID,
+
+    target_type: TargetType,
+    target_id: text,
+
+    @receive-only
+    editor_id: UserID,
+
+    ;;; Absent for a comment revision (comments have no title).
+    @receive-only
+    ? prev_title: text,
+
+    @receive-only
+    prev_body_md: text,
+
+    @receive-only
+    created_at: timestamp
+}
+
+RevisionList = {
+    revisions: [* Revision]
+}

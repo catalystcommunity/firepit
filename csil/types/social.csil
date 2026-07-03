@@ -1,0 +1,49 @@
+;; Types for SocialService — friend groups, private to their owner, used
+;; only to order the endorser list per-viewer (PLANDOC.md §1, §4). Friend
+;; groups carry no other privilege — they are not a visibility/sharing
+;; mechanism, just a ranking hint for EndorsementService.
+
+;; NOTE: does not `include "common.csil"` directly — csilgen has a
+;; generator bug where a type reachable via more than one `include`
+;; edge in a single compilation is emitted twice (duplicate Go/TS
+;; symbols); see the workaround note in csil/firepit.csil. This file
+;; uses common.csil's types (UserID, BoardID, ..., TargetType, Empty)
+;; relying on firepit.csil including common.csil exactly once, before
+;; this file — CSIL resolves names in one flat namespace across a
+;; compilation, so include order/location doesn't matter, only count.
+
+;;; A private grouping of other users, owned by the caller. Only the owner
+;;; can see or manage a friend group's membership.
+FriendGroup = {
+    @receive-only
+    id: GroupID,
+
+    name: text .size (1..128),
+
+    @receive-only
+    members: [* UserID],
+
+    @receive-only
+    created_at: timestamp
+}
+
+FriendGroupList = {
+    groups: [* FriendGroup]
+}
+
+CreateFriendGroupRequest = {
+    name: text .size (1..128)
+}
+
+;;; Add a user to one of the caller's own friend groups.
+AddFriendRequest = {
+    group_id: GroupID,
+    user_id: UserID
+}
+
+;;; Remove a user from one of the caller's own friend groups (the group
+;;; itself is unaffected; delete-friend-group removes the whole group).
+RemoveFriendRequest = {
+    group_id: GroupID,
+    user_id: UserID
+}
