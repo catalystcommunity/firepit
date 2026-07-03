@@ -17,21 +17,26 @@ import (
 // hardcoded string.
 const SessionCookieName = "firepit_session"
 
-type userContextKey struct{}
-
 // CurrentUser returns the user attached to ctx by the session middleware, or
 // ok=false if the caller has no valid session — which is a normal,
 // expected state (anonymous read), never an error on its own. Individual
 // service methods decide whether anonymous access is allowed for a given
 // op; this helper just answers "who, if anyone."
+//
+// This forwards to store.CurrentUser rather than owning the context key
+// itself: this package already imports csilservices (dispatch.go, for
+// *AppError), so csilservices can't import server back to read the same
+// ctx value without a cycle. store has no such dependents, so it's the
+// shared home for the key — see store/context.go's doc comment for the
+// full reasoning. Signature here is unchanged so nothing depending on
+// server.CurrentUser needs to change.
 func CurrentUser(ctx context.Context) (*store.User, bool) {
-	u, ok := ctx.Value(userContextKey{}).(*store.User)
-	return u, ok
+	return store.CurrentUser(ctx)
 }
 
 // withCurrentUser attaches u to ctx for CurrentUser to retrieve later.
 func withCurrentUser(ctx context.Context, u *store.User) context.Context {
-	return context.WithValue(ctx, userContextKey{}, u)
+	return store.WithCurrentUser(ctx, u)
 }
 
 // sessionMiddleware reads the session cookie (if any), looks it up via st,
