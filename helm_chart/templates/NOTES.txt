@@ -1,0 +1,36 @@
+Firepit has been deployed!
+
+api:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "firepit.fullname" . }}-api {{ .Values.api.port }}:{{ .Values.api.port }}
+  curl http://localhost:{{ .Values.api.port }}/healthz
+
+webapp:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "firepit.fullname" . }}-webapp {{ .Values.webapp.port }}:{{ .Values.webapp.port }}
+  open http://localhost:{{ .Values.webapp.port }}/
+
+{{- if .Values.linkkeysRp.enabled }}
+
+linkkeys-rp (this release's own RP instance):
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "firepit.fullname" . }}-linkkeys-rp {{ .Values.linkkeysRp.httpsPort }}:{{ .Values.linkkeysRp.httpsPort }}
+
+  If this is the FIRST install, the RP has no domain keys or API-key users
+  yet — login will fail until you run the one-time init runbook in
+  helm_chart/README.md ("First deploy" section): `linkkeys domain init`
+  inside the pod, then `linkkeys user create ... --api-key` and feed the
+  printed key back in as linkkeys.pki.apiKey (a values overlay/
+  `--set-string`, re-run `helm upgrade`).
+{{- end }}
+
+{{- if .Values.gateway.enabled }}
+
+Gateway HTTPRoutes attached to {{ .Values.gateway.gatewayName }}{{ if .Values.gateway.gatewayNamespace }}.{{ .Values.gateway.gatewayNamespace }}{{ end }} for:
+{{- range .Values.gateway.domains }}
+  https://{{ . }}/
+{{- end }}
+{{- else }}
+
+gateway.enabled is false — no HTTPRoute was created. Set gateway.enabled:
+true (plus gatewayName/gatewayNamespace/domains) once a Gateway exists in
+this cluster to route to, or reach the Services above via port-forward in
+the meantime.
+{{- end }}

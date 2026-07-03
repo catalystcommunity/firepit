@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "firepit.fullname" . }}-webapp
+  labels:
+    {{- include "firepit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webapp
+spec:
+  replicas: {{ .Values.replicaCount.webapp }}
+  selector:
+    matchLabels:
+      {{- include "firepit.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: webapp
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "firepit.labels" . | nindent 8 }}
+        app.kubernetes.io/component: webapp
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "firepit.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: webapp
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.webapp.repository }}:{{ .Values.image.webapp.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.webapp.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.webapp.port }}
+              protocol: TCP
+          env:
+            # Consumed by webapp/nginx.conf's ${FIREPIT_API_URL} template
+            # placeholders (proxies /csil, /auth, /webhooks, /healthz to
+            # the api Service — see that file's header comment).
+            - name: FIREPIT_API_URL
+              value: {{ .Values.webapp.apiUrl | default (include "firepit.apiUrl" .) | quote }}
+          readinessProbe:
+            httpGet:
+              path: /nginx-healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /nginx-healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.resources.webapp | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,233 @@
+# Firepit Helm chart values (task D1, PLANDOC.md §3, §6, §7, §9 decision 7).
+#
+# Components this chart deploys:
+#   api        firepit-api (Go binary): CSIL-RPC, /auth/callback,
+#              /webhooks/github, /healthz (see api/internal/server).
+#   webapp     The SolidJS SPA behind nginx (webapp/Dockerfile).
+#   linkkeysRp A linkkeys server instance running in RP (relying-party)
+#              mode — sign-request / decrypt-token / verify-assertion /
+#              userinfo — that firepit-api calls over a Bearer API key to
+#              complete the linkkeys login flow (PLANDOC.md §2/§3; mirrors
+#              linkkeys/helm_chart's `rp.*` values and longhouse's
+#              linkkeysRp sidecar pattern). Can instead point at an
+#              existing external RP (linkkeysRp.enabled: false).
+#
+# Postgres — NOT managed by this chart (PLANDOC.md §9 decision 7). Firepit's
+# database is a Zalando postgres-operator `postgresql.acid.zalan.do` CR
+# applied ALONGSIDE this release, not templated by it. The chart only ever
+# *consumes* a `DB_URI` key from an existing Secret it does not create, own,
+# or rotate — see `database.existingSecretName` below and
+# helm_chart/README.md for the full CR + first-deploy runbook.
+
+replicaCount:
+  api: 1
+  webapp: 1
+  linkkeysRp: 1
+
+image:
+  api:
+    repository: containers.catalystsquad.com/catalystcommunity/firepit-api
+    pullPolicy: IfNotPresent
+    tag: "" # defaults to .Chart.AppVersion
+  webapp:
+    repository: containers.catalystsquad.com/catalystcommunity/firepit-webapp
+    pullPolicy: IfNotPresent
+    tag: "" # defaults to .Chart.AppVersion
+  linkkeysRp:
+    repository: containers.catalystsquad.com/public/catalystcommunity/linkkeys
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+# Pulled from containers.catalystsquad.com — a private registry, so a
+# regcred-style docker-registry Secret is required in the release
+# namespace. Not created by this chart (deploy.sh creates it before
+# `helm upgrade`, same as longhouse's deploy.sh) — just referenced by name:
+#   imagePullSecrets:
+#     - name: regcred
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# -----------------------------------------------------------------------
+# Database — Zalando postgres-operator convention (PLANDOC.md §9 decision 7)
+# -----------------------------------------------------------------------
+database:
+  # Name of an EXISTING Secret in the release namespace — NOT rendered,
+  # created, owned, or lifecycle-managed by this chart in any way — holding
+  # a single key with a ready-to-use `postgresql://...` connection string.
+  # Typically produced by a small ops-side step that reads the Zalando
+  # operator's own `<user>.<cluster>.credentials.postgresql.acid.zalan.do`
+  # Secret (keys: username, password) plus the CR's Service host and
+  # assembles them into this simpler single-key Secret. See
+  # helm_chart/README.md for the exact recipe and a first-deploy runbook.
+  existingSecretName: "firepit-db-uri"
+  existingSecretKey: "DB_URI"
+
+# -----------------------------------------------------------------------
+# firepit-api
+# -----------------------------------------------------------------------
+api:
+  port: 8080
+  logLevel: info
+  # Comma-separated FIREPIT_CORS_ORIGINS. "*" is dev-only — narrow this in
+  # any real deployment's values overlay (e.g. the SPA's own origin).
+  corsOrigins: "*"
+  migrateOnBoot: true
+  postLoginRedirectUrl: "/"
+  # Full https://.../auth/callback URL the linkkeys IDP redirects back to
+  # after authentication (GET /auth/callback — see
+  # api/internal/server/authcallback.go). Required for login to work.
+  appCallbackUrl: ""
+  # HMAC secret for the self-verifying login nonce
+  # (FIREPIT_SESSION_NONCE_SECRET — api/internal/config/config.go). Leave
+  # blank to have the chart generate one and persist it across upgrades
+  # (via `lookup`, same pattern as longhouse's api.jwtSecret/
+  # webapp.sessionSecret) — this is REQUIRED to be stable across replicas
+  # and restarts, so either let the chart persist it or set it explicitly
+  # via a values overlay/`--set-string` at deploy time.
+  sessionNonceSecret: ""
+
+# -----------------------------------------------------------------------
+# linkkeys client config — firepit-api's FIREPIT_LINKKEYS_* env. The RP it
+# talks to is either this chart's own linkkeysRp Deployment below, or an
+# external RP (linkkeysRp.enabled: false + linkkeys.pki.url set).
+# -----------------------------------------------------------------------
+linkkeys:
+  # This firepit instance's own relying-party domain identity.
+  domain: ""
+  # The IDP users log in against. First deployment: linkkeys.todandlorna.com
+  # (PLANDOC.md §2/§9); a later deploy (e.g. catalystsquad.com) would point
+  # at linkkeys.catalystsquad.com instead.
+  idpDomain: ""
+  idpUrl: ""
+  transport: "http" # "http" (the RP's HTTPS PKI endpoint) or "tcp" (CSIL-RPC/TLS)
+  tcpAddr: ""
+  tcpFingerprints: ""
+  tcpAllowInsecure: false
+  pki:
+    # RP sign-request/decrypt-token/verify-assertion/userinfo endpoint.
+    # Leave blank when linkkeysRp.enabled is true to use this chart's own
+    # linkkeysRp Service URL automatically; set explicitly (an external
+    # https://... RP with ENABLE_RP_ENDPOINTS=true) when linkkeysRp.enabled
+    # is false.
+    url: ""
+    allowInvalidCerts: false
+    # Bearer API key firepit-api authenticates to the RP with. There is no
+    # way to generate this ahead of time — it's minted BY the RP itself via
+    # `linkkeys user create <name> --api-key` after the RP's first boot
+    # (see helm_chart/README.md's first-deploy runbook). Supplied via a
+    # values overlay/`--set-string` at deploy time — reactorcide's
+    # deploy.yaml sources it from `${secret:catalystcommunity/firepit:...}`
+    # so the real value is never committed to git. The chart turns
+    # whatever's here into a Secret key; it never invents one on its own
+    # the way it does for api.sessionNonceSecret.
+    apiKey: ""
+
+# -----------------------------------------------------------------------
+# linkkeys-rp — this chart's own linkkeys server instance running in RP
+# mode (ENABLE_RP_ENDPOINTS=true / ENABLE_API_KEY_AUTH=true /
+# ENABLE_PASSWORD_AUTH=false, per linkkeys/helm_chart's rp.* values and
+# PLANDOC.md §2's "linkkeys server in RP mode as a sidecar"). Holds this
+# instance's Ed25519 domain key material in a small SQLite-backed PVC — no
+# second Zalando Postgres cluster needed just for RP key storage. See
+# helm_chart/README.md for the domain-key init runbook.
+# -----------------------------------------------------------------------
+linkkeysRp:
+  enabled: true
+  httpsPort: 8443
+  tcpPort: 4987
+  logLevel: info
+  # Passphrase encrypting this RP's on-disk domain key material. Leave
+  # blank to have the chart generate and persist one across upgrades (same
+  # `lookup` pattern as api.sessionNonceSecret). Losing this after
+  # `linkkeys domain init` has run means losing the domain key, so for
+  # anything beyond a throwaway dev install, set it explicitly (values
+  # overlay/`--set-string`, never committed) and back it up.
+  domainKeyPassphrase: ""
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClassName: ""
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  # Extra env vars passed through to the linkkeys-rp container verbatim
+  # (list of {name, value} or {name, valueFrom}), for any deployment-specific
+  # knob not covered above.
+  extraEnv: []
+  # External RP mode: set enabled: false and linkkeys.pki.url to a linkkeys
+  # instance elsewhere already running with ENABLE_RP_ENDPOINTS=true — no
+  # Deployment/Service/PVC/Secret is created by this chart in that case,
+  # and only linkkeys.pki.apiKey (issued by that external RP) is needed.
+
+# -----------------------------------------------------------------------
+# webapp — SolidJS SPA behind nginx (webapp/Dockerfile). nginx proxies
+# /csil, /auth, /webhooks, /healthz to the api Service so the SPA and api
+# share one origin even without the Gateway splitting paths first (e.g.
+# docker-compose, or a Gateway listener that isn't path-aware).
+# -----------------------------------------------------------------------
+webapp:
+  port: 8080
+  # In-cluster api Service URL nginx proxies the above paths to. Leave
+  # blank to default to this release's own api Service
+  # (http://<fullname>-api:<api.port>); override only for unusual
+  # topologies (e.g. an api Service in another namespace).
+  apiUrl: ""
+
+# -----------------------------------------------------------------------
+# Gateway API HTTPRoutes — attach to a shared, pre-existing Gateway
+# (reactorcide/helm_chart's httproute-*.yaml pattern: one Gateway per
+# cluster; each app chart release attaches its own HTTPRoutes to it by
+# name/namespace rather than owning a Gateway itself).
+# -----------------------------------------------------------------------
+gateway:
+  enabled: false
+  gatewayName: ""
+  gatewayNamespace: ""
+  sectionName: "https"
+  domains:
+    - firepit.catalystsquad.com
+  annotations: {}
+
+resources:
+  api:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  webapp:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL

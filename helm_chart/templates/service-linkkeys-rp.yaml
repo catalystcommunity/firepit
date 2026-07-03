@@ -1,0 +1,23 @@
+{{- if .Values.linkkeysRp.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "firepit.fullname" . }}-linkkeys-rp
+  labels:
+    {{- include "firepit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: linkkeys-rp
+spec:
+  type: {{ .Values.linkkeysRp.service.type }}
+  ports:
+    - port: {{ .Values.linkkeysRp.httpsPort }}
+      targetPort: https
+      protocol: TCP
+      name: https
+    - port: {{ .Values.linkkeysRp.tcpPort }}
+      targetPort: tcp
+      protocol: TCP
+      name: tcp
+  selector:
+    {{- include "firepit.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: linkkeys-rp
+{{- end }}

@@ -1,0 +1,31 @@
+name: firepit-release
+description: "Version bump with semver-tags, BuildKit build+push firepit-{api,webapp} images, and create a GitHub release on merge to main"
+triggers:
+  events:
+    - pull_request_merged
+  branches:
+    - main
+job:
+  image: containers.catalystsquad.com/public/reactorcide/runnerbase:dev
+  command: "sh .reactorcide/jobs/scripts/release.sh"
+  timeout: 1800
+  priority: 15
+  working_dir: /job
+  raw_command: true
+  # Image builds need a BuildKit sidecar (BUILDKIT_HOST is injected by this
+  # capability — see reactorcide/.reactorcide/jobs/scripts/release.sh and
+  # reactorcide/jobs/build-all.yaml, which this job's script mirrors) and
+  # this job pushes a version-bump commit straight to main + tags/releases
+  # on GitHub, so it isn't safe to run unattended via `reactorcide
+  # run-local` against a real repo.
+  capabilities:
+    - builder
+  run_as:
+    user: root
+  disable_run_local: true
+environment:
+  REACTORCIDE_REPO: "catalystcommunity/firepit"
+  REGISTRY: "containers.catalystsquad.com"
+  GITHUB_PAT: "${secret:catalystcommunity/ci:githubpat}"
+  REGISTRY_USER: "${secret:catalystcommunity/registry:user}"
+  REGISTRY_PASSWORD: "${secret:catalystcommunity/registry:password}"

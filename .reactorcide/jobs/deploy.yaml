@@ -1,0 +1,42 @@
+name: firepit-deploy
+description: "Deploy firepit to Kubernetes via Helm when a release tag is pushed. Values pinned to firepit.catalystsquad.com (the first deployment target, PLANDOC.md §1); copy this job + deploy/values-*.yaml for another environment."
+triggers:
+  events:
+    - tag_created
+job:
+  image: containers.catalystsquad.com/public/reactorcide/runnerbase:dev
+  command: "sh .reactorcide/jobs/scripts/deploy.sh"
+  timeout: 900
+  priority: 20
+  working_dir: /job
+  raw_command: true
+  # Deploys straight to the target cluster with real credentials — not
+  # something `reactorcide run-local` should be able to fire unattended.
+  disable_run_local: true
+environment:
+  K8S_NAMESPACE: "firepit"
+  HELM_RELEASE: "firepit"
+  HELM_VALUES_FILE: "deploy/values-catalystsquad.yaml"
+
+  # REACTORCIDE_BRANCH carries the pushed tag's name for a tag_created
+  # trigger (e.g. "v0.3.0" — see coordinator_api/internal/handlers/
+  # eval_job.go's extractBranchOrTag); deploy.sh strips the leading "v" to
+  # get the image tag that release.yaml just pushed for this exact commit.
+  # Left empty here so deploy.sh's own REACTORCIDE_BRANCH read (already in
+  # its environment automatically) is what's used; see that script for the
+  # version/VERSION.txt fallback used under `reactorcide run-local`.
+
+  REGISTRY_USER: "${secret:catalystcommunity/registry:user}"
+  REGISTRY_PASSWORD: "${secret:catalystcommunity/registry:password}"
+  KUBECONFIG_CONTENT: "${secret:catalystcommunity/k8s:kubeconfig}"
+
+  # Bootstraps FIREPIT_LINKKEYS_PKI_API_KEY on the api pod (Secret rendered
+  # by helm_chart/templates/secret-api.yaml) and the RP's own domain-key
+  # passphrase (helm_chart/templates/secret-linkkeys-rp.yaml) — see
+  # helm_chart/README.md's first-deploy runbook for how these values come
+  # to exist in the first place (they can't be generated ahead of time).
+  # Until both are populated in the org's reactorcide secrets store, the
+  # chart still deploys (session-nonce and DB secrets don't depend on
+  # them) but login won't work.
+  LINKKEYS_PKI_API_KEY: "${secret:catalystcommunity/firepit:linkkeys_api_key}"
+  LINKKEYS_RP_DOMAIN_KEY_PASSPHRASE: "${secret:catalystcommunity/firepit:linkkeys_rp_domain_key_passphrase}"

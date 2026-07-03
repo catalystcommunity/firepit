@@ -1,0 +1,42 @@
+{{- /*
+Gateway API HTTPRoute for the webapp — the default backend for
+firepit.catalystsquad.com (or whatever gateway.domains lists). The api's
+own HTTPRoute (httproute-api.yaml) declares more specific PathPrefix
+matches on the same hostname(s), which win over this catch-all "/" rule
+per the Gateway API spec — same pattern as reactorcide/helm_chart's
+httproute-web.yaml (catch-all) paired with httproute-app.yaml
+(PathPrefix /api).
+*/ -}}
+{{- if .Values.gateway.enabled }}
+{{- range .Values.gateway.domains }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "firepit.fullname" $ }}-webapp-{{ . | replace "." "-" | trunc 53 }}
+  labels:
+    {{- include "firepit.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: webapp
+  {{- with $.Values.gateway.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    - name: {{ $.Values.gateway.gatewayName }}
+      {{- if $.Values.gateway.gatewayNamespace }}
+      namespace: {{ $.Values.gateway.gatewayNamespace }}
+      {{- end }}
+      sectionName: {{ $.Values.gateway.sectionName | default "https" }}
+  hostnames:
+    - {{ . | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ include "firepit.fullname" $ }}-webapp
+          port: {{ $.Values.webapp.port }}
+{{- end }}
+{{- end }}

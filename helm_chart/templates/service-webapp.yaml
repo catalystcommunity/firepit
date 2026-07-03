@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "firepit.fullname" . }}-webapp
+  labels:
+    {{- include "firepit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: webapp
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.webapp.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "firepit.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: webapp

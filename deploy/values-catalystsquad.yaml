@@ -1,0 +1,55 @@
+# Prod values overlay for firepit.catalystsquad.com (PLANDOC.md §1's first
+# deployment target). Layered on top of helm_chart/values.yaml by
+# .reactorcide/jobs/deploy.yaml -> scripts/deploy.sh
+# (`helm upgrade --install -f deploy/values-catalystsquad.yaml -f <runtime-overrides>`).
+#
+# image.*.tag, linkkeys.pki.apiKey, and linkkeysRp.domainKeyPassphrase are
+# deliberately NOT set here — deploy.sh injects those at deploy time (the
+# image tag from the release that triggered this deploy; the two secrets
+# from reactorcide's `${secret:catalystcommunity/firepit:...}` vault) so
+# nothing sensitive or commit-specific lives in this file. See
+# helm_chart/README.md for the full first-deploy runbook this values file
+# is one half of.
+
+imagePullSecrets:
+  - name: regcred
+
+database:
+  # Provisioned per helm_chart/README.md's runbook: a Zalando postgres CR
+  # named "firepit-postgres" in the "firepit" namespace, whose credentials
+  # get assembled into this single-key Secret.
+  existingSecretName: "firepit-db-uri"
+  existingSecretKey: "DB_URI"
+
+api:
+  corsOrigins: "https://firepit.catalystsquad.com"
+  appCallbackUrl: "https://firepit.catalystsquad.com/auth/callback"
+
+linkkeys:
+  domain: "catalystsquad.com"
+  # First deployment's IDP is linkkeys.todandlorna.com, NOT
+  # linkkeys.catalystsquad.com (PLANDOC.md §2: "IDP at
+  # linkkeys.todandlorna.com for the first deployment").
+  idpDomain: "todandlorna.com"
+  idpUrl: "https://linkkeys.todandlorna.com"
+
+linkkeysRp:
+  enabled: true
+
+webapp:
+  port: 8080
+
+gateway:
+  enabled: true
+  # Same foundry contour Gateway longhouse's catalystsquad deployment uses
+  # (longhouse/deploy/values-catalystsquad.yaml) — one shared Gateway,
+  # every app chart in the cluster attaches its own HTTPRoutes to it.
+  gatewayName: contour
+  gatewayNamespace: projectcontour
+  # TLS terminates externally (Cloudflare) in front of this cluster's
+  # contour listener for *.catalystsquad.com, same as longhouse's
+  # catalystsquad deployment — so this attaches to the plain HTTP listener,
+  # not "https". Adjust if firepit's Gateway listener setup differs.
+  sectionName: http
+  domains:
+    - firepit.catalystsquad.com

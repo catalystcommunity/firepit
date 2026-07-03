@@ -1,0 +1,122 @@
+{{- if .Values.linkkeysRp.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "firepit.fullname" . }}-linkkeys-rp
+  labels:
+    {{- include "firepit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: linkkeys-rp
+spec:
+  replicas: {{ .Values.replicaCount.linkkeysRp }}
+  {{- if .Values.linkkeysRp.persistence.enabled }}
+  # SQLite lives on a ReadWriteOnce volume — a rolling update can't attach
+  # it to the new pod while the old pod still holds it, so the rollout
+  # would deadlock. Recreate terminates the old pod first, releasing the
+  # volume (same reasoning as linkkeys/helm_chart's own deployment.yaml).
+  strategy:
+    type: Recreate
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "firepit.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: linkkeys-rp
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret-linkkeys-rp.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "firepit.labels" . | nindent 8 }}
+        app.kubernetes.io/component: linkkeys-rp
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "firepit.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: linkkeys-rp
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.linkkeysRp.repository }}:{{ .Values.image.linkkeysRp.tag }}"
+          imagePullPolicy: {{ .Values.image.linkkeysRp.pullPolicy }}
+          ports:
+            - name: https
+              containerPort: {{ .Values.linkkeysRp.httpsPort }}
+              protocol: TCP
+            - name: tcp
+              containerPort: {{ .Values.linkkeysRp.tcpPort }}
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ include "firepit.fullname" . }}-linkkeys-rp
+          env:
+            - name: DATABASE_BACKEND
+              value: "sqlite"
+            - name: LOG_LEVEL
+              value: {{ .Values.linkkeysRp.logLevel | quote }}
+            - name: RUST_LOG
+              value: {{ printf "warn,linkkeys=%s,liblinkkeys=%s" .Values.linkkeysRp.logLevel .Values.linkkeysRp.logLevel | quote }}
+            - name: TCP_PORT
+              value: {{ .Values.linkkeysRp.tcpPort | quote }}
+            - name: HTTPS_PORT
+              value: {{ .Values.linkkeysRp.httpsPort | quote }}
+            - name: ENABLE_RP_ENDPOINTS
+              value: "true"
+            - name: ENABLE_API_KEY_AUTH
+              value: "true"
+            - name: ENABLE_PASSWORD_AUTH
+              value: "false"
+            {{- with .Values.linkkeysRp.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if .Values.linkkeysRp.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- end }}
+          # Readiness gates Service traffic and goes green as soon as the
+          # TCP listener opens; liveness is deliberately lenient so it
+          # never restarts the pod during that startup window — only if
+          # the process is genuinely wedged (same reasoning as
+          # linkkeys/helm_chart's own deployment.yaml).
+          readinessProbe:
+            tcpSocket:
+              port: tcp
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: tcp
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.linkkeysRp.resources | nindent 12 }}
+      {{- if .Values.linkkeysRp.persistence.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "firepit.fullname" . }}-linkkeys-rp-data
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

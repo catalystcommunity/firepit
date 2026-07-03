@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "firepit.fullname" . }}-api
+  labels:
+    {{- include "firepit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+data:
+  FIREPIT_PORT: {{ .Values.api.port | quote }}
+  FIREPIT_CORS_ORIGINS: {{ .Values.api.corsOrigins | quote }}
+  FIREPIT_MIGRATE_ON_BOOT: {{ .Values.api.migrateOnBoot | quote }}
+  FIREPIT_POST_LOGIN_REDIRECT_URL: {{ .Values.api.postLoginRedirectUrl | quote }}
+  {{- if .Values.api.appCallbackUrl }}
+  FIREPIT_APP_CALLBACK_URL: {{ .Values.api.appCallbackUrl | quote }}
+  {{- end }}
+  {{- if .Values.linkkeys.domain }}
+  FIREPIT_LINKKEYS_DOMAIN: {{ .Values.linkkeys.domain | quote }}
+  {{- end }}
+  {{- if .Values.linkkeys.idpDomain }}
+  FIREPIT_LINKKEYS_IDP_DOMAIN: {{ .Values.linkkeys.idpDomain | quote }}
+  {{- end }}
+  {{- if .Values.linkkeys.idpUrl }}
+  FIREPIT_LINKKEYS_IDP_URL: {{ .Values.linkkeys.idpUrl | quote }}
+  {{- end }}
+  {{- $pkiUrl := include "firepit.resolvedLinkkeysPkiUrl" . }}
+  {{- if $pkiUrl }}
+  FIREPIT_LINKKEYS_PKI_URL: {{ $pkiUrl | quote }}
+  {{- end }}
+  FIREPIT_LINKKEYS_PKI_ALLOW_INVALID_CERTS: {{ .Values.linkkeys.pki.allowInvalidCerts | quote }}
+  FIREPIT_LINKKEYS_TRANSPORT: {{ .Values.linkkeys.transport | quote }}
+  {{- if .Values.linkkeys.tcpAddr }}
+  FIREPIT_LINKKEYS_TCP_ADDR: {{ .Values.linkkeys.tcpAddr | quote }}
+  {{- end }}
+  {{- if .Values.linkkeys.tcpFingerprints }}
+  FIREPIT_LINKKEYS_TCP_FINGERPRINTS: {{ .Values.linkkeys.tcpFingerprints | quote }}
+  {{- end }}
+  FIREPIT_LINKKEYS_TCP_ALLOW_INSECURE: {{ .Values.linkkeys.tcpAllowInsecure | quote }}

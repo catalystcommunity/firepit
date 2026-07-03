@@ -1,0 +1,11 @@
+apiVersion: v2
+name: firepit
+description: A dev coordination forum for open source projects — threaded discussion, endorsements, and GitHub event ingestion
+type: application
+
+# Chart version — bumped by .reactorcide/jobs/scripts/release.sh alongside
+# version/VERSION.txt, mirroring longhouse's release.sh convention.
+version: 0.1.0
+
+# Application version — matches version/VERSION.txt.
+appVersion: "0.0.0"

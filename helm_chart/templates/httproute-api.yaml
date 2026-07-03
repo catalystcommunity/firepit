@@ -1,0 +1,65 @@
+{{- /*
+Gateway API HTTPRoute for firepit-api's HTTP-native surface: CSIL-RPC
+(/csil), the linkkeys auth callback (/auth), the GitHub webhook receiver
+(/webhooks), and /healthz (see api/internal/server/server.go). Path-prefix
+matches are more specific than httproute-webapp.yaml's catch-all "/" rule,
+so per the Gateway API spec (longest path match wins regardless of which
+HTTPRoute object declares it, as long as both attach to the same
+Gateway+hostname) these routes win over the webapp's default backend for
+these four paths — same "more specific path wins" mechanism reactorcide's
+own httproute-app.yaml/httproute-web.yaml pair relies on.
+*/ -}}
+{{- if .Values.gateway.enabled }}
+{{- range .Values.gateway.domains }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "firepit.fullname" $ }}-api-{{ . | replace "." "-" | trunc 53 }}
+  labels:
+    {{- include "firepit.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: api
+  {{- with $.Values.gateway.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    - name: {{ $.Values.gateway.gatewayName }}
+      {{- if $.Values.gateway.gatewayNamespace }}
+      namespace: {{ $.Values.gateway.gatewayNamespace }}
+      {{- end }}
+      sectionName: {{ $.Values.gateway.sectionName | default "https" }}
+  hostnames:
+    - {{ . | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /csil
+      backendRefs:
+        - name: {{ include "firepit.fullname" $ }}-api
+          port: {{ $.Values.api.port }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /auth
+      backendRefs:
+        - name: {{ include "firepit.fullname" $ }}-api
+          port: {{ $.Values.api.port }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /webhooks
+      backendRefs:
+        - name: {{ include "firepit.fullname" $ }}-api
+          port: {{ $.Values.api.port }}
+    - matches:
+        - path:
+            type: Exact
+            value: /healthz
+      backendRefs:
+        - name: {{ include "firepit.fullname" $ }}-api
+          port: {{ $.Values.api.port }}
+{{- end }}
+{{- end }}

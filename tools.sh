@@ -235,7 +235,37 @@ cmd_dev() {
 
 cmd_build_images() {
     log_status "build-images"
-    not_implemented "build-images (Dockerfiles land with task D1)"
+    command -v docker >/dev/null 2>&1 || { err "docker is required for './tools.sh build-images'"; exit 1; }
+
+    local version sha tag
+    version="$(tr -d '[:space:]' < "$SCRIPT_DIR/version/VERSION.txt")"
+    sha="$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo "nogit")"
+    tag="${version}-${sha}"
+
+    # Dev-oriented: plain `docker build` from the repo root (both
+    # Dockerfiles expect that context — api/Dockerfile needs the sibling
+    # coredb/ module, webapp/Dockerfile needs clients/ and version/). CI's
+    # release job (.reactorcide/jobs/release.yaml) instead uses BuildKit's
+    # buildctl directly against a builder-capability sidecar — see that
+    # job's script for the multi-arch/registry-push path this verb doesn't
+    # need to cover.
+    log_status "build-images: firepit-api -> firepit/api:${tag}"
+    docker build \
+        -f "$SCRIPT_DIR/api/Dockerfile" \
+        -t "firepit/api:${tag}" \
+        -t "firepit/api:dev" \
+        "$SCRIPT_DIR"
+
+    log_status "build-images: firepit-webapp -> firepit/webapp:${tag}"
+    docker build \
+        -f "$SCRIPT_DIR/webapp/Dockerfile" \
+        -t "firepit/webapp:${tag}" \
+        -t "firepit/webapp:dev" \
+        "$SCRIPT_DIR"
+
+    log_status "build-images: done"
+    echo "  firepit/api:${tag} (+ :dev)"
+    echo "  firepit/webapp:${tag} (+ :dev)"
 }
 
 case "${1:-}" in
