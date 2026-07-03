@@ -27,14 +27,26 @@ api:
 
 linkkeys:
   domain: "catalystsquad.com"
-  # First deployment's IDP is linkkeys.todandlorna.com, NOT
-  # linkkeys.catalystsquad.com (PLANDOC.md §2: "IDP at
-  # linkkeys.todandlorna.com for the first deployment").
-  idpDomain: "todandlorna.com"
-  idpUrl: "https://linkkeys.todandlorna.com"
+  # The catalystsquad.com linkkeys instance (namespace
+  # linkkeys-catalystsquad) is both the IDP and this app's RP — the same
+  # arrangement longhouse-catalystsquad uses. It already holds the
+  # DNS-published catalystsquad.com domain key, so firepit must NOT boot
+  # its own RP claiming that domain identity (linkkeysRp.enabled: false
+  # below); it talks to the existing instance over CSIL-RPC/TCP with
+  # pinned SPKI fingerprints, mirroring longhouse's config verbatim.
+  idpDomain: "catalystsquad.com"
+  idpUrl: "https://linkkeys.catalystsquad.com"
+  transport: "tcp"
+  tcpAddr: "linkkeys-catalystsquad.linkkeys-catalystsquad.svc.cluster.local:4987"
+  tcpFingerprints: "c20dadc7bea8ecf47c2d2f43ff78004c5bad28d5f56874c142ddd76c888aaf06,50d7df1ea0298a90d38ed5d7c366172944d7bbed56d9fbd3e9a6e23e39ed7360,63a01719e9df06d7f33b206d301382c610703fc72dd0b54ed11e15faea3c3b80"
+  pki:
+    url: "http://linkkeys.catalystsquad.com"
 
 linkkeysRp:
-  enabled: true
+  # Using the existing linkkeys-catalystsquad instance as the RP — no
+  # in-chart RP Deployment (and the catalystsquad/firepit
+  # linkkeys_rp_domain_key_passphrase vault entry goes unused).
+  enabled: false
 
 webapp:
   port: 8080
