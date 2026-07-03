@@ -2,10 +2,10 @@
 #
 # Usage: ./tools.sh dev   (or `docker compose up` directly)
 #
-# postgres + api run today (task B1's Dockerfile at api/Dockerfile). webapp
-# builds nothing yet (Wave C) — its entry is a placeholder so the shape of
-# the eventual stack is visible; uncomment as that image becomes buildable
-# (task D1).
+# postgres + api + webapp all build and run (api/Dockerfile,
+# webapp/Dockerfile). The webapp serves the SPA on :8081 and proxies
+# /csil, /auth, /webhooks, /healthz to the api container — the same
+# one-origin shape production has behind the Gateway.
 services:
   postgres:
     image: postgres:17
@@ -60,22 +60,22 @@ services:
     networks:
       - firepit
 
-  # webapp (SolidJS SPA via Vite). No Dockerfile/image yet — placeholder
-  # until task D1.
-  # webapp:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.webapp
-  #   image: firepit/webapp:dev
-  #   container_name: firepit-webapp-dev
-  #   environment:
-  #     FIREPIT_API_URL: "http://api:8080"
-  #   ports:
-  #     - "5173:5173"
-  #   depends_on:
-  #     - api
-  #   networks:
-  #     - firepit
+  # webapp (SolidJS SPA behind nginx-unprivileged, webapp/Dockerfile).
+  # Built from the repo root so clients/ and version/ are in context.
+  webapp:
+    build:
+      context: .
+      dockerfile: webapp/Dockerfile
+    image: firepit/webapp:dev
+    container_name: firepit-webapp-dev
+    environment:
+      FIREPIT_API_URL: "http://api:8080"
+    ports:
+      - "8081:8080"
+    depends_on:
+      - api
+    networks:
+      - firepit
 
 networks:
   firepit:
