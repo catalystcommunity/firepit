@@ -125,41 +125,39 @@ Before enabling this, confirm:
      --from-literal=DB_URI="postgresql://$USER:$PASSWORD@$HOST:5432/firepit_db?sslmode=require"
    ```
 
-2. **First `helm upgrade --install`** with `linkkeysRp.enabled: true` and
-   no `linkkeys.pki.apiKey` yet — the RP comes up with no domain key and no
-   API-key users; `api` will fail login attempts (everything else still
-   works) until step 3.
-
-3. **Initialize the RP's domain key and mint an API key:**
-
-   ```sh
-   POD=$(kubectl get pod -n firepit -l app.kubernetes.io/component=linkkeys-rp -o name | head -1)
-   kubectl exec -n firepit -it "$POD" -- linkkeys domain init
-   kubectl exec -n firepit -it "$POD" -- linkkeys user create firepit-api "Firepit API" --api-key
-   # copy the printed key
-   ```
-
-4. **Feed the API key back in** and re-deploy:
+2. **Mint the RP API key.** The catalystsquad deployment does NOT run its
+   own RP (`linkkeysRp.enabled: false` in `deploy/values-catalystsquad.yaml`)
+   — it uses the existing `linkkeys-catalystsquad` instance, which already
+   holds the DNS-published catalystsquad.com domain key and doubles as the
+   IDP, exactly like longhouse-catalystsquad. Mint the key on that
+   instance, any time before the first deploy:
 
    ```sh
-   helm upgrade --install firepit ./helm_chart \
-     -f deploy/values-catalystsquad.yaml \
-     --set-string linkkeys.pki.apiKey="<key from step 3>"
+   kubectl exec -n linkkeys-catalystsquad deploy/linkkeys-catalystsquad -- \
+     linkkeys user create firepit "Firepit Forum" --api-key
+   # store the printed key as catalystsquad/firepit:linkkeys_api_key in
+   # the reactorcide vault (set-secrets.sh prompts for it)
    ```
 
-   (In CI, this is `.reactorcide/jobs/deploy.yaml` sourcing the same value
-   from `${secret:catalystsquad/firepit:linkkeys_api_key}` — store it
-   there once so subsequent tag-triggered deploys don't need step 3/4
-   again.)
+   `.reactorcide/jobs/deploy.yaml` sources it from
+   `${secret:catalystsquad/firepit:linkkeys_api_key}` on every
+   tag-triggered deploy.
 
-5. **Publish the domain's DNS TXT record** as printed by
-   `linkkeys domain dns-check` inside the RP pod, if this firepit instance
-   is also meant to be discoverable as its own linkkeys domain (not just a
-   consumer of `linkkeys.todandlorna.com`'s IDP).
+   *(Self-hosted variant — only when a deployment really does run its own
+   RP with `linkkeysRp.enabled: true`: deploy once keyless, then
+   `linkkeys domain init` + `linkkeys user create ... --api-key` inside
+   the RP pod, publish the domain's DNS TXT records per
+   `linkkeys domain dns-check`, feed the key back in, and redeploy.)*
 
-6. **Enable the Gateway routes** (`gateway.enabled: true` +
-   `gatewayName`/`gatewayNamespace`/`domains`) once DNS for
-   `firepit.catalystsquad.com` points at the cluster's Gateway LB.
+3. **Deploy** — merge to main (release job builds + tags) and the
+   `tag_created` deploy job runs `helm upgrade --install` with
+   `deploy/values-catalystsquad.yaml`; or run the equivalent helm command
+   by hand for a first manual deploy.
+
+4. **Gateway routes** are enabled in the values overlay
+   (`gateway.enabled: true`); external-dns picks the HTTPRoute hostname up
+   automatically, and Cloudflare terminates TLS for
+   `*.catalystsquad.com` in front of the cluster's contour Gateway.
 
 ## Validating locally (no cluster required)
 
