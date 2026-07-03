@@ -1,13 +1,14 @@
 // Package coredb embeds the goose migrations that define firepit's
-// PostgreSQL schema. api/cmd/firepit-api wires Migrations into goose at
-// boot to run `migrate`.
+// PostgreSQL schema and exposes Up/Reset/Status so both
+// api/cmd/firepit-api and coredb/cmd/migrate (backing `./tools.sh migrate`)
+// can apply them programmatically against a DB URL.
 //
-// This is a scaffold stub (task A1) — migrations/ is empty except for
-// .gitkeep. The baseline migration (000001_baseline.sql, per PLANDOC.md §4)
-// lands in task A3.
+// See migrations/000001_baseline.sql (PLANDOC.md §4) for the schema itself.
 package coredb
 
 import "embed"
 
 //go:embed all:migrations
 var Migrations embed.FS
+
+const migrationsDir = "migrations"
