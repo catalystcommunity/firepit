@@ -45,7 +45,7 @@ against it (see the runbook below). Once minted, feed it back in as
 the real value) — the chart turns it into a key
 (`FIREPIT_LINKKEYS_PKI_API_KEY`) on a Secret it creates
 (`<release>-firepit-api`). In CI this flows in via reactorcide's
-`${secret:catalystcommunity/firepit:linkkeys_api_key}` (see
+`${secret:catalystsquad/firepit:linkkeys_api_key}` (see
 `.reactorcide/jobs/deploy.yaml`).
 
 ### 3. linkkeys RP domain key passphrase — `linkkeysRp.domainKeyPassphrase`
@@ -148,7 +148,7 @@ Before enabling this, confirm:
    ```
 
    (In CI, this is `.reactorcide/jobs/deploy.yaml` sourcing the same value
-   from `${secret:catalystcommunity/firepit:linkkeys_api_key}` — store it
+   from `${secret:catalystsquad/firepit:linkkeys_api_key}` — store it
    there once so subsequent tag-triggered deploys don't need step 3/4
    again.)
 

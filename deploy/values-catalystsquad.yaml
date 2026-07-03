@@ -6,7 +6,7 @@
 # image.*.tag, linkkeys.pki.apiKey, and linkkeysRp.domainKeyPassphrase are
 # deliberately NOT set here — deploy.sh injects those at deploy time (the
 # image tag from the release that triggered this deploy; the two secrets
-# from reactorcide's `${secret:catalystcommunity/firepit:...}` vault) so
+# from reactorcide's `${secret:catalystsquad/firepit:...}` vault) so
 # nothing sensitive or commit-specific lives in this file. See
 # helm_chart/README.md for the full first-deploy runbook this values file
 # is one half of.

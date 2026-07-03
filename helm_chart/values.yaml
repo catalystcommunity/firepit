@@ -122,7 +122,7 @@ linkkeys:
     # `linkkeys user create <name> --api-key` after the RP's first boot
     # (see helm_chart/README.md's first-deploy runbook). Supplied via a
     # values overlay/`--set-string` at deploy time — reactorcide's
-    # deploy.yaml sources it from `${secret:catalystcommunity/firepit:...}`
+    # deploy.yaml sources it from `${secret:catalystsquad/firepit:...}`
     # so the real value is never committed to git. The chart turns
     # whatever's here into a Secret key; it never invents one on its own
     # the way it does for api.sessionNonceSecret.
