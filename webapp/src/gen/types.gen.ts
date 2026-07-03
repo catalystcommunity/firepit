@@ -294,6 +294,14 @@ export interface Post {
   id: PostID;
   boardId: BoardID;
   authorId: UserID;
+  /**
+   * The author's handle, denormalized onto every post/comment response so
+   * the UI can render a real name instead of a bare `author_id` without a
+   * per-row follow-up lookup. Absent for a tombstoned post (author_id
+   * itself is also blanked — see ThreadService's redaction), or if the
+   * author's `users` row is somehow gone.
+   */
+  authorHandle?: string;
   title: string;
   bodyMd: string;
   origin: OriginKind;
@@ -331,6 +339,11 @@ export interface Comment {
   postId: PostID;
   parentCommentId?: CommentID;
   authorId: UserID;
+  /**
+   * The author's handle — same denormalization/absence rules as
+   * `Post.author_handle`.
+   */
+  authorHandle?: string;
   bodyMd: string;
   origin: OriginKind;
   originRef?: string;
@@ -440,6 +453,15 @@ export interface EndorseRequest {
 export interface Endorsement {
   id: EndorsementID;
   userId: UserID;
+  /**
+   * The endorsing user's handle, denormalized so the UI can render a real
+   * name instead of a bare `user_id` without a per-row follow-up lookup —
+   * same denormalization/absence rules as `Post.author_handle`/
+   * `Comment.author_handle` (named `author_handle` here too rather than
+   * e.g. `endorser_handle`, for one consistent field name across every
+   * content-adjacent type that denormalizes a handle this way).
+   */
+  authorHandle?: string;
   targetType: TargetType;
   targetId: string;
   roleBadge?: string;
@@ -501,6 +523,14 @@ export interface MentionGrant {
 export interface MentionGrantList {
   grants: MentionGrant[];
 }
+
+/**
+ * A user's handle — the resolve-user lookup key (bare-typed request; no
+ * wrapper group needed for a single-scalar payload, same convention as
+ * BoardSlug/Domain). Exact-match against `users.handle`, case-sensitive at
+ * the wire/type level (the store method decides its own match semantics).
+ */
+export type Handle = string;
 
 /**
  * A private grouping of other users, owned by the caller. Only the owner
@@ -589,9 +619,15 @@ export interface UnreadSummary {
 }
 
 /**
- * What kind of event produced a notification.
+ * What kind of event produced a notification. `endorsed` mirrors coredb's
+ * notification_event enum value added in
+ * coredb/migrations/000003_notification_event_endorsed.sql — the fan-out
+ * publisher (api/internal/notify/publisher.go's EventEndorsed) has written
+ * this value since that migration landed; it was simply missing from this
+ * union, which meant an endorsement notification couldn't round-trip the
+ * API. Purely additive — every existing value is unchanged.
  */
-export type NotificationEvent = "new_post" | "new_comment" | "mention" | "github_event";
+export type NotificationEvent = "new_post" | "new_comment" | "mention" | "github_event" | "endorsed";
 
 /**
  * One recipient's copy of a fan-out event. Denormalized enough to render
@@ -608,6 +644,19 @@ export interface Notification {
    * system-generated notifications that have none).
    */
   actorId?: UserID;
+  /**
+   * The actor's handle, denormalized so the UI can render a real name
+   * instead of a bare id without a follow-up lookup. Absent whenever
+   * `actor_id` is absent, or if the actor's `users` row has since been
+   * removed (not expected in v1, but this type doesn't assume it can't
+   * happen).
+   */
+  actorHandle?: string;
+  /**
+   * The actor's display name, same denormalization/absence rules as
+   * `actor_handle`.
+   */
+  actorDisplayName?: string;
   targetType: TargetType;
   targetId: string;
   /**

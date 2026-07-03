@@ -25,6 +25,14 @@ Post = {
     @receive-only
     author_id: UserID,
 
+    ;;; The author's handle, denormalized onto every post/comment response so
+    ;;; the UI can render a real name instead of a bare `author_id` without a
+    ;;; per-row follow-up lookup. Absent for a tombstoned post (author_id
+    ;;; itself is also blanked — see ThreadService's redaction), or if the
+    ;;; author's `users` row is somehow gone.
+    @receive-only
+    ? author_handle: text,
+
     title: text .size (1..512),
 
     body_md: text .size (1..100000),
@@ -73,6 +81,11 @@ Comment = {
 
     @receive-only
     author_id: UserID,
+
+    ;;; The author's handle — same denormalization/absence rules as
+    ;;; `Post.author_handle`.
+    @receive-only
+    ? author_handle: text,
 
     body_md: text .size (1..100000),
 

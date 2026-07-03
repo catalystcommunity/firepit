@@ -379,6 +379,15 @@ func (c *SocialClient) RemoveFriend(ctx context.Context, req RemoveFriendRequest
 	return DecodeEmpty(csilResp)
 }
 
+func (c *SocialClient) ResolveUser(ctx context.Context, req Handle) (UserProfile, error) {
+	var csilZero UserProfile
+	csilResp, csilErr := c.transport.Call(ctx, "social", "ResolveUser", EncodeSocialResolveUserRequest(req))
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return DecodeUserProfile(csilResp)
+}
+
 // SubscriptionClient is a typed client for the SubscriptionService service. The client owns
 // (de)serialization via the generated codec; the transport only moves bytes.
 type SubscriptionClient struct {

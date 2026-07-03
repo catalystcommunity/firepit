@@ -10,8 +10,14 @@
 ;; this file — CSIL resolves names in one flat namespace across a
 ;; compilation, so include order/location doesn't matter, only count.
 
-;;; What kind of event produced a notification.
-NotificationEvent = "new_post" / "new_comment" / "mention" / "github_event"
+;;; What kind of event produced a notification. `endorsed` mirrors coredb's
+;;; notification_event enum value added in
+;;; coredb/migrations/000003_notification_event_endorsed.sql — the fan-out
+;;; publisher (api/internal/notify/publisher.go's EventEndorsed) has written
+;;; this value since that migration landed; it was simply missing from this
+;;; union, which meant an endorsement notification couldn't round-trip the
+;;; API. Purely additive — every existing value is unchanged.
+NotificationEvent = "new_post" / "new_comment" / "mention" / "github_event" / "endorsed"
 
 ;;; One recipient's copy of a fan-out event. Denormalized enough to render
 ;;; without a follow-up fetch in the common case; `target_type`/`target_id`
@@ -29,6 +35,19 @@ Notification = {
     ;;; system-generated notifications that have none).
     @receive-only
     ? actor_id: UserID,
+
+    ;;; The actor's handle, denormalized so the UI can render a real name
+    ;;; instead of a bare id without a follow-up lookup. Absent whenever
+    ;;; `actor_id` is absent, or if the actor's `users` row has since been
+    ;;; removed (not expected in v1, but this type doesn't assume it can't
+    ;;; happen).
+    @receive-only
+    ? actor_handle: text,
+
+    ;;; The actor's display name, same denormalization/absence rules as
+    ;;; `actor_handle`.
+    @receive-only
+    ? actor_display_name: text,
 
     @receive-only
     target_type: TargetType,

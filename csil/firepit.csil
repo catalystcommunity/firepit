@@ -219,7 +219,15 @@ service SocialService {
 
     ;;; Remove a user from one of the caller's own friend groups.
     @wire-id(4)
-    remove-friend: RemoveFriendRequest -> Empty / ServiceError
+    remove-friend: RemoveFriendRequest -> Empty / ServiceError,
+
+    ;;; Resolve a handle to its user's public profile — lets the UI turn a
+    ;;; typed "@handle" into the UserID that grant-mention/add-friend
+    ;;; actually take, instead of making the caller paste a raw ULID.
+    ;;; Available to any authenticated user (a handle is public by
+    ;;; definition, unlike friend-group membership); not owner-scoped.
+    @wire-id(5)
+    resolve-user: Handle -> UserProfile / ServiceError
 }
 
 ;;; Subscriptions to a board, a post, or a specific comment subtree — the

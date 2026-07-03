@@ -28,6 +28,15 @@ Endorsement = {
     @receive-only
     user_id: UserID,
 
+    ;;; The endorsing user's handle, denormalized so the UI can render a real
+    ;;; name instead of a bare `user_id` without a per-row follow-up lookup —
+    ;;; same denormalization/absence rules as `Post.author_handle`/
+    ;;; `Comment.author_handle` (named `author_handle` here too rather than
+    ;;; e.g. `endorser_handle`, for one consistent field name across every
+    ;;; content-adjacent type that denormalizes a handle this way).
+    @receive-only
+    ? author_handle: text,
+
     target_type: TargetType,
     target_id: text,
 

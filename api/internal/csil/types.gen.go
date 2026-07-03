@@ -154,6 +154,7 @@ type Post struct {
 	Id             PostID     `json:"id" yaml:"id"`
 	BoardId        BoardID    `json:"board_id" yaml:"board_id"`
 	AuthorId       UserID     `json:"author_id" yaml:"author_id"`
+	AuthorHandle   *string    `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
 	Title          string     `json:"title" yaml:"title"`
 	BodyMd         string     `json:"body_md" yaml:"body_md"`
 	Origin         OriginKind `json:"origin" yaml:"origin"`
@@ -171,6 +172,7 @@ type Comment struct {
 	PostId          PostID     `json:"post_id" yaml:"post_id"`
 	ParentCommentId *CommentID `json:"parent_comment_id,omitempty" yaml:"parent_comment_id,omitempty"`
 	AuthorId        UserID     `json:"author_id" yaml:"author_id"`
+	AuthorHandle    *string    `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
 	BodyMd          string     `json:"body_md" yaml:"body_md"`
 	Origin          OriginKind `json:"origin" yaml:"origin"`
 	OriginRef       *string    `json:"origin_ref,omitempty" yaml:"origin_ref,omitempty"`
@@ -254,12 +256,13 @@ type EndorseRequest struct {
 
 // Endorsement represents a structured data type
 type Endorsement struct {
-	Id         EndorsementID `json:"id" yaml:"id"`
-	UserId     UserID        `json:"user_id" yaml:"user_id"`
-	TargetType TargetType    `json:"target_type" yaml:"target_type"`
-	TargetId   string        `json:"target_id" yaml:"target_id"`
-	RoleBadge  *string       `json:"role_badge,omitempty" yaml:"role_badge,omitempty"`
-	CreatedAt  time.Time     `json:"created_at" yaml:"created_at"`
+	Id           EndorsementID `json:"id" yaml:"id"`
+	UserId       UserID        `json:"user_id" yaml:"user_id"`
+	AuthorHandle *string       `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
+	TargetType   TargetType    `json:"target_type" yaml:"target_type"`
+	TargetId     string        `json:"target_id" yaml:"target_id"`
+	RoleBadge    *string       `json:"role_badge,omitempty" yaml:"role_badge,omitempty"`
+	CreatedAt    time.Time     `json:"created_at" yaml:"created_at"`
 }
 
 // EndorsementList represents a structured data type
@@ -293,6 +296,9 @@ type MentionGrant struct {
 type MentionGrantList struct {
 	Grants []MentionGrant `json:"grants" yaml:"grants"`
 }
+
+// Handle is a type alias
+type Handle string
 
 // FriendGroup represents a structured data type
 type FriendGroup struct {
@@ -362,14 +368,16 @@ type NotificationEvent string
 
 // Notification represents a structured data type
 type Notification struct {
-	Id         NotificationID    `json:"id" yaml:"id"`
-	Event      NotificationEvent `json:"event" yaml:"event"`
-	ActorId    *UserID           `json:"actor_id,omitempty" yaml:"actor_id,omitempty"`
-	TargetType TargetType        `json:"target_type" yaml:"target_type"`
-	TargetId   string            `json:"target_id" yaml:"target_id"`
-	PostId     PostID            `json:"post_id" yaml:"post_id"`
-	ReadAt     *time.Time        `json:"read_at,omitempty" yaml:"read_at,omitempty"`
-	CreatedAt  time.Time         `json:"created_at" yaml:"created_at"`
+	Id               NotificationID    `json:"id" yaml:"id"`
+	Event            NotificationEvent `json:"event" yaml:"event"`
+	ActorId          *UserID           `json:"actor_id,omitempty" yaml:"actor_id,omitempty"`
+	ActorHandle      *string           `json:"actor_handle,omitempty" yaml:"actor_handle,omitempty"`
+	ActorDisplayName *string           `json:"actor_display_name,omitempty" yaml:"actor_display_name,omitempty"`
+	TargetType       TargetType        `json:"target_type" yaml:"target_type"`
+	TargetId         string            `json:"target_id" yaml:"target_id"`
+	PostId           PostID            `json:"post_id" yaml:"post_id"`
+	ReadAt           *time.Time        `json:"read_at,omitempty" yaml:"read_at,omitempty"`
+	CreatedAt        time.Time         `json:"created_at" yaml:"created_at"`
 }
 
 // ListNotificationsRequest represents a structured data type

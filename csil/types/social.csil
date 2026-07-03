@@ -12,6 +12,12 @@
 ;; this file — CSIL resolves names in one flat namespace across a
 ;; compilation, so include order/location doesn't matter, only count.
 
+;;; A user's handle — the resolve-user lookup key (bare-typed request; no
+;;; wrapper group needed for a single-scalar payload, same convention as
+;;; BoardSlug/Domain). Exact-match against `users.handle`, case-sensitive at
+;;; the wire/type level (the store method decides its own match semantics).
+Handle = text
+
 ;;; A private grouping of other users, owned by the caller. Only the owner
 ;;; can see or manage a friend group's membership.
 FriendGroup = {

@@ -614,6 +614,7 @@ export function toPostCborValue(v: Post): CborValue {
   csilMap.set("created_at", { tag: 0, value: csilTsToText(v.createdAt) });
   if (v.deletedAt !== undefined) csilMap.set("deleted_at", { tag: 0, value: csilTsToText(v.deletedAt) });
   if (v.originRef !== undefined) csilMap.set("origin_ref", v.originRef);
+  if (v.authorHandle !== undefined) csilMap.set("author_handle", v.authorHandle);
   csilMap.set("comment_count", v.commentCount);
   csilMap.set("last_activity_at", { tag: 0, value: csilTsToText(v.lastActivityAt) });
   return csilMap;
@@ -624,6 +625,7 @@ export function fromPostCborValue(value: CborValue): Post {
     id: asString(requireKey(value, "id")),
     boardId: asString(requireKey(value, "board_id")),
     authorId: asString(requireKey(value, "author_id")),
+    authorHandle: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "author_handle")),
     title: asString(requireKey(value, "title")),
     bodyMd: asString(requireKey(value, "body_md")),
     origin: (requireKey(value, "origin") as unknown as OriginKind),
@@ -655,6 +657,7 @@ export function toCommentCborValue(v: Comment): CborValue {
   csilMap.set("created_at", { tag: 0, value: csilTsToText(v.createdAt) });
   if (v.deletedAt !== undefined) csilMap.set("deleted_at", { tag: 0, value: csilTsToText(v.deletedAt) });
   if (v.originRef !== undefined) csilMap.set("origin_ref", v.originRef);
+  if (v.authorHandle !== undefined) csilMap.set("author_handle", v.authorHandle);
   if (v.parentCommentId !== undefined) csilMap.set("parent_comment_id", v.parentCommentId);
   return csilMap;
 }
@@ -665,6 +668,7 @@ export function fromCommentCborValue(value: CborValue): Comment {
     postId: asString(requireKey(value, "post_id")),
     parentCommentId: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "parent_comment_id")),
     authorId: asString(requireKey(value, "author_id")),
+    authorHandle: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "author_handle")),
     bodyMd: asString(requireKey(value, "body_md")),
     origin: (requireKey(value, "origin") as unknown as OriginKind),
     originRef: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "origin_ref")),
@@ -946,6 +950,7 @@ export function toEndorsementCborValue(v: Endorsement): CborValue {
   csilMap.set("created_at", { tag: 0, value: csilTsToText(v.createdAt) });
   if (v.roleBadge !== undefined) csilMap.set("role_badge", v.roleBadge);
   csilMap.set("target_type", v.targetType);
+  if (v.authorHandle !== undefined) csilMap.set("author_handle", v.authorHandle);
   return csilMap;
 }
 
@@ -953,6 +958,7 @@ export function fromEndorsementCborValue(value: CborValue): Endorsement {
   return {
     id: asString(requireKey(value, "id")),
     userId: asString(requireKey(value, "user_id")),
+    authorHandle: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "author_handle")),
     targetType: (requireKey(value, "target_type") as unknown as TargetType),
     targetId: asString(requireKey(value, "target_id")),
     roleBadge: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "role_badge")),
@@ -1312,6 +1318,8 @@ export function toNotificationCborValue(v: Notification): CborValue {
   csilMap.set("target_id", v.targetId);
   csilMap.set("created_at", { tag: 0, value: csilTsToText(v.createdAt) });
   csilMap.set("target_type", v.targetType);
+  if (v.actorHandle !== undefined) csilMap.set("actor_handle", v.actorHandle);
+  if (v.actorDisplayName !== undefined) csilMap.set("actor_display_name", v.actorDisplayName);
   return csilMap;
 }
 
@@ -1320,6 +1328,8 @@ export function fromNotificationCborValue(value: CborValue): Notification {
     id: asString(requireKey(value, "id")),
     event: (requireKey(value, "event") as unknown as NotificationEvent),
     actorId: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "actor_id")),
+    actorHandle: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "actor_handle")),
+    actorDisplayName: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "actor_display_name")),
     targetType: (requireKey(value, "target_type") as unknown as TargetType),
     targetId: asString(requireKey(value, "target_id")),
     postId: asString(requireKey(value, "post_id")),

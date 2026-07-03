@@ -2,7 +2,7 @@
 // Source: <csil spec>
 // Target: typescript-client
 
-import type { AddFriendRequest, BeginLoginRequest, BeginLoginResponse, Board, BoardID, BoardPage, BoardSlug, Comment, CommentID, CreateBoardRequest, CreateCommentRequest, CreateFriendGroupRequest, CreateMappingRequest, CreatePostRequest, Domain, DomainList, EditCommentRequest, EditPostRequest, Empty, EndorseRequest, Endorsement, EndorsementList, FriendGroup, FriendGroupList, GetThreadRequest, GithubMapping, GroupID, ListBoardsRequest, ListNotificationsRequest, ListPostsRequest, MappingID, MappingList, MentionGrantList, NotificationIDs, NotificationPage, Post, PostID, PostPage, RemoveBoardMemberRequest, RemoveFriendRequest, RevisionList, SetBoardMemberRequest, SetMutedRequest, Subscription, SubscriptionList, TargetRef, Thread, UnreadSummary, UpdateBoardRequest, UpdateSettingsRequest, UserID, UserProfile, UserSettings } from "./types.gen";
+import type { AddFriendRequest, BeginLoginRequest, BeginLoginResponse, Board, BoardID, BoardPage, BoardSlug, Comment, CommentID, CreateBoardRequest, CreateCommentRequest, CreateFriendGroupRequest, CreateMappingRequest, CreatePostRequest, Domain, DomainList, EditCommentRequest, EditPostRequest, Empty, EndorseRequest, Endorsement, EndorsementList, FriendGroup, FriendGroupList, GetThreadRequest, GithubMapping, GroupID, Handle, ListBoardsRequest, ListNotificationsRequest, ListPostsRequest, MappingID, MappingList, MentionGrantList, NotificationIDs, NotificationPage, Post, PostID, PostPage, RemoveBoardMemberRequest, RemoveFriendRequest, RevisionList, SetBoardMemberRequest, SetMutedRequest, Subscription, SubscriptionList, TargetRef, Thread, UnreadSummary, UpdateBoardRequest, UpdateSettingsRequest, UserID, UserProfile, UserSettings } from "./types.gen";
 import { encodeValue, fromBeginLoginResponseCbor, fromBoardCbor, fromBoardPageCbor, fromCommentCbor, fromDomainListCbor, fromEmptyCbor, fromEndorsementCbor, fromEndorsementListCbor, fromFriendGroupCbor, fromFriendGroupListCbor, fromGithubMappingCbor, fromMappingListCbor, fromMentionGrantListCbor, fromNotificationPageCbor, fromPostCbor, fromPostPageCbor, fromRevisionListCbor, fromSubscriptionCbor, fromSubscriptionListCbor, fromThreadCbor, fromUnreadSummaryCbor, fromUserProfileCbor, fromUserSettingsCbor, toAddFriendRequestCbor, toBeginLoginRequestCbor, toCreateBoardRequestCbor, toCreateCommentRequestCbor, toCreateFriendGroupRequestCbor, toCreateMappingRequestCbor, toCreatePostRequestCbor, toEditCommentRequestCbor, toEditPostRequestCbor, toEmptyCbor, toEndorseRequestCbor, toGetThreadRequestCbor, toListBoardsRequestCbor, toListNotificationsRequestCbor, toListPostsRequestCbor, toRemoveBoardMemberRequestCbor, toRemoveFriendRequestCbor, toSetBoardMemberRequestCbor, toSetMutedRequestCbor, toTargetRefCbor, toUpdateBoardRequestCbor, toUpdateSettingsRequestCbor } from "./codec.gen";
 
 export interface ServiceTransport {
@@ -399,6 +399,20 @@ export class SocialClient {
   removeFriend(req: RemoveFriendRequest): Empty {
     const csilResp = this.t.call("social", "RemoveFriend", toRemoveFriendRequestCbor(req));
     return fromEmptyCbor(csilResp);
+  }
+
+  /**
+   * Resolve a handle to its user's public profile — lets the UI turn a
+   * typed "@handle" into the UserID that grant-mention/add-friend
+   * actually take, instead of making the caller paste a raw ULID.
+   * Available to any authenticated user (a handle is public by
+   * definition, unlike friend-group membership); not owner-scoped.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  resolveUser(req: Handle): UserProfile {
+    const csilResp = this.t.call("social", "ResolveUser", encodeValue(req));
+    return fromUserProfileCbor(csilResp);
   }
 }
 

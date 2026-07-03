@@ -103,6 +103,7 @@ type SocialService interface {
 	DeleteFriendGroup(ctx context.Context, req GroupID) (Empty, error)
 	AddFriend(ctx context.Context, req AddFriendRequest) (Empty, error)
 	RemoveFriend(ctx context.Context, req RemoveFriendRequest) (Empty, error)
+	ResolveUser(ctx context.Context, req Handle) (UserProfile, error)
 }
 
 // Wire-id ordinals for the SocialService service (transport compact profiles).
@@ -112,6 +113,7 @@ const SocialServiceOpCreateFriendGroupWireID uint64 = 1
 const SocialServiceOpDeleteFriendGroupWireID uint64 = 2
 const SocialServiceOpAddFriendWireID uint64 = 3
 const SocialServiceOpRemoveFriendWireID uint64 = 4
+const SocialServiceOpResolveUserWireID uint64 = 5
 
 // SubscriptionService defines the service interface
 type SubscriptionService interface {

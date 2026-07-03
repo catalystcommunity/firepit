@@ -1295,7 +1295,7 @@ func DecodeRemoveBoardMemberRequest(csilData []byte) (RemoveBoardMemberRequest, 
 
 // csilEncPost builds the canonical CBOR value tree for a Post.
 func csilEncPost(csilV Post) cborValue {
-	csilEntries := make(cborMap, 0, 12)
+	csilEntries := make(cborMap, 0, 13)
 	csilEntries = append(csilEntries, cborEntry{cborText("id"), cborText(csilV.Id)})
 	csilEntries = append(csilEntries, cborEntry{cborText("title"), cborText(csilV.Title)})
 	csilEntries = append(csilEntries, cborEntry{cborText("origin"), cborText(csilV.Origin)})
@@ -1311,6 +1311,9 @@ func csilEncPost(csilV Post) cborValue {
 	}
 	if csilV.OriginRef != nil {
 		csilEntries = append(csilEntries, cborEntry{cborText("origin_ref"), cborText((*csilV.OriginRef))})
+	}
+	if csilV.AuthorHandle != nil {
+		csilEntries = append(csilEntries, cborEntry{cborText("author_handle"), cborText((*csilV.AuthorHandle))})
 	}
 	csilEntries = append(csilEntries, cborEntry{cborText("comment_count"), cborUint(csilV.CommentCount)})
 	csilEntries = append(csilEntries, cborEntry{cborText("last_activity_at"), csilEncTimestamp(csilV.LastActivityAt)})
@@ -1361,6 +1364,13 @@ func csilDecPost(csilRoot cborValue) (Post, error) {
 			return csilOut, csilErr
 		}
 		csilOut.AuthorId = csilVal
+	}
+	if csilField, csilOk := cborMapGet(csilRoot, "author_handle"); csilOk {
+		csilVal, csilErr := (cborAsText)(csilField)
+		if csilErr != nil {
+			return csilOut, csilErr
+		}
+		csilOut.AuthorHandle = &csilVal
 	}
 	{
 		csilField, csilErr := cborRequire(csilRoot, "title")
@@ -1472,7 +1482,7 @@ func DecodePost(csilData []byte) (Post, error) {
 
 // csilEncComment builds the canonical CBOR value tree for a Comment.
 func csilEncComment(csilV Comment) cborValue {
-	csilEntries := make(cborMap, 0, 10)
+	csilEntries := make(cborMap, 0, 11)
 	csilEntries = append(csilEntries, cborEntry{cborText("id"), cborText(csilV.Id)})
 	csilEntries = append(csilEntries, cborEntry{cborText("origin"), cborText(csilV.Origin)})
 	csilEntries = append(csilEntries, cborEntry{cborText("body_md"), cborText(csilV.BodyMd)})
@@ -1487,6 +1497,9 @@ func csilEncComment(csilV Comment) cborValue {
 	}
 	if csilV.OriginRef != nil {
 		csilEntries = append(csilEntries, cborEntry{cborText("origin_ref"), cborText((*csilV.OriginRef))})
+	}
+	if csilV.AuthorHandle != nil {
+		csilEntries = append(csilEntries, cborEntry{cborText("author_handle"), cborText((*csilV.AuthorHandle))})
 	}
 	if csilV.ParentCommentId != nil {
 		csilEntries = append(csilEntries, cborEntry{cborText("parent_comment_id"), cborText((*csilV.ParentCommentId))})
@@ -1548,6 +1561,13 @@ func csilDecComment(csilRoot cborValue) (Comment, error) {
 			return csilOut, csilErr
 		}
 		csilOut.AuthorId = csilVal
+	}
+	if csilField, csilOk := cborMapGet(csilRoot, "author_handle"); csilOk {
+		csilVal, csilErr := (cborAsText)(csilField)
+		if csilErr != nil {
+			return csilOut, csilErr
+		}
+		csilOut.AuthorHandle = &csilVal
 	}
 	{
 		csilField, csilErr := cborRequire(csilRoot, "body_md")
@@ -2300,7 +2320,7 @@ func DecodeEndorseRequest(csilData []byte) (EndorseRequest, error) {
 
 // csilEncEndorsement builds the canonical CBOR value tree for a Endorsement.
 func csilEncEndorsement(csilV Endorsement) cborValue {
-	csilEntries := make(cborMap, 0, 6)
+	csilEntries := make(cborMap, 0, 7)
 	csilEntries = append(csilEntries, cborEntry{cborText("id"), cborText(csilV.Id)})
 	csilEntries = append(csilEntries, cborEntry{cborText("user_id"), cborText(csilV.UserId)})
 	csilEntries = append(csilEntries, cborEntry{cborText("target_id"), cborText(csilV.TargetId)})
@@ -2309,6 +2329,9 @@ func csilEncEndorsement(csilV Endorsement) cborValue {
 		csilEntries = append(csilEntries, cborEntry{cborText("role_badge"), cborText((*csilV.RoleBadge))})
 	}
 	csilEntries = append(csilEntries, cborEntry{cborText("target_type"), cborText(csilV.TargetType)})
+	if csilV.AuthorHandle != nil {
+		csilEntries = append(csilEntries, cborEntry{cborText("author_handle"), cborText((*csilV.AuthorHandle))})
+	}
 	return csilEntries
 }
 
@@ -2342,6 +2365,13 @@ func csilDecEndorsement(csilRoot cborValue) (Endorsement, error) {
 			return csilOut, csilErr
 		}
 		csilOut.UserId = csilVal
+	}
+	if csilField, csilOk := cborMapGet(csilRoot, "author_handle"); csilOk {
+		csilVal, csilErr := (cborAsText)(csilField)
+		if csilErr != nil {
+			return csilOut, csilErr
+		}
+		csilOut.AuthorHandle = &csilVal
 	}
 	{
 		csilField, csilErr := cborRequire(csilRoot, "target_type")
@@ -3235,7 +3265,7 @@ func DecodeUnreadSummary(csilData []byte) (UnreadSummary, error) {
 
 // csilEncNotification builds the canonical CBOR value tree for a Notification.
 func csilEncNotification(csilV Notification) cborValue {
-	csilEntries := make(cborMap, 0, 8)
+	csilEntries := make(cborMap, 0, 10)
 	csilEntries = append(csilEntries, cborEntry{cborText("id"), cborText(csilV.Id)})
 	csilEntries = append(csilEntries, cborEntry{cborText("event"), cborText(csilV.Event)})
 	csilEntries = append(csilEntries, cborEntry{cborText("post_id"), cborText(csilV.PostId)})
@@ -3248,6 +3278,12 @@ func csilEncNotification(csilV Notification) cborValue {
 	csilEntries = append(csilEntries, cborEntry{cborText("target_id"), cborText(csilV.TargetId)})
 	csilEntries = append(csilEntries, cborEntry{cborText("created_at"), csilEncTimestamp(csilV.CreatedAt)})
 	csilEntries = append(csilEntries, cborEntry{cborText("target_type"), cborText(csilV.TargetType)})
+	if csilV.ActorHandle != nil {
+		csilEntries = append(csilEntries, cborEntry{cborText("actor_handle"), cborText((*csilV.ActorHandle))})
+	}
+	if csilV.ActorDisplayName != nil {
+		csilEntries = append(csilEntries, cborEntry{cborText("actor_display_name"), cborText((*csilV.ActorDisplayName))})
+	}
 	return csilEntries
 }
 
@@ -3291,6 +3327,20 @@ func csilDecNotification(csilRoot cborValue) (Notification, error) {
 			return csilOut, csilErr
 		}
 		csilOut.ActorId = &csilVal
+	}
+	if csilField, csilOk := cborMapGet(csilRoot, "actor_handle"); csilOk {
+		csilVal, csilErr := (cborAsText)(csilField)
+		if csilErr != nil {
+			return csilOut, csilErr
+		}
+		csilOut.ActorHandle = &csilVal
+	}
+	if csilField, csilOk := cborMapGet(csilRoot, "actor_display_name"); csilOk {
+		csilVal, csilErr := (cborAsText)(csilField)
+		if csilErr != nil {
+			return csilOut, csilErr
+		}
+		csilOut.ActorDisplayName = &csilVal
 	}
 	{
 		csilField, csilErr := cborRequire(csilRoot, "target_type")
@@ -4818,6 +4868,39 @@ func DecodeSocialRemoveFriendResponse(csilData []byte) (Empty, error) {
 		return csilZero, csilErr
 	}
 	return (csilDecEmpty)(csilRoot)
+}
+
+// EncodeSocialResolveUserRequest encodes the SocialResolveUserRequest payload to canonical CSIL CBOR bytes.
+func EncodeSocialResolveUserRequest(csilV Handle) []byte {
+	return cborEncode(cborText(csilV))
+}
+
+// DecodeSocialResolveUserRequest decodes canonical CSIL CBOR bytes into the SocialResolveUserRequest payload.
+func DecodeSocialResolveUserRequest(csilData []byte) (Handle, error) {
+	var csilZero Handle
+	csilRoot, csilErr := cborDecode(csilData)
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return (func(csilV cborValue) (Handle, error) {
+		csilInner, csilErr := (cborAsText)(csilV)
+		return Handle(csilInner), csilErr
+	})(csilRoot)
+}
+
+// EncodeSocialResolveUserResponse encodes the SocialResolveUserResponse payload to canonical CSIL CBOR bytes.
+func EncodeSocialResolveUserResponse(csilV UserProfile) []byte {
+	return cborEncode(csilEncUserProfile(csilV))
+}
+
+// DecodeSocialResolveUserResponse decodes canonical CSIL CBOR bytes into the SocialResolveUserResponse payload.
+func DecodeSocialResolveUserResponse(csilData []byte) (UserProfile, error) {
+	var csilZero UserProfile
+	csilRoot, csilErr := cborDecode(csilData)
+	if csilErr != nil {
+		return csilZero, csilErr
+	}
+	return (csilDecUserProfile)(csilRoot)
 }
 
 // EncodeSubscriptionSubscribeRequest encodes the SubscriptionSubscribeRequest payload to canonical CSIL CBOR bytes.
