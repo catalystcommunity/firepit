@@ -43,3 +43,4 @@ Thumbs.db
 
 # Local dev runtime
 /logs/
+.claude/

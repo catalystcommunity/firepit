@@ -72,17 +72,28 @@ func TestDispatchFallibleOpReturnsServiceError(t *testing.T) {
 	}
 }
 
+// failingNotificationService embeds the real NotificationService interface
+// but forces MarkAllRead (an op with no declared error arm) to return a
+// plain error, giving TestDispatchInfallibleOpReturnsTransportError a
+// stable subject now that every real service is implemented. Every earlier
+// incarnation of this test chased "whatever op is still a stub" and broke
+// each time a Wave B task landed.
+type failingNotificationService struct {
+	csil.NotificationService
+}
+
+func (failingNotificationService) MarkAllRead(context.Context, csil.Empty) (csil.Empty, error) {
+	return csil.Empty{}, context.DeadlineExceeded // any non-*AppError error
+}
+
 // TestDispatchInfallibleOpReturnsTransportError exercises the
-// routeInfallible path: an op with NO declared error arm whose stub still
-// returns an error has no typed channel to carry it, so it must surface as
-// a transport-level internal failure.
-//
-// Uses notification/mark-all-read, the one service still stubbed as Wave B
-// lands (this example has already moved twice as boards and threads became
-// real implementations — once NotificationService lands too, this test
-// should switch to a purpose-built fake rather than chasing stubs).
+// routeInfallible path: an op with NO declared error arm whose
+// implementation returns an error has no typed channel to carry it, so it
+// must surface as a transport-level internal failure.
 func TestDispatchInfallibleOpReturnsTransportError(t *testing.T) {
-	routes := buildRoutes(stubServices())
+	svcs := stubServices()
+	svcs.Notification = failingNotificationService{svcs.Notification}
+	routes := buildRoutes(svcs)
 	req := &transport.RpcRequest{
 		Service: "notification",
 		Op:      "mark-all-read",

@@ -192,11 +192,8 @@ cmd_test_integration() {
     log_status "test-integration"
     command -v docker >/dev/null 2>&1 || { err "docker is required for './tools.sh test-integration' (testcontainers)"; exit 1; }
 
-    log_status "go test -tags=integration (api/internal/store)"
-    ( cd "$SCRIPT_DIR/api" && go test -tags=integration ./internal/store/... )
-
-    log_status "go test -tags=integration (api/internal/server)"
-    ( cd "$SCRIPT_DIR/api" && go test -tags=integration ./internal/server/... )
+    log_status "go test -tags=integration (api, all packages)"
+    ( cd "$SCRIPT_DIR/api" && go test -tags=integration ./... )
 
     log_status "test-integration passed"
 }
