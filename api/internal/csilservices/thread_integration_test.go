@@ -403,4 +403,41 @@ func TestGetThread_UnknownPostReturnsEmptyThread(t *testing.T) {
 	require.Empty(t, thread.Comments)
 }
 
+// TestListPostsAndGetThread_PopulateAuthorHandle covers the CSIL schema gap
+// fixed alongside resolve-user: Post/Comment now carry an optional
+// author_handle, denormalized server-side via a single batched
+// store.GetUsersByIDs lookup (never one query per row — see
+// ListPosts/GetThread's doc comments) so the UI can render a real name
+// instead of hashing the bare author id into a fake label.
+func TestListPostsAndGetThread_PopulateAuthorHandle(t *testing.T) {
+	svc, st, _ := threadServiceEnv(t)
+	author := mkUser(t, st, "carol")
+	replier := mkUser(t, st, "dave")
+	board := mkBoard(t, st, "general", author)
+
+	post, err := svc.CreatePost(asUser(author), csil.CreatePostRequest{BoardId: csil.BoardID(board.ID), Title: "t", BodyMd: "b"})
+	require.NoError(t, err)
+	require.NotNil(t, post.AuthorHandle)
+	require.Equal(t, "carol", *post.AuthorHandle)
+
+	comment, err := svc.CreateComment(asUser(replier), csil.CreateCommentRequest{PostId: post.Id, BodyMd: "reply"})
+	require.NoError(t, err)
+	require.NotNil(t, comment.AuthorHandle)
+	require.Equal(t, "dave", *comment.AuthorHandle)
+
+	page, err := svc.ListPosts(context.Background(), csil.ListPostsRequest{BoardId: csil.BoardID(board.ID)})
+	require.NoError(t, err)
+	require.Len(t, page.Posts, 1)
+	require.NotNil(t, page.Posts[0].AuthorHandle)
+	require.Equal(t, "carol", *page.Posts[0].AuthorHandle)
+
+	thread, err := svc.GetThread(context.Background(), csil.GetThreadRequest{PostId: post.Id})
+	require.NoError(t, err)
+	require.NotNil(t, thread.Post.AuthorHandle)
+	require.Equal(t, "carol", *thread.Post.AuthorHandle)
+	require.Len(t, thread.Comments, 1)
+	require.NotNil(t, thread.Comments[0].AuthorHandle)
+	require.Equal(t, "dave", *thread.Comments[0].AuthorHandle)
+}
+
 // requireAppErrorCode is shared with integration_integration_test.go.

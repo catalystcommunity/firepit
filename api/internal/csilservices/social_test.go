@@ -105,6 +105,28 @@ func TestRemoveFriendRequiresSession(t *testing.T) {
 	require.Equal(t, CodeUnauthenticated, appErr.Code)
 }
 
+func TestResolveUserRequiresSession(t *testing.T) {
+	svc := newSocialServiceForTest()
+
+	_, err := svc.ResolveUser(context.Background(), csil.Handle("bob"))
+
+	var appErr *AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, CodeUnauthenticated, appErr.Code)
+}
+
+func TestResolveUserRejectsBlankHandle(t *testing.T) {
+	svc := newSocialServiceForTest()
+	ctx := reqctx.WithUser(context.Background(), &store.User{ID: "user-1"})
+
+	_, err := svc.ResolveUser(ctx, csil.Handle("   "))
+
+	var appErr *AppError
+	require.ErrorAs(t, err, &appErr)
+	require.Equal(t, CodeValidation, appErr.Code)
+	require.Equal(t, "handle", appErr.Field)
+}
+
 func TestListFriendGroupsRequiresSession(t *testing.T) {
 	svc := newSocialServiceForTest()
 

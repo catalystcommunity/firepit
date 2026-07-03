@@ -120,6 +120,12 @@ func (s *endorsementService) Endorse(ctx context.Context, req csil.EndorseReques
 	if roleBadge != "" {
 		resp.RoleBadge = &roleBadge
 	}
+	// The endorser is always the caller here — no extra lookup needed, we
+	// already hold their handle from reqctx.
+	if user.Handle != "" {
+		handle := user.Handle
+		resp.AuthorHandle = &handle
+	}
 	return resp, nil
 }
 
@@ -197,6 +203,17 @@ func (s *endorsementService) ListEndorsements(ctx context.Context, req csil.Targ
 		return csil.EndorsementList{}, err
 	}
 
+	// One batched endorser lookup for the whole list (never a per-row
+	// query).
+	userIDs := make([]string, len(views))
+	for i, v := range views {
+		userIDs[i] = v.Endorsement.UserID
+	}
+	endorsers, err := s.store.GetUsersByIDs(ctx, userIDs)
+	if err != nil {
+		return csil.EndorsementList{}, err
+	}
+
 	out := make([]csil.Endorsement, len(views))
 	for i, v := range views {
 		e := csil.Endorsement{
@@ -209,6 +226,9 @@ func (s *endorsementService) ListEndorsements(ctx context.Context, req csil.Targ
 		if v.RoleBadge != "" {
 			roleBadge := v.RoleBadge
 			e.RoleBadge = &roleBadge
+		}
+		if handle := endorsers[v.Endorsement.UserID].Handle; handle != "" {
+			e.AuthorHandle = &handle
 		}
 		out[i] = e
 	}

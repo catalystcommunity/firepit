@@ -165,6 +165,48 @@ func (s *socialService) RemoveFriend(ctx context.Context, req csil.RemoveFriendR
 	return csil.Empty{}, nil
 }
 
+// ResolveUser looks up a user by exact handle match, for the UI to turn a
+// typed "@handle" into the UserID that grant-mention/add-friend actually
+// take instead of making the caller paste a raw ULID. Available to any
+// authenticated user — a handle is public by definition (unlike a friend
+// group's membership, which every other method in this file scopes to the
+// owner), so this deliberately does NOT restrict lookups to the caller's own
+// friend groups/grants.
+func (s *socialService) ResolveUser(ctx context.Context, req csil.Handle) (csil.UserProfile, error) {
+	if _, appErr := socialCurrentUserID(ctx); appErr != nil {
+		return csil.UserProfile{}, appErr
+	}
+	handle := strings.TrimSpace(string(req))
+	if handle == "" {
+		return csil.UserProfile{}, Validation("handle", "handle must not be blank")
+	}
+	user, err := s.store.GetUserByHandle(ctx, handle)
+	if err != nil {
+		if store.IsNotFound(err) {
+			return csil.UserProfile{}, NotFound("user", "no user with that handle")
+		}
+		return csil.UserProfile{}, err
+	}
+	return toCSILUserProfile(user), nil
+}
+
+// toCSILUserProfile converts a store.User to its wire representation — the
+// same shape AuthService.Whoami builds inline for the caller's own profile
+// (api/internal/csilservices/auth.go), factored out here since ResolveUser
+// is the first place in this package that needs to build one for a user
+// other than the caller.
+func toCSILUserProfile(u *store.User) csil.UserProfile {
+	return csil.UserProfile{
+		Id:             csil.UserID(u.ID),
+		LinkkeysDomain: u.LinkkeysDomain,
+		Handle:         u.Handle,
+		DisplayName:    u.DisplayName,
+		Kind:           csil.UserKind(u.Kind),
+		Roles:          []string(u.Roles),
+		CreatedAt:      u.CreatedAt,
+	}
+}
+
 // toCSILFriendGroup converts a store row (with its members already loaded)
 // to the wire type.
 func toCSILFriendGroup(g store.FriendGroupWithMembers) csil.FriendGroup {

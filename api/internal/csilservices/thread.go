@@ -93,9 +93,18 @@ func (s *threadService) ListPosts(ctx context.Context, req csil.ListPostsRequest
 		next = &c
 	}
 
+	authorIDs := make([]string, len(posts))
+	for i := range posts {
+		authorIDs[i] = posts[i].AuthorID
+	}
+	authors, err := s.store.GetUsersByIDs(ctx, authorIDs)
+	if err != nil {
+		return csil.PostPage{}, err
+	}
+
 	out := csil.PostPage{Posts: make([]csil.Post, 0, len(posts)), NextCursor: next}
 	for i := range posts {
-		out.Posts = append(out.Posts, toCSILPost(&posts[i]))
+		out.Posts = append(out.Posts, toCSILPost(&posts[i], authors[posts[i].AuthorID].Handle))
 	}
 	return out, nil
 }
@@ -122,9 +131,22 @@ func (s *threadService) GetThread(ctx context.Context, req csil.GetThreadRequest
 		return csil.Thread{}, err
 	}
 
-	out := csil.Thread{Post: toCSILPost(post), Comments: make([]csil.Comment, 0, len(comments))}
+	// One batched author lookup for the post plus every comment (never a
+	// per-row query) — the post and its whole comment tree share this single
+	// author-id -> handle map.
+	authorIDs := make([]string, 0, len(comments)+1)
+	authorIDs = append(authorIDs, post.AuthorID)
 	for i := range comments {
-		out.Comments = append(out.Comments, toCSILComment(&comments[i]))
+		authorIDs = append(authorIDs, comments[i].AuthorID)
+	}
+	authors, err := s.store.GetUsersByIDs(ctx, authorIDs)
+	if err != nil {
+		return csil.Thread{}, err
+	}
+
+	out := csil.Thread{Post: toCSILPost(post, authors[post.AuthorID].Handle), Comments: make([]csil.Comment, 0, len(comments))}
+	for i := range comments {
+		out.Comments = append(out.Comments, toCSILComment(&comments[i], authors[comments[i].AuthorID].Handle))
 	}
 	return out, nil
 }
@@ -167,7 +189,9 @@ func (s *threadService) CreatePost(ctx context.Context, req csil.CreatePostReque
 	if txErr != nil {
 		return csil.Post{}, asAppError(txErr)
 	}
-	return toCSILPost(post), nil
+	// The author is always the caller here — no extra lookup needed, we
+	// already hold their handle from reqctx.
+	return toCSILPost(post, user.Handle), nil
 }
 
 // CreateComment replies to a post, optionally nested under an existing
@@ -243,7 +267,8 @@ func (s *threadService) CreateComment(ctx context.Context, req csil.CreateCommen
 	if txErr != nil {
 		return csil.Comment{}, asAppError(txErr)
 	}
-	return toCSILComment(comment), nil
+	// The author is always the caller here — no extra lookup needed.
+	return toCSILComment(comment, user.Handle), nil
 }
 
 // EditPost is author-only. Snapshots the prior title/body into a Revision,
@@ -304,7 +329,8 @@ func (s *threadService) EditPost(ctx context.Context, req csil.EditPostRequest) 
 	if txErr != nil {
 		return csil.Post{}, asAppError(txErr)
 	}
-	return toCSILPost(&post), nil
+	// Only the author may reach here (checked above) — that's the caller.
+	return toCSILPost(&post, user.Handle), nil
 }
 
 // EditComment is author-only. Snapshots the prior body into a Revision
@@ -369,7 +395,8 @@ func (s *threadService) EditComment(ctx context.Context, req csil.EditCommentReq
 	if txErr != nil {
 		return csil.Comment{}, asAppError(txErr)
 	}
-	return toCSILComment(&comment), nil
+	// Only the author may reach here (checked above) — that's the caller.
+	return toCSILComment(&comment, user.Handle), nil
 }
 
 // ListRevisions returns a target's edit history, most recent first.
@@ -543,8 +570,13 @@ func asAppError(err error) *AppError {
 
 // toCSILPost converts a store.Post to its wire representation, redacting
 // title/body/author when the post is a tombstone (deleted_at set) — see
-// tombstonePlaceholder's doc comment for why a placeholder, not "".
-func toCSILPost(p *store.Post) csil.Post {
+// tombstonePlaceholder's doc comment for why a placeholder, not "". authorHandle
+// is the author's users.handle, resolved by the caller (a single batched
+// lookup across a whole page/thread — see ListPosts/GetThread — or, for a
+// create/edit response, the caller's own already-in-hand handle); "" means
+// no handle is known, which comes across the wire as an absent
+// author_handle.
+func toCSILPost(p *store.Post, authorHandle string) csil.Post {
 	out := csil.Post{
 		Id:             csil.PostID(p.ID),
 		BoardId:        csil.BoardID(p.BoardID),
@@ -562,10 +594,15 @@ func toCSILPost(p *store.Post) csil.Post {
 		ref := string(p.OriginRef)
 		out.OriginRef = &ref
 	}
+	if authorHandle != "" {
+		handle := authorHandle
+		out.AuthorHandle = &handle
+	}
 	if p.DeletedAt != nil {
 		out.Title = tombstonePlaceholder
 		out.BodyMd = tombstonePlaceholder
 		out.AuthorId = ""
+		out.AuthorHandle = nil
 	}
 	return out
 }
@@ -573,7 +610,9 @@ func toCSILPost(p *store.Post) csil.Post {
 // toCSILComment converts a store.Comment to its wire representation,
 // redacting body/author (structure — id/post_id/parent_comment_id/path
 // ordering/created_at — stays intact) when the comment is a tombstone.
-func toCSILComment(c *store.Comment) csil.Comment {
+// authorHandle follows the same resolution/absence convention as
+// toCSILPost's.
+func toCSILComment(c *store.Comment, authorHandle string) csil.Comment {
 	out := csil.Comment{
 		Id:        csil.CommentID(c.ID),
 		PostId:    csil.PostID(c.PostID),
@@ -592,9 +631,14 @@ func toCSILComment(c *store.Comment) csil.Comment {
 		ref := string(c.OriginRef)
 		out.OriginRef = &ref
 	}
+	if authorHandle != "" {
+		handle := authorHandle
+		out.AuthorHandle = &handle
+	}
 	if c.DeletedAt != nil {
 		out.BodyMd = tombstonePlaceholder
 		out.AuthorId = ""
+		out.AuthorHandle = nil
 	}
 	return out
 }

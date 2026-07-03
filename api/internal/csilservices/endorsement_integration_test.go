@@ -293,6 +293,31 @@ func TestEndorseRejectsMissingTarget(t *testing.T) {
 	require.Equal(t, csilservices.CodeNotFound, appErr.Code)
 }
 
+// TestEndorse_PopulatesAuthorHandle covers the CSIL schema gap fixed
+// alongside resolve-user: Endorsement now carries an optional
+// author_handle (the endorser's handle) — populated directly from the
+// caller's own already-in-hand handle on Endorse, and via a single batched
+// store.GetUsersByIDs lookup on ListEndorsements (never one query per row).
+func TestEndorse_PopulatesAuthorHandle(t *testing.T) {
+	env := setupEndorsementTestEnv(t)
+
+	author := env.createUser(t, "example.com", "author")
+	board := env.createBoard(t, "general", author.ID)
+	post := env.createPost(t, board.ID, author.ID)
+	endorser := env.createUser(t, "example.com", "endorser")
+
+	created, err := env.svc.Endorse(asUser(endorser), csil.EndorseRequest{TargetType: "post", TargetId: post.ID})
+	require.NoError(t, err)
+	require.NotNil(t, created.AuthorHandle)
+	require.Equal(t, "endorser", *created.AuthorHandle)
+
+	list, err := env.svc.ListEndorsements(context.Background(), csil.TargetRef{TargetType: "post", TargetId: post.ID})
+	require.NoError(t, err)
+	require.Len(t, list.Endorsements, 1)
+	require.NotNil(t, list.Endorsements[0].AuthorHandle)
+	require.Equal(t, "endorser", *list.Endorsements[0].AuthorHandle)
+}
+
 // TestRetractIdempotentAndReputationDecrements covers retract's
 // idempotency and the reputation cache's decrement-on-retract semantics.
 func TestRetractIdempotentAndReputationDecrements(t *testing.T) {

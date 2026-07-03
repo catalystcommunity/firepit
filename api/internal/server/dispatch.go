@@ -169,6 +169,7 @@ func buildRoutes(svcs Services) map[string]map[string]typedHandler {
 			"delete-friend-group": routeFallible(csil.DecodeSocialDeleteFriendGroupRequest, svcs.Social.DeleteFriendGroup, csil.EncodeSocialDeleteFriendGroupResponse, "Empty"),
 			"add-friend":          routeFallible(csil.DecodeSocialAddFriendRequest, svcs.Social.AddFriend, csil.EncodeSocialAddFriendResponse, "Empty"),
 			"remove-friend":       routeFallible(csil.DecodeSocialRemoveFriendRequest, svcs.Social.RemoveFriend, csil.EncodeSocialRemoveFriendResponse, "Empty"),
+			"resolve-user":        routeFallible(csil.DecodeSocialResolveUserRequest, svcs.Social.ResolveUser, csil.EncodeSocialResolveUserResponse, "UserProfile"),
 		},
 		"subscription": {
 			"subscribe":          routeFallible(csil.DecodeSubscriptionSubscribeRequest, svcs.Subscription.Subscribe, csil.EncodeSubscriptionSubscribeResponse, "Subscription"),

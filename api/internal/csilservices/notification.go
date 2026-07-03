@@ -72,11 +72,31 @@ func (s *notificationService) ListNotifications(ctx context.Context, req csil.Li
 		return csil.NotificationPage{}, err
 	}
 
+	// One batched actor lookup for the whole page (never a per-row query) —
+	// most rows carry an actor_id, some don't (see Notification.actor_id's
+	// doc comment), GetUsersByIDs tolerates the blanks fine.
+	actorIDs := make([]string, 0, len(result.Notifications))
+	for _, n := range result.Notifications {
+		if n.ActorID != nil {
+			actorIDs = append(actorIDs, *n.ActorID)
+		}
+	}
+	actors, err := s.store.GetUsersByIDs(ctx, actorIDs)
+	if err != nil {
+		return csil.NotificationPage{}, err
+	}
+
 	page := csil.NotificationPage{
 		Notifications: make([]csil.Notification, len(result.Notifications)),
 	}
 	for i, n := range result.Notifications {
-		page.Notifications[i] = toCSILNotification(n)
+		var actor *store.User
+		if n.ActorID != nil {
+			if u, ok := actors[*n.ActorID]; ok {
+				actor = &u
+			}
+		}
+		page.Notifications[i] = toCSILNotification(n, actor)
 	}
 	if result.NextCursor != "" {
 		cursor := csil.PageCursor(result.NextCursor)
@@ -121,8 +141,11 @@ func (s *notificationService) MarkAllRead(ctx context.Context, req csil.Empty) (
 	return csil.Empty{}, nil
 }
 
-// toCSILNotification converts a store row to its wire representation.
-func toCSILNotification(n store.Notification) csil.Notification {
+// toCSILNotification converts a store row to its wire representation. actor
+// is the resolved store.User for n.ActorID (nil if n.ActorID is nil, or the
+// batched lookup found no matching row) — ListNotifications resolves this
+// once per page (GetUsersByIDs), never per row.
+func toCSILNotification(n store.Notification, actor *store.User) csil.Notification {
 	out := csil.Notification{
 		Id:         csil.NotificationID(n.ID),
 		Event:      csil.NotificationEvent(n.Event),
@@ -134,6 +157,16 @@ func toCSILNotification(n store.Notification) csil.Notification {
 	if n.ActorID != nil {
 		actorID := csil.UserID(*n.ActorID)
 		out.ActorId = &actorID
+	}
+	if actor != nil {
+		if actor.Handle != "" {
+			handle := actor.Handle
+			out.ActorHandle = &handle
+		}
+		if actor.DisplayName != "" {
+			displayName := actor.DisplayName
+			out.ActorDisplayName = &displayName
+		}
 	}
 	if n.PostID != nil {
 		out.PostId = csil.PostID(*n.PostID)

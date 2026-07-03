@@ -35,6 +35,20 @@ func (s *Store) GetUser(ctx context.Context, id string) (*User, error) {
 	return &user, nil
 }
 
+// GetUserByHandle looks up a user by their exact handle (case-sensitive,
+// matching the `users_handle_idx` unique index this exact-matches against),
+// returning gorm.ErrRecordNotFound (see IsNotFound) if there is none. Used by
+// SocialService.resolve-user (csil/types/social.csil's Handle) so the UI can
+// turn a typed "@handle" into the UserID that grant-mention/add-friend
+// actually take.
+func (s *Store) GetUserByHandle(ctx context.Context, handle string) (*User, error) {
+	var user User
+	if err := s.DB.WithContext(ctx).First(&user, "handle = ?", handle).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 // maxHandleAttempts bounds the deterministic "-2", "-3", ... suffix retry
 // loop in UpsertUser before falling back to a random suffix. 20 is generous
 // headroom for any realistic handle collision run (see UpsertUser's doc
@@ -132,6 +146,52 @@ func (s *Store) UpsertUser(ctx context.Context, linkkeysDomain, linkkeysUserID, 
 		return nil, err
 	}
 	return user, nil
+}
+
+// GetUsersByIDs batch-loads every user in ids in one query, returned as a
+// map keyed by id — the shape every list-response handle-denormalization
+// caller (ThreadService.ListPosts/GetThread, NotificationService.
+// ListNotifications, EndorsementService.ListEndorsements) needs: look up
+// once per page/response, not once per row (avoiding the N+1 a per-row
+// GetUser call would cause). A ULID missing from the returned map (deleted
+// user, or a bad id) is simply absent — callers treat that the same as "no
+// handle to denormalize" rather than an error, mirroring GetUser's
+// not-found-as-error convention being deliberately NOT used here (a partial
+// miss shouldn't fail the whole page). An empty/nil ids returns an empty map
+// without querying.
+func (s *Store) GetUsersByIDs(ctx context.Context, ids []string) (map[string]User, error) {
+	out := make(map[string]User, len(ids))
+	if len(ids) == 0 {
+		return out, nil
+	}
+	// De-duplicate before querying — the same author/actor id commonly
+	// repeats across a page of posts/comments/notifications, and there's no
+	// reason to ask Postgres to match the same value in an IN-list more than
+	// once.
+	seen := make(map[string]struct{}, len(ids))
+	unique := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		unique = append(unique, id)
+	}
+	if len(unique) == 0 {
+		return out, nil
+	}
+
+	var users []User
+	if err := s.DB.WithContext(ctx).Where("id IN ?", unique).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	for _, u := range users {
+		out[u.ID] = u
+	}
+	return out, nil
 }
 
 // findUserByIdentity returns the users row for (linkkeysDomain,
