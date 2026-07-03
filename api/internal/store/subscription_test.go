@@ -48,9 +48,9 @@ func newSubscriptionTestStore(t *testing.T) *store.Store {
 	return store.New(gdb)
 }
 
-// seedUserAndBoard creates one user and one board (owned by that user) for
+// seedSubUserAndBoard creates one user and one board (owned by that user) for
 // tests that just need a valid subscription target.
-func seedUserAndBoard(t *testing.T, st *store.Store) (userID, boardID string) {
+func seedSubUserAndBoard(t *testing.T, st *store.Store) (userID, boardID string) {
 	t.Helper()
 	ctx := context.Background()
 
@@ -66,7 +66,7 @@ func seedUserAndBoard(t *testing.T, st *store.Store) (userID, boardID string) {
 func TestSubscribeIsIdempotent(t *testing.T) {
 	st := newSubscriptionTestStore(t)
 	ctx := context.Background()
-	userID, boardID := seedUserAndBoard(t, st)
+	userID, boardID := seedSubUserAndBoard(t, st)
 
 	first, err := st.Subscribe(ctx, userID, "board", boardID)
 	require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestSubscribeIsIdempotent(t *testing.T) {
 func TestSubscribeThenMuteDoesNotDuplicateOrLoseFlag(t *testing.T) {
 	st := newSubscriptionTestStore(t)
 	ctx := context.Background()
-	userID, boardID := seedUserAndBoard(t, st)
+	userID, boardID := seedSubUserAndBoard(t, st)
 
 	sub, err := st.Subscribe(ctx, userID, "board", boardID)
 	require.NoError(t, err)
@@ -107,7 +107,7 @@ func TestSubscribeThenMuteDoesNotDuplicateOrLoseFlag(t *testing.T) {
 func TestSetSubscriptionMutedCreatesRowIfMissing(t *testing.T) {
 	st := newSubscriptionTestStore(t)
 	ctx := context.Background()
-	userID, boardID := seedUserAndBoard(t, st)
+	userID, boardID := seedSubUserAndBoard(t, st)
 
 	// Muting a post the caller never explicitly subscribed to is exactly
 	// the "carve a hole out of a board subscription" flow (PLANDOC.md §4):
@@ -125,7 +125,7 @@ func TestSetSubscriptionMutedCreatesRowIfMissing(t *testing.T) {
 func TestUnsubscribeIsIdempotent(t *testing.T) {
 	st := newSubscriptionTestStore(t)
 	ctx := context.Background()
-	userID, boardID := seedUserAndBoard(t, st)
+	userID, boardID := seedSubUserAndBoard(t, st)
 
 	// Unsubscribing when never subscribed must succeed silently.
 	require.NoError(t, st.Unsubscribe(ctx, userID, "board", boardID))
@@ -144,7 +144,7 @@ func TestUnsubscribeIsIdempotent(t *testing.T) {
 func TestListSubscriptionsReturnsAllOfCallers(t *testing.T) {
 	st := newSubscriptionTestStore(t)
 	ctx := context.Background()
-	userID, boardID := seedUserAndBoard(t, st)
+	userID, boardID := seedSubUserAndBoard(t, st)
 
 	other := &store.User{LinkkeysDomain: "example.com", LinkkeysUserID: "u2", Handle: "bob", Kind: "human"}
 	require.NoError(t, st.DB.WithContext(ctx).Create(other).Error)
@@ -168,7 +168,7 @@ func TestListSubscriptionsReturnsAllOfCallers(t *testing.T) {
 func TestTargetExists(t *testing.T) {
 	st := newSubscriptionTestStore(t)
 	ctx := context.Background()
-	_, boardID := seedUserAndBoard(t, st)
+	_, boardID := seedSubUserAndBoard(t, st)
 
 	ok, err := st.TargetExists(ctx, "board", boardID)
 	require.NoError(t, err)
