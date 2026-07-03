@@ -6,6 +6,7 @@ import (
 
 	"github.com/catalystcommunity/firepit/api/internal/csil"
 	"github.com/catalystcommunity/firepit/api/internal/csilservices"
+	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 	"github.com/catalystcommunity/firepit/api/internal/transport"
 )
@@ -13,13 +14,17 @@ import (
 // stubServices builds a Services value backed entirely by the
 // csilservices.NewXService stubs, exactly as main.go does today. The stub
 // constructors never touch *store.Store, so a nil store is safe here.
+// EndorsementService is real as of B5 rather than a stub, but it's
+// likewise safe to construct with a nil *store.Store here since these
+// tests never invoke a method that dereferences it — notify.Noop{} mirrors
+// main.go's own wiring.
 func stubServices() Services {
 	var st *store.Store
 	return Services{
 		Auth:         csilservices.NewAuthService(st),
 		Board:        csilservices.NewBoardService(st),
 		Thread:       csilservices.NewThreadService(st),
-		Endorsement:  csilservices.NewEndorsementService(st),
+		Endorsement:  csilservices.NewEndorsementService(st, notify.Noop{}),
 		Settings:     csilservices.NewSettingsService(st),
 		Social:       csilservices.NewSocialService(st),
 		Subscription: csilservices.NewSubscriptionService(st),

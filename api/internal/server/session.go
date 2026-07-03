@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/catalystcommunity/firepit/api/internal/reqctx"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
@@ -17,21 +18,18 @@ import (
 // hardcoded string.
 const SessionCookieName = "firepit_session"
 
-type userContextKey struct{}
-
 // CurrentUser returns the user attached to ctx by the session middleware, or
 // ok=false if the caller has no valid session — which is a normal,
 // expected state (anonymous read), never an error on its own. Individual
 // service methods decide whether anonymous access is allowed for a given
 // op; this helper just answers "who, if anyone."
+// It's a thin forward to api/internal/reqctx (see that package's doc
+// comment for why the context-key plumbing itself lives there rather than
+// here: csilservices needs the same accessor and can't import this package
+// without an import cycle through dispatch.go, which already imports
+// csilservices for *csilservices.AppError).
 func CurrentUser(ctx context.Context) (*store.User, bool) {
-	u, ok := ctx.Value(userContextKey{}).(*store.User)
-	return u, ok
-}
-
-// withCurrentUser attaches u to ctx for CurrentUser to retrieve later.
-func withCurrentUser(ctx context.Context, u *store.User) context.Context {
-	return context.WithValue(ctx, userContextKey{}, u)
+	return reqctx.User(ctx)
 }
 
 // sessionMiddleware reads the session cookie (if any), looks it up via st,
@@ -46,7 +44,7 @@ func sessionMiddleware(st *store.Store) func(http.Handler) http.Handler {
 			ctx := r.Context()
 			if cookie, err := r.Cookie(SessionCookieName); err == nil && cookie.Value != "" {
 				if user := lookupSessionUser(ctx, st, cookie.Value); user != nil {
-					ctx = withCurrentUser(ctx, user)
+					ctx = reqctx.WithUser(ctx, user)
 				}
 			}
 			next.ServeHTTP(w, r.WithContext(ctx))
