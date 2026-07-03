@@ -1,0 +1,43 @@
+/* Board post list (task C2, PLANDOC.md §7): dense, chronological rows —
+ * quiet rules between rows, no card shadows; unread is a dot + bold title,
+ * never a colored count badge. `.unread-dot` / `.origin-glyph` come from
+ * ~/components/board-list/board-list.css, imported alongside this file so
+ * the board index and the post list read as one system. */
+
+.post-list ul {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.post-row {
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.post-row:last-child {
+  border-bottom: none;
+}
+
+.post-row-title {
+  display: block;
+  font-size: 1rem;
+  color: var(--text-h);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.post-row.unread .post-row-title {
+  font-weight: 700;
+}
+
+.post-row-title:hover {
+  color: var(--accent);
+}
+
+.post-row-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.65;
+}

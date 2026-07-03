@@ -22,6 +22,7 @@ import type {
   FriendGroup,
   FriendGroupList,
   ListNotificationsRequest,
+  ListPostsRequest,
   MentionGrantList,
   NotificationPage,
   Post,
@@ -193,11 +194,19 @@ export class FixtureStore {
 
   // -------------------------------------------------------------- threads --
 
-  listPosts(boardId: string): PostPage {
+  // Cursor is the plain stringified offset into the activity-sorted list —
+  // opaque to callers (PageCursor's contract), just not cryptographically so;
+  // the mock has no need for tamper-resistance, only for the same "pass it
+  // back verbatim" shape the real cursor will have.
+  listPosts(req: ListPostsRequest): PostPage {
     const boardPosts = this.seed.posts
-      .filter((p) => p.boardId === boardId)
+      .filter((p) => p.boardId === req.boardId)
       .sort((a, b) => b.lastActivityAt.getTime() - a.lastActivityAt.getTime());
-    return { posts: structuredClone(boardPosts) };
+    const start = req.cursor ? Number(req.cursor) : 0;
+    const limit = req.limit ?? 20;
+    const page = boardPosts.slice(start, start + limit);
+    const nextCursor = start + limit < boardPosts.length ? String(start + limit) : undefined;
+    return { posts: structuredClone(page), nextCursor };
   }
 
   getThread(postId: string): Thread {

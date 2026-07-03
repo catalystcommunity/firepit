@@ -104,6 +104,8 @@ export const boards: readonly Board[] = [
 const POST_WELCOME = "01FPMOCKPOSTWELCOME00000";
 const POST_RELEASE = "01FPMOCKPOSTRELEASE00000";
 const POST_CSIL_QUESTION = "01FPMOCKPOSTCSILQ0000000";
+const POST_GH_ISSUE = "01FPMOCKPOSTGHISSUE00000";
+const POST_SECOND = "01FPMOCKPOSTSECOND000000";
 
 export const posts: readonly Post[] = [
   {
@@ -141,6 +143,35 @@ export const posts: readonly Post[] = [
     commentCount: 0,
     lastActivityAt: ago(5),
     createdAt: ago(5),
+  },
+  // Two more on BOARD_FIREPIT (additive — task C2, PLANDOC.md §7): the
+  // welcome post alone left every board with exactly one post, which is too
+  // degenerate a fixture to exercise list-posts' cursor pagination (C2's
+  // "post list pagination appends" accept criterion) or render a
+  // GitHub-origin row (C2's "small origin glyph" requirement). Both stay
+  // deterministic, same as every other fixture here.
+  {
+    id: POST_GH_ISSUE,
+    boardId: BOARD_FIREPIT,
+    authorId: DAVE_ID,
+    title: "flaky ltree GIST index test on CI",
+    bodyMd: "Ingested from the firepit repo's issue tracker — see the linked issue for repro steps.",
+    origin: "github",
+    originRef: JSON.stringify({ repo: "catalystcommunity/firepit", issue: 42 }),
+    commentCount: 0,
+    lastActivityAt: ago(1),
+    createdAt: ago(4),
+  },
+  {
+    id: POST_SECOND,
+    boardId: BOARD_FIREPIT,
+    authorId: BOB_ID,
+    title: "Style guide for board descriptions?",
+    bodyMd: "Should descriptions be a sentence or a short paragraph? Looking at csilgen's board for reference.",
+    origin: "user",
+    commentCount: 0,
+    lastActivityAt: ago(3),
+    createdAt: ago(7),
   },
 ];
 
