@@ -64,12 +64,19 @@ func TestDispatchFallibleOpReturnsServiceError(t *testing.T) {
 // routeInfallible path: an op with NO declared error arm whose stub still
 // returns an error has no typed channel to carry it, so it must surface as
 // a transport-level internal failure.
+//
+// Uses thread/list-posts (still a B1 stub as of task B3) rather than
+// board/list-boards: BoardService is a real implementation now (task B3)
+// and its ListBoards touches *store.Store, which stubServices() sets up as
+// nil — exercising a still-unimplemented op is what this test actually
+// wants to cover, so it moved to one that stays a stub until B4 lands
+// rather than asserting on BoardService's stub behavior specifically.
 func TestDispatchInfallibleOpReturnsTransportError(t *testing.T) {
 	routes := buildRoutes(stubServices())
 	req := &transport.RpcRequest{
-		Service: "board",
-		Op:      "list-boards",
-		Payload: csil.EncodeBoardListBoardsRequest(csil.ListBoardsRequest{}),
+		Service: "thread",
+		Op:      "list-posts",
+		Payload: csil.EncodeThreadListPostsRequest(csil.ListPostsRequest{BoardId: "board-1"}),
 	}
 
 	outcome := dispatch(context.Background(), routes, req)
