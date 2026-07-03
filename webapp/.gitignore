@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# The repo root's .gitignore has a `*.test` rule (Go's compiled-test-binary
+# convention) that would otherwise also swallow Vite's `.env.test` — vitest
+# runs in Vite's "test" mode and auto-loads exactly that filename (see
+# .env.test's own comment), so it needs to stay tracked.
+!.env.test
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

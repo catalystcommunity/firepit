@@ -60,7 +60,7 @@ export const boards: readonly Board[] = [
   {
     id: BOARD_FIREPIT,
     slug: "firepit",
-    title: "Firepit",
+    title: "Firepit Meta",
     description: "General discussion about firepit itself — the forum eating its own dog food.",
     kind: "discussion",
     createdBy: CAROL_ID,

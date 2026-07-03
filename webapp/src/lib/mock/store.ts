@@ -19,11 +19,9 @@ import type {
   EndorsementList,
   ListNotificationsRequest,
   MentionGrantList,
-  Notification,
   NotificationPage,
   Post,
   PostPage,
-  Revision,
   RevisionList,
   Subscription,
   SubscriptionList,
@@ -50,18 +48,51 @@ const conflict = (message: string) => serviceError(ServiceErrorCode.Conflict, me
 const unauthenticated = (message: string) => serviceError(ServiceErrorCode.Unauthenticated, message);
 const validation = (field: string, message: string) => serviceError(ServiceErrorCode.Validation, message, { field });
 
+export interface FixtureStoreOptions {
+  /**
+   * Persist the mock "logged in" flag to `sessionStorage` so it survives a
+   * real full-page navigation. `session.login()` does a real
+   * `window.location.href` assignment (matching the real login flow's 302
+   * to an IDP and back) — in a real browser that reloads the page and
+   * throws away every in-memory JS object, this `FixtureStore` included, so
+   * without this the mock would "log in" and then immediately look
+   * logged-out again on arrival at `/auth/callback`. Off by default so
+   * tests constructing their own `FixtureStore` get a clean, storage-free
+   * instance every time; `src/lib/mock/mockTransport.ts`'s zero-arg
+   * `createMockTransport()` (what `src/lib/api.ts`'s singleton uses) turns
+   * it on.
+   */
+  persistLogin?: boolean;
+}
+
+const SESSION_STORAGE_KEY = "firepit-mock-logged-in";
+
 export class FixtureStore {
   private readonly seed: Seed;
-  private loggedIn = false;
+  private readonly persistLogin: boolean;
+  private loggedIn: boolean;
   private genCounter = 0;
   private readonly readPostIds: Set<string>;
 
-  constructor(seed: Seed = createSeed()) {
+  constructor(seed: Seed = createSeed(), opts: FixtureStoreOptions = {}) {
     this.seed = seed;
+    this.persistLogin = opts.persistLogin ?? false;
+    this.loggedIn = this.persistLogin && this.readPersistedLogin();
     // Everything is unread by default except the one post on a board with no
     // subscription — gives a non-trivial, but not overwhelming, unread
     // summary out of the box (see unreadSummary below).
     this.readPostIds = new Set(this.seed.posts.filter((p) => p.title.startsWith("Why kebab-case")).map((p) => p.id));
+  }
+
+  private readPersistedLogin(): boolean {
+    if (typeof sessionStorage === "undefined") return false;
+    return sessionStorage.getItem(SESSION_STORAGE_KEY) === "1";
+  }
+
+  private writePersistedLogin(loggedIn: boolean): void {
+    if (!this.persistLogin || typeof sessionStorage === "undefined") return;
+    if (loggedIn) sessionStorage.setItem(SESSION_STORAGE_KEY, "1");
+    else sessionStorage.removeItem(SESSION_STORAGE_KEY);
   }
 
   private nextId(label: string): string {
@@ -87,11 +118,13 @@ export class FixtureStore {
     // without leaving the app (see PLANDOC.md C1's accept criterion "login
     // flow against mock").
     this.loggedIn = true;
+    this.writePersistedLogin(true);
     return { redirectUrl: `/auth/callback?mock_domain=${encodeURIComponent(domain)}` };
   }
 
   logout(): void {
     this.loggedIn = false;
+    this.writePersistedLogin(false);
   }
 
   whoami(): UserProfile {

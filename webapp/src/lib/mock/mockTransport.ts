@@ -24,7 +24,6 @@ import {
   fromCreatePostRequestCbor,
   fromEditCommentRequestCbor,
   fromEditPostRequestCbor,
-  fromEmptyCbor,
   fromEndorseRequestCbor,
   fromListNotificationsRequestCbor,
   fromSetMutedRequestCbor,
@@ -153,12 +152,22 @@ export interface MockTransport extends AsyncServiceTransport {
   readonly store: FixtureStore;
 }
 
-/** Build a fresh mock transport. Pass a `FixtureStore` to share/inspect state (tests do this to assert on mutations). */
-export function createMockTransport(store: FixtureStore = new FixtureStore()): MockTransport {
+/**
+ * Build a fresh mock transport. Pass a `FixtureStore` to share/inspect state
+ * (tests do this to assert on mutations, and get a clean, storage-free
+ * store every time); the zero-arg default — what `src/lib/api.ts`'s
+ * singleton uses in the real app — turns on `persistLogin` so a real
+ * `window.location.href` login round-trip (session.tsx's `login()`) survives
+ * the full-page reload it causes (see `FixtureStoreOptions.persistLogin`'s
+ * doc comment).
+ */
+export function createMockTransport(store: FixtureStore = new FixtureStore(undefined, { persistLogin: true })): MockTransport {
   const routes = buildRoutes(store);
   return {
     store,
-    // eslint-disable-next-line @typescript-eslint/require-await -- AsyncServiceTransport's contract is async; the mock has no real I/O to await.
+    // No `await` in the body: `AsyncServiceTransport`'s contract is async,
+    // but the mock has no real I/O to await — the `async` keyword just
+    // makes the return type `Promise<Uint8Array>` as required.
     async call(service: string, op: string, payload: Uint8Array): Promise<Uint8Array> {
       const kebabOp = methodToOp(op);
       const handler = routes[service]?.[kebabOp];
