@@ -5,7 +5,13 @@ triggers:
     - tag_created
 job:
   image: containers.catalystsquad.com/public/reactorcide/runnerbase:dev
-  command: "sh .reactorcide/jobs/scripts/deploy.sh"
+  # Clone at the triggering tag (REACTORCIDE_BRANCH carries the tag name
+  # for tag_created events). Public repo — unauthenticated read is fine.
+  command: |
+    set -e
+    git clone "https://github.com/catalystcommunity/firepit.git" /job/src
+    git -C /job/src checkout "${REACTORCIDE_BRANCH}"
+    sh /job/src/.reactorcide/jobs/scripts/deploy.sh
   timeout: 900
   priority: 20
   working_dir: /job
