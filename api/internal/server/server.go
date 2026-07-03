@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/catalystcommunity/firepit/api/internal/config"
+	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 	"github.com/catalystcommunity/firepit/api/internal/transport"
 )
@@ -34,18 +35,23 @@ const maxRPCBodyBytes = transport.MaxFrameDefault
 type Server struct {
 	cfg    config.Config
 	store  *store.Store
+	notify notify.Publisher
 	routes map[string]map[string]typedHandler
 
 	httpServer *http.Server
 }
 
 // New constructs a Server. svcs supplies one implementation per generated
-// csil service (see Services); main.go wires csilservices.NewXService stubs
-// in today, real implementations as B2-B9 land.
-func New(cfg config.Config, st *store.Store, svcs Services) *Server {
+// csil service (see Services). pub is the same notify.Publisher main.go
+// wires into the CSIL services (notify.NewDBPublisher in production) —
+// registerGithubWebhookRoutes passes it to the GitHub webhook handler too,
+// so every content-creating path (CSIL-RPC or GitHub ingestion) fans out
+// notifications through the one implementation.
+func New(cfg config.Config, st *store.Store, svcs Services, pub notify.Publisher) *Server {
 	return &Server{
 		cfg:    cfg,
 		store:  st,
+		notify: pub,
 		routes: buildRoutes(svcs),
 	}
 }

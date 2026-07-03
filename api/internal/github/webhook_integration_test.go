@@ -17,6 +17,7 @@ import (
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
+	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 	"github.com/catalystcommunity/firepit/coredb"
 )
@@ -79,7 +80,32 @@ func TestWebhookGoldenPayloads(t *testing.T) {
 	}
 	require.NoError(t, st.CreateGithubMapping(ctx, mapping))
 
-	handler := NewWebhookHandler(st)
+	// subscriber watches the whole board, so any GitHub-originated post
+	// (task B-int: "GitHub content is first-class", PLANDOC.md §4) must fan
+	// out a notification to them exactly like a human-authored one would.
+	subscriber := &store.User{LinkkeysDomain: "example.com", LinkkeysUserID: "subscriber-1", Handle: "subscriber", Kind: "human", Roles: store.StringArray{}}
+	require.NoError(t, gdb.Create(subscriber).Error)
+	require.NoError(t, gdb.Create(&store.Subscription{UserID: subscriber.ID, TargetType: "board", TargetID: board.ID}).Error)
+
+	// Pre-seed the repo's system user under the exact identity
+	// getOrCreateSystemUser would otherwise lazily create on first event
+	// (systemUserIdentity), and subscribe IT to the board too — so the
+	// ordinary "the actor is never notified of their own content" rule
+	// (notify.DBPublisher) can be exercised for system-authored content,
+	// not just human content.
+	sysDomain, sysUID, sysHandle, sysDisplayName := systemUserIdentity(repo)
+	sysUserSeed := &store.User{LinkkeysDomain: sysDomain, LinkkeysUserID: sysUID, Handle: sysHandle, DisplayName: sysDisplayName, Kind: "system", Roles: store.StringArray{}}
+	require.NoError(t, gdb.Create(sysUserSeed).Error)
+	require.NoError(t, gdb.Create(&store.Subscription{UserID: sysUserSeed.ID, TargetType: "board", TargetID: board.ID}).Error)
+
+	handler := NewWebhookHandler(st, notify.NewDBPublisher())
+
+	notificationsFor := func(t *testing.T, userID string) []store.Notification {
+		t.Helper()
+		var rows []store.Notification
+		require.NoError(t, gdb.Where("user_id = ?", userID).Order("created_at, id").Find(&rows).Error)
+		return rows
+	}
 
 	post := func(t *testing.T, body []byte, event, deliveryID, signature string) *httptest.ResponseRecorder {
 		t.Helper()
@@ -186,6 +212,24 @@ func TestWebhookGoldenPayloads(t *testing.T) {
 		require.Equal(t, "system", sysUser.Kind)
 		require.Equal(t, "github-catalystcommunity-firepit", sysUser.Handle)
 		require.Equal(t, p.AuthorID, sysUser.ID)
+		require.Equal(t, sysUserSeed.ID, sysUser.ID, "getOrCreateSystemUser must find the pre-seeded system user, not create a second one")
+
+		// The board subscriber gets notified of the new post, attributed to
+		// the repo's system user as actor — the bug this task fixes
+		// (contentWriter used to write posts/comments straight into the
+		// store with no notify.Publisher call at all).
+		notifs := notificationsFor(t, subscriber.ID)
+		require.Len(t, notifs, 1)
+		require.Equal(t, notify.EventNewPost, notifs[0].Event)
+		require.Equal(t, "post", notifs[0].TargetType)
+		require.Equal(t, p.ID, notifs[0].TargetID)
+		require.NotNil(t, notifs[0].ActorID)
+		require.Equal(t, sysUser.ID, *notifs[0].ActorID)
+
+		// The system user is also subscribed to the board (seeded above),
+		// but it's the actor here — nobody is notified of their own
+		// actions, system users included.
+		require.Empty(t, notificationsFor(t, sysUser.ID))
 	})
 
 	t.Run("issues closed adds a top-level comment on the existing post", func(t *testing.T) {
@@ -207,6 +251,18 @@ func TestWebhookGoldenPayloads(t *testing.T) {
 		var updatedPost store.Post
 		require.NoError(t, gdb.First(&updatedPost, "id = ?", p.ID).Error)
 		require.Equal(t, 1, updatedPost.CommentCount)
+
+		// The board subscriber also gets notified of the new comment (the
+		// post-level notification from "issues opened" above already landed
+		// as its own row, so this is the subscriber's second notification).
+		notifs := notificationsFor(t, subscriber.ID)
+		require.Len(t, notifs, 2)
+		newComment := notifs[1]
+		require.Equal(t, notify.EventNewComment, newComment.Event)
+		require.Equal(t, "comment", newComment.TargetType)
+		require.Equal(t, comment.ID, newComment.TargetID)
+		require.NotNil(t, newComment.ActorID)
+		require.Equal(t, systemUser(t).ID, *newComment.ActorID)
 	})
 
 	t.Run("idempotent redelivery of the same delivery id is a no-op", func(t *testing.T) {

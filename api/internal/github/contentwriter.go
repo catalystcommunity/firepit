@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
-	"time"
 
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
+	"github.com/catalystcommunity/firepit/api/internal/content"
+	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
@@ -20,14 +21,18 @@ import (
 // user per repo, safe to get-or-create idempotently.
 const systemUserLinkkeysDomain = "github.firepit.system"
 
-// contentWriter is the TEMPORARY, B8-owned path for writing posts and
-// top-level comments straight into the store for GitHub-originated content.
-// See the package doc comment's "contentWriter — TEMPORARY" section: this
-// exists because ThreadService (task B4) is being built concurrently and
-// can't be depended on yet; TODO(post-merge) is to replace this with calls
-// into ThreadService once both land.
+// contentWriter is the B8-owned path from a verified GitHub webhook event to
+// firepit content. It resolves/creates the repo's system user, applies the
+// event -> content rules (see the package doc comment's "Event rules v1"
+// section), and inserts the resulting post/top-level comment via
+// api/internal/content — the same shared creation logic
+// ThreadService.CreatePost/CreateComment uses, so a GitHub-originated post or
+// comment fans out notify.Publisher events exactly like a human-authored one
+// (see content's package doc comment for which validations that shared path
+// deliberately skips for system content, and why).
 type contentWriter struct {
-	store *store.Store
+	store  *store.Store
+	notify notify.Publisher
 }
 
 // systemUserIdentity derives the (linkkeys_domain, linkkeys_user_id, handle,
@@ -126,80 +131,64 @@ func (w *contentWriter) deliveryProcessed(ctx context.Context, deliveryID string
 	return count > 0, nil
 }
 
-// createPost inserts a new origin='github' post.
+// createPost inserts a new origin='github' post via the shared
+// api/internal/content path, publishing the notify.KindContentCreated event
+// that follows from it in the same transaction as the insert.
 func (w *contentWriter) createPost(ctx context.Context, boardID, authorID, title, bodyMD string, ref OriginRef) (*store.Post, error) {
 	refBytes, err := ref.Marshal()
 	if err != nil {
 		return nil, err
 	}
-	p := &store.Post{
-		BoardID:        boardID,
-		AuthorID:       authorID,
-		Title:          title,
-		BodyMD:         bodyMD,
-		Origin:         "github",
-		OriginRef:      datatypes.JSON(refBytes),
-		LastActivityAt: time.Now().UTC(),
-	}
-	if err := w.store.DB.WithContext(ctx).Create(p).Error; err != nil {
+
+	var post *store.Post
+	err = w.store.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var txErr error
+		post, txErr = content.CreatePost(ctx, tx, w.store, w.notify, content.CreatePostParams{
+			BoardID:   boardID,
+			AuthorID:  authorID,
+			Title:     title,
+			BodyMD:    bodyMD,
+			Origin:    "github",
+			OriginRef: datatypes.JSON(refBytes),
+		})
+		return txErr
+	})
+	if err != nil {
 		return nil, err
 	}
-	return p, nil
+	return post, nil
 }
 
 // createTopLevelComment inserts a new origin='github' comment directly
-// under postID (no parent) and bumps the post's comment_count /
-// last_activity_at in the same transaction.
-//
-// The comment's ltree path is set to its own id — comments.path is NOT
-// NULL, and the id isn't known until after insert (it's a DB-side
-// generate_ulid() default), so this is a two-step insert-then-update within
-// one transaction rather than a single insert. See the package doc
-// comment's contentWriter section: only TOP-LEVEL comments are ever created
-// here, so there is no parent path to prepend and no nested-path scheme to
-// get wrong.
-func (w *contentWriter) createTopLevelComment(ctx context.Context, postID, authorID, bodyMD string, ref OriginRef) (*store.Comment, error) {
+// under postID (no parent) via the shared api/internal/content path, which
+// also bumps the post's comment_count/last_activity_at and publishes the
+// resulting notify.KindContentCreated event — all in the same transaction
+// as the insert. See the package doc comment: only TOP-LEVEL comments are
+// ever created here, so ParentCommentID/ParentPath are left zero (no parent
+// path to prepend).
+func (w *contentWriter) createTopLevelComment(ctx context.Context, boardID, postID, authorID, bodyMD string, ref OriginRef) (*store.Comment, error) {
 	refBytes, err := ref.Marshal()
 	if err != nil {
 		return nil, err
 	}
 
-	var comment store.Comment
+	var comment *store.Comment
 	err = w.store.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		comment = store.Comment{
-			PostID:   postID,
-			AuthorID: authorID,
-			BodyMD:   bodyMD,
-			Origin:   "github",
-			// Placeholder — a syntactically valid ltree label, corrected
-			// to the row's own id immediately below once it's known.
-			Path:      "pending",
+		var txErr error
+		comment, txErr = content.CreateComment(ctx, tx, w.store, w.notify, content.CreateCommentParams{
+			BoardID:   boardID,
+			PostID:    postID,
+			AuthorID:  authorID,
+			BodyMD:    bodyMD,
+			Origin:    "github",
 			OriginRef: datatypes.JSON(refBytes),
-		}
-		if err := tx.Create(&comment).Error; err != nil {
-			return err
-		}
-
-		comment.Path = store.Ltree(comment.ID)
-		if err := tx.Model(&store.Comment{}).Where("id = ?", comment.ID).
-			Update("path", comment.Path).Error; err != nil {
-			return err
-		}
-
-		now := time.Now().UTC()
-		if err := tx.Model(&store.Post{}).Where("id = ?", postID).
-			Updates(map[string]any{
-				"comment_count":    gorm.Expr("comment_count + 1"),
-				"last_activity_at": now,
-			}).Error; err != nil {
-			return err
-		}
-		return nil
+		})
+		return txErr
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &comment, nil
+	return comment, nil
 }
 
 // HandleEvent applies event rules v1 (see the package doc comment) for one
@@ -294,7 +283,7 @@ func (w *contentWriter) handleIssues(ctx context.Context, mapping *store.GithubM
 			}
 			return true, nil
 		}
-		if _, err := w.createTopLevelComment(ctx, existing.ID, sysUser.ID, "Issue closed.", ref); err != nil {
+		if _, err := w.createTopLevelComment(ctx, existing.BoardID, existing.ID, sysUser.ID, "Issue closed.", ref); err != nil {
 			return false, err
 		}
 		return true, nil
@@ -331,7 +320,7 @@ func (w *contentWriter) handlePullRequest(ctx context.Context, mapping *store.Gi
 		// mode (a post this same merge fallback created earlier — see
 		// below), an existing thread always gets a comment, never a
 		// second post.
-		if _, err := w.createTopLevelComment(ctx, existing.ID, sysUser.ID, "Pull request merged.", ref); err != nil {
+		if _, err := w.createTopLevelComment(ctx, existing.BoardID, existing.ID, sysUser.ID, "Pull request merged.", ref); err != nil {
 			return false, err
 		}
 		return true, nil

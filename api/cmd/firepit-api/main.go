@@ -75,7 +75,7 @@ func run(ctx context.Context) error {
 		Integration:  csilservices.NewIntegrationService(st),
 	}
 
-	srv := server.New(cfg, st, svcs)
+	srv := server.New(cfg, st, svcs, pub)
 	log.WithField("port", cfg.Port).Info("firepit-api ready")
 	return srv.ListenAndServe(ctx)
 }

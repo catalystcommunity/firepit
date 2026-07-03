@@ -9,6 +9,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/catalystcommunity/firepit/api/internal/content"
 	"github.com/catalystcommunity/firepit/api/internal/csil"
 	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/reqctx"
@@ -141,7 +142,7 @@ func (s *threadService) CreatePost(ctx context.Context, req csil.CreatePostReque
 		return csil.Post{}, verr
 	}
 
-	var post store.Post
+	var post *store.Post
 	txErr := s.store.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var board store.Board
 		if err := tx.First(&board, "id = ?", string(req.BoardId)).Error; err != nil {
@@ -154,29 +155,19 @@ func (s *threadService) CreatePost(ctx context.Context, req csil.CreatePostReque
 			return Validation("board_id", "board is archived; new posts are not accepted")
 		}
 
-		post = store.Post{
-			BoardID:        board.ID,
-			AuthorID:       user.ID,
-			Title:          title,
-			BodyMD:         body,
-			LastActivityAt: time.Now().UTC(),
-		}
-		if err := s.store.CreatePost(ctx, tx, &post); err != nil {
-			return err
-		}
-
-		return s.notify.Publish(ctx, tx, notify.Event{
-			Kind:    notify.KindContentCreated,
-			ActorID: user.ID,
-			BoardID: board.ID,
-			PostID:  post.ID,
-			Body:    post.BodyMD,
+		var err error
+		post, err = content.CreatePost(ctx, tx, s.store, s.notify, content.CreatePostParams{
+			BoardID:  board.ID,
+			AuthorID: user.ID,
+			Title:    title,
+			BodyMD:   body,
 		})
+		return err
 	})
 	if txErr != nil {
 		return csil.Post{}, asAppError(txErr)
 	}
-	return toCSILPost(&post), nil
+	return toCSILPost(post), nil
 }
 
 // CreateComment replies to a post, optionally nested under an existing
@@ -196,7 +187,7 @@ func (s *threadService) CreateComment(ctx context.Context, req csil.CreateCommen
 		return csil.Comment{}, verr
 	}
 
-	var comment store.Comment
+	var comment *store.Comment
 	txErr := s.store.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var post store.Post
 		if err := tx.First(&post, "id = ?", string(req.PostId)).Error; err != nil {
@@ -238,40 +229,21 @@ func (s *threadService) CreateComment(ctx context.Context, req csil.CreateCommen
 			parentID = &pid
 		}
 
-		newID, err := store.NewCommentID()
-		if err != nil {
-			return err
-		}
-		comment = store.Comment{
-			ID:              newID,
+		var err error
+		comment, err = content.CreateComment(ctx, tx, s.store, s.notify, content.CreateCommentParams{
+			BoardID:         post.BoardID,
 			PostID:          post.ID,
 			ParentCommentID: parentID,
+			ParentPath:      parentPath,
 			AuthorID:        user.ID,
-			Path:            store.ChildPath(parentPath, newID),
 			BodyMD:          body,
-		}
-		if err := s.store.CreateComment(ctx, tx, &comment); err != nil {
-			return err
-		}
-
-		now := time.Now().UTC()
-		if err := s.store.BumpPostActivity(ctx, tx, post.ID, now, 1); err != nil {
-			return err
-		}
-
-		return s.notify.Publish(ctx, tx, notify.Event{
-			Kind:      notify.KindContentCreated,
-			ActorID:   user.ID,
-			BoardID:   post.BoardID,
-			PostID:    post.ID,
-			CommentID: comment.ID,
-			Body:      comment.BodyMD,
 		})
+		return err
 	})
 	if txErr != nil {
 		return csil.Comment{}, asAppError(txErr)
 	}
-	return toCSILComment(&comment), nil
+	return toCSILComment(comment), nil
 }
 
 // EditPost is author-only. Snapshots the prior title/body into a Revision,

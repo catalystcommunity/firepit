@@ -109,7 +109,7 @@ func TestAuthLoginFlow(t *testing.T) {
 		Notification: csilservices.NewNotificationService(st),
 		Integration:  csilservices.NewIntegrationService(st),
 	}
-	srv := server.New(cfg, st, svcs)
+	srv := server.New(cfg, st, svcs, notify.Noop{})
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)
 

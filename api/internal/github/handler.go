@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
@@ -24,9 +25,14 @@ type Handler struct {
 	writer *contentWriter
 }
 
-// NewWebhookHandler constructs the GitHub webhook Handler over st.
-func NewWebhookHandler(st *store.Store) *Handler {
-	return &Handler{store: st, writer: &contentWriter{store: st}}
+// NewWebhookHandler constructs the GitHub webhook Handler over st, wiring
+// pub (notify.NewDBPublisher in production; see cmd/firepit-api/main.go)
+// through to contentWriter so a GitHub-originated post/comment fans out
+// notifications exactly like a human-authored one — see
+// api/internal/content's package doc comment for the shared creation path
+// this exercises.
+func NewWebhookHandler(st *store.Store, pub notify.Publisher) *Handler {
+	return &Handler{store: st, writer: &contentWriter{store: st, notify: pub}}
 }
 
 // ServeHTTP implements http.Handler. See the package doc comment for the

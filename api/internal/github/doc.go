@@ -103,27 +103,30 @@
 //     this case exists so the distinction is meaningful once a later
 //     iteration adds pull_request/opened handling.
 //
-// # contentWriter — TEMPORARY, unify with ThreadService post-merge
+// # contentWriter — unified with ThreadService via api/internal/content
 //
-// contentWriter (contentwriter.go) writes posts and TOP-LEVEL comments
-// directly via *store.Store (raw gorm calls: Create, a two-step
-// insert-then-set-ltree-path for a comment's materialized path, and a
-// comment_count/last_activity_at bump on the parent post) rather than going
-// through ThreadService.CreatePost/CreateComment.
+// contentWriter (contentwriter.go) creates posts and TOP-LEVEL comments
+// through api/internal/content's CreatePost/CreateComment — the exact same
+// shared logic ThreadService.CreatePost/CreateComment (task B4) calls for
+// human-authored content. That package owns ltree path computation,
+// comment_count/last_activity_at maintenance, and the notify.Publisher
+// call, so a GitHub-originated post or comment fans out board/post/comment
+// subscriber notifications identically to a human-authored one (PLANDOC.md
+// §4: "GitHub content is first-class").
 //
-// This is deliberate, not an oversight: ThreadService (task B4) is being
-// implemented concurrently in a sibling worktree and could not be called
-// from here without depending on unmerged, unstable code. Once both land,
-// TODO(post-merge): replace contentWriter's direct store writes with calls
-// to ThreadService (or whatever internal repository it settles on for
-// post/comment creation + ltree path maintenance), so there is exactly one
-// code path that knows how to create a post or comment. Until then, the
-// ltree path convention here (a top-level comment's own id, unqualified —
-// see createTopLevelComment) is chosen to match the "materialized path"
-// design PLANDOC.md §4 describes, but is NOT guaranteed to be byte-for-byte
-// what ThreadService's eventual implementation produces for nested replies;
-// only top-level comments are ever created here, which sidesteps the
-// nested-path question entirely.
+// This wasn't always the case: contentWriter originally wrote posts/comments
+// straight into the store with its own duplicated ltree-path and
+// comment_count/last_activity_at logic, because ThreadService (task B4) was
+// being implemented concurrently in a sibling worktree and couldn't be
+// depended on yet — and, since it never called notify.Publisher, board
+// subscribers were never told about GitHub-originated activity. Both gaps
+// are closed by routing through api/internal/content instead of ThreadService
+// directly: see that package's doc comment for exactly which product-facing
+// validations (title/body length and blankness, board-archived checks) a
+// human CSIL-RPC caller gets that a GitHub webhook delivery deliberately
+// does not, and why. contentWriter only ever creates TOP-LEVEL comments
+// (ParentCommentID/ParentPath left zero), so it never exercises the nested
+// reply path ThreadService.CreateComment uses.
 //
 // # System user per mapping
 //
