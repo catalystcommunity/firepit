@@ -56,7 +56,7 @@ func run(ctx context.Context) error {
 	st := store.New(gdb)
 
 	svcs := server.Services{
-		Auth:         csilservices.NewAuthService(st),
+		Auth:         csilservices.NewAuthService(st, cfg),
 		Board:        csilservices.NewBoardService(st),
 		Thread:       csilservices.NewThreadService(st),
 		Endorsement:  csilservices.NewEndorsementService(st),

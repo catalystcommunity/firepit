@@ -57,6 +57,9 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST "+rpcMountPath, s.handleRPC)
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
+	// GET /auth/callback (task B2, PLANDOC.md §5): the one HTTP-native route
+	// the linkkeys login flow needs — see authcallback.go.
+	mux.HandleFunc("GET /auth/callback", s.handleAuthCallback)
 
 	var handler http.Handler = mux
 	handler = sessionMiddleware(s.store)(handler)

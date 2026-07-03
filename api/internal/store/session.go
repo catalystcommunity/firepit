@@ -2,13 +2,25 @@ package store
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"time"
 
 	"gorm.io/gorm"
 )
+
+// DefaultSessionTTL is how long a freshly minted session is valid for absent
+// an explicit ttl argument to CreateSession. firepit has no "remember me" /
+// short-session distinction in v1 — one TTL for every login.
+const DefaultSessionTTL = 30 * 24 * time.Hour
+
+// rawSessionTokenBytes is the amount of crypto/rand entropy behind a raw
+// session token (256 bits) — comfortably unguessable; only its SHA-256 hash
+// (HashSessionToken) is ever persisted.
+const rawSessionTokenBytes = 32
 
 // Session mirrors the `sessions` table: firepit's own session, minted
 // after a successful linkkeys RP handshake.
@@ -47,6 +59,54 @@ func (s *Store) LookupSession(ctx context.Context, tokenHash string) (*Session, 
 		return nil, err
 	}
 	return &sess, nil
+}
+
+// CreateSession mints a brand new session for userID: a random raw token
+// (never persisted) plus its sha256 hash (persisted, see HashSessionToken),
+// expiring ttl from now — pass exactly 0 to use DefaultSessionTTL. A
+// negative ttl is honored as-is (mints an already-expired session); tests
+// use that to exercise LookupSession's expiry handling without waiting.
+// Returns the inserted row AND the raw token; the row's own TokenHash field
+// is the only place the raw token can no longer be recovered from, so the
+// caller (GET /auth/callback) must capture the returned raw token
+// immediately to place in the session cookie.
+func (s *Store) CreateSession(ctx context.Context, userID string, ttl time.Duration) (sess *Session, rawToken string, err error) {
+	if ttl == 0 {
+		ttl = DefaultSessionTTL
+	}
+	rawToken, err = generateRawSessionToken()
+	if err != nil {
+		return nil, "", err
+	}
+	row := &Session{
+		UserID:    userID,
+		TokenHash: HashSessionToken(rawToken),
+		ExpiresAt: time.Now().UTC().Add(ttl),
+	}
+	if err := s.DB.WithContext(ctx).Create(row).Error; err != nil {
+		return nil, "", err
+	}
+	return row, rawToken, nil
+}
+
+// DeleteSession removes the session row matching tokenHash (see
+// HashSessionToken) — AuthService.Logout's job. Deleting a hash that matches
+// no row (already logged out, already expired and reaped, or never existed)
+// is not an error: gorm's Delete doesn't fail on "0 rows affected", and
+// Logout's CSIL contract explicitly never errors even when already logged
+// out (csilservices/auth.go).
+func (s *Store) DeleteSession(ctx context.Context, tokenHash string) error {
+	return s.DB.WithContext(ctx).Where("token_hash = ?", tokenHash).Delete(&Session{}).Error
+}
+
+// generateRawSessionToken returns a fresh crypto/rand-backed session token,
+// base64url-encoded (cookie-safe: no padding, no reserved characters).
+func generateRawSessionToken() (string, error) {
+	buf := make([]byte, rawSessionTokenBytes)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
 }
 
 // ErrSessionNotFound is a convenience alias for the not-found sentinel

@@ -3,6 +3,7 @@ module github.com/catalystcommunity/firepit/api
 go 1.26.4
 
 require (
+	github.com/fxamacker/cbor/v2 v2.9.2
 	github.com/rs/cors v1.11.1
 	github.com/sirupsen/logrus v1.9.4
 )
@@ -11,6 +12,7 @@ require (
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/pressly/goose/v3 v3.27.2 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 )
 

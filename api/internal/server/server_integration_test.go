@@ -32,10 +32,14 @@ import (
 // drives it purely over HTTP in CBOR:
 //
 //   - GET /healthz reports 200 once the database is reachable.
-//   - POST /csil/v1/rpc for a stubbed op (AuthService.begin-login) round-trips
+//   - POST /csil/v1/rpc for a stubbed op (BoardService.create-board) round-trips
 //     the declared ServiceError arm with the Unimplemented code, proving the
 //     dispatcher, the session middleware, and the stub wiring all work
-//     end-to-end over the wire — not just via direct Go calls.
+//     end-to-end over the wire — not just via direct Go calls. (Task B2 gave
+//     AuthService a real begin-login; board/create-board is still B3's stub,
+//     so it's what this generic dispatch-plumbing check now exercises. B2's
+//     own login-flow coverage lives in api/internal/csilservices and this
+//     package's auth_integration_test.go.)
 //
 // This uses api/internal/csil's codec + api/internal/transport's envelope
 // helpers directly (one of the two options task B1 allows) rather than the
@@ -75,7 +79,7 @@ func TestServerEndToEnd(t *testing.T) {
 
 	cfg := config.Config{DBURI: dsn, CORSOrigins: []string{"*"}}
 	svcs := server.Services{
-		Auth:         csilservices.NewAuthService(st),
+		Auth:         csilservices.NewAuthService(st, cfg),
 		Board:        csilservices.NewBoardService(st),
 		Thread:       csilservices.NewThreadService(st),
 		Endorsement:  csilservices.NewEndorsementService(st),
@@ -103,8 +107,8 @@ func TestServerEndToEnd(t *testing.T) {
 	})
 
 	t.Run("stubbed op round-trips ServiceError over HTTP", func(t *testing.T) {
-		payload := csil.EncodeAuthBeginLoginRequest(csil.BeginLoginRequest{Domain: "example.com"})
-		envelope, err := transport.NewRpcRequest("auth", "begin-login", payload).Encode()
+		payload := csil.EncodeBoardCreateBoardRequest(csil.CreateBoardRequest{Slug: "general", Title: "General", Kind: "discussion"})
+		envelope, err := transport.NewRpcRequest("board", "create-board", payload).Encode()
 		require.NoError(t, err)
 
 		httpResp, err := http.Post(ts.URL+"/csil/v1/rpc", "application/cbor", bytes.NewReader(envelope))
@@ -128,6 +132,6 @@ func TestServerEndToEnd(t *testing.T) {
 		svcErr, err := csil.DecodeServiceError(rpcResp.Payload)
 		require.NoError(t, err)
 		require.Equal(t, csilservices.CodeUnimplemented, svcErr.Code)
-		require.Contains(t, svcErr.Message, "begin-login")
+		require.Contains(t, svcErr.Message, "create-board")
 	})
 }

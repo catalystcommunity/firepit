@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/catalystcommunity/firepit/api/internal/config"
 	"github.com/catalystcommunity/firepit/api/internal/csil"
 	"github.com/catalystcommunity/firepit/api/internal/csilservices"
 	"github.com/catalystcommunity/firepit/api/internal/store"
@@ -13,10 +14,14 @@ import (
 // stubServices builds a Services value backed entirely by the
 // csilservices.NewXService stubs, exactly as main.go does today. The stub
 // constructors never touch *store.Store, so a nil store is safe here.
+// AuthService is real (task B2), not a stub, but a zero-value config.Config
+// leaves it unable to reach any RP (see TestDispatchFallibleOpReturnsServiceError),
+// which is enough for these tests: they exercise dispatch mechanics, not the
+// login flow itself (api/internal/csilservices has that coverage).
 func stubServices() Services {
 	var st *store.Store
 	return Services{
-		Auth:         csilservices.NewAuthService(st),
+		Auth:         csilservices.NewAuthService(st, config.Config{}),
 		Board:        csilservices.NewBoardService(st),
 		Thread:       csilservices.NewThreadService(st),
 		Endorsement:  csilservices.NewEndorsementService(st),
@@ -30,9 +35,13 @@ func stubServices() Services {
 }
 
 // TestDispatchFallibleOpReturnsServiceError exercises the routeFallible path:
-// an op with a declared `/ ServiceError` arm whose stub returns an
+// an op with a declared `/ ServiceError` arm whose implementation returns an
 // *AppError should come back as a typed ServiceError reply (transport
-// status ok), not a transport-level failure.
+// status ok), not a transport-level failure. auth/begin-login is real (task
+// B2), not a stub; stubServices()'s zero-value config.Config leaves it with
+// no configured linkkeys RP, so it still returns a (different) *AppError —
+// CodeInternal rather than CodeUnimplemented — which is exactly the
+// dispatch-mechanics behavior this test cares about.
 func TestDispatchFallibleOpReturnsServiceError(t *testing.T) {
 	routes := buildRoutes(stubServices())
 	req := &transport.RpcRequest{
@@ -52,8 +61,8 @@ func TestDispatchFallibleOpReturnsServiceError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode ServiceError: %v", err)
 	}
-	if svcErr.Code != csilservices.CodeUnimplemented {
-		t.Errorf("code = %d, want %d", svcErr.Code, csilservices.CodeUnimplemented)
+	if svcErr.Code != csilservices.CodeInternal {
+		t.Errorf("code = %d, want %d", svcErr.Code, csilservices.CodeInternal)
 	}
 	if svcErr.Message == "" {
 		t.Error("expected a non-empty message")
