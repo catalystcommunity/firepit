@@ -9,7 +9,12 @@ issues, releases, and operating/supporting those projects.
 
 First deployment: `firepit.catalystsquad.com`.
 
-**Status: planning. Nothing here is implemented yet.**
+**Status: built. Every task in §7 is implemented, tested (unit + integration +
+end-to-end over the real wire), and merged — including the Helm chart and
+reactorcide jobs. What remains is operational: provision the Zalando Postgres CR
+and secrets, register the reactorcide project/webhook, and point DNS at the
+gateway (runbooks: `helm_chart/README.md`, `docs/OPERATING.md`). This document
+is retained as the design record; §9 is the decision log.**
 
 ---
 
