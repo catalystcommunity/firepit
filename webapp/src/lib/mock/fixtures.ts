@@ -117,7 +117,7 @@ export const posts: readonly Post[] = [
       "This is the first post. Threaded replies go arbitrarily deep — try " +
       "collapsing the tree below once C3 lands the thread view.",
     origin: "user",
-    commentCount: 6,
+    commentCount: 7,
     lastActivityAt: ago(0, 2),
     createdAt: ago(10),
   },
@@ -182,8 +182,32 @@ const COMMENT_4 = "01FPMOCKCOMMENT000000004";
 const COMMENT_5 = "01FPMOCKCOMMENT000000005";
 const COMMENT_6 = "01FPMOCKCOMMENT000000006";
 const COMMENT_RELEASE_1 = "01FPMOCKCOMMENTRELEASE01";
+const COMMENT_GITHUB_1 = "01FPMOCKCOMMENTGITHUB001";
+
+// A per-integration system user (PLANDOC.md §4: "a system user per
+// mapping") — stands in for the GitHub webhook's authoring identity so the
+// welcome thread has one `origin: "github"` item to exercise the thread
+// view's "distinct quiet treatment (origin glyph + backlink)" (task C3
+// scope item 1), same as a real `issues`/`pull_request` mapping would
+// produce. No IntegrationService fixture data exists yet (task C4's board
+// admin work, not C3's) — this comment is enough to render/test the origin
+// styling without it.
+const GITHUB_BOT_ID = "01FPMOCKUSERGHBOT0000000";
 
 export const comments: readonly Comment[] = [
+  {
+    // Top-level and chronologically first (predates COMMENT_1) so it
+    // doesn't disturb the deep BOB->CAROL->DAVE->... reply chain the rest
+    // of this fixture builds, or become "the deepest/last" comment the
+    // mock-transport round-trip test walks.
+    id: COMMENT_GITHUB_1,
+    postId: POST_WELCOME,
+    authorId: GITHUB_BOT_ID,
+    bodyMd: "Closed via #4: docs now link here from the README.",
+    origin: "github",
+    originRef: JSON.stringify({ url: "https://github.com/catalystcommunity/firepit/issues/4", repo: "catalystcommunity/firepit" }),
+    createdAt: ago(9, 23),
+  },
   {
     id: COMMENT_1,
     postId: POST_WELCOME,
@@ -235,7 +259,10 @@ export const comments: readonly Comment[] = [
     authorId: CAROL_ID,
     bodyMd: "Six levels deep and still legible — that's the bar.",
     origin: "user",
-    editedAt: ago(0, 4),
+    // Edited an hour after posting (ago(0, 1) is *after* createdAt's
+    // ago(0, 2) — smaller "hours ago" is more recent) — see the matching
+    // `revisions` entry below for the pre-edit snapshot.
+    editedAt: ago(0, 1),
     createdAt: ago(0, 2),
   },
   {
@@ -272,6 +299,24 @@ export const endorsements: readonly Endorsement[] = [
     targetType: "comment",
     targetId: COMMENT_4,
     createdAt: ago(5),
+  },
+];
+
+// --- revisions ------------------------------------------------------------------
+//
+// One entry, matching COMMENT_6's `editedAt` — the pre-edit snapshot
+// `list-revisions` (task C3's revision-history panel) has something real to
+// render. `store.ts`'s `editPost`/`editComment` push further entries here at
+// runtime; this is just the seed.
+
+export const revisions: readonly Revision[] = [
+  {
+    id: "01FPMOCKREVISION0000001",
+    targetType: "comment",
+    targetId: COMMENT_6,
+    editorId: CAROL_ID,
+    prevBodyMd: "Six levels deep and still readable — that's the bar.",
+    createdAt: ago(0, 1),
   },
 ];
 
@@ -421,7 +466,7 @@ export function createSeed() {
     settings: structuredClone(settings) as UserSettings,
     mentionGrants: structuredClone(mentionGrants) as MentionGrant[],
     friendGroups: structuredClone(friendGroups) as FriendGroup[],
-    revisions: [] as Revision[],
+    revisions: structuredClone(revisions) as Revision[],
   };
 }
 

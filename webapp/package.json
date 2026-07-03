@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@solidjs/router": "^0.15.4",
-    "dompurify": "^3.4.6",
-    "marked": "^18.0.4",
+    "dompurify": "^3.4.11",
+    "marked": "^18.0.5",
     "solid-js": "^1.9.13"
   },
   "devDependencies": {
