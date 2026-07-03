@@ -171,10 +171,10 @@ func buildRoutes(svcs Services) map[string]map[string]typedHandler {
 			"remove-friend":       routeFallible(csil.DecodeSocialRemoveFriendRequest, svcs.Social.RemoveFriend, csil.EncodeSocialRemoveFriendResponse, "Empty"),
 		},
 		"subscription": {
-			"subscribe":           routeFallible(csil.DecodeSubscriptionSubscribeRequest, svcs.Subscription.Subscribe, csil.EncodeSubscriptionSubscribeResponse, "Subscription"),
-			"unsubscribe":         routeFallible(csil.DecodeSubscriptionUnsubscribeRequest, svcs.Subscription.Unsubscribe, csil.EncodeSubscriptionUnsubscribeResponse, "Empty"),
-			"set-muted":           routeFallible(csil.DecodeSubscriptionSetMutedRequest, svcs.Subscription.SetMuted, csil.EncodeSubscriptionSetMutedResponse, "Subscription"),
-			"list-subscriptions":  routeInfallible(csil.DecodeSubscriptionListSubscriptionsRequest, svcs.Subscription.ListSubscriptions, csil.EncodeSubscriptionListSubscriptionsResponse, "SubscriptionList"),
+			"subscribe":          routeFallible(csil.DecodeSubscriptionSubscribeRequest, svcs.Subscription.Subscribe, csil.EncodeSubscriptionSubscribeResponse, "Subscription"),
+			"unsubscribe":        routeFallible(csil.DecodeSubscriptionUnsubscribeRequest, svcs.Subscription.Unsubscribe, csil.EncodeSubscriptionUnsubscribeResponse, "Empty"),
+			"set-muted":          routeFallible(csil.DecodeSubscriptionSetMutedRequest, svcs.Subscription.SetMuted, csil.EncodeSubscriptionSetMutedResponse, "Subscription"),
+			"list-subscriptions": routeInfallible(csil.DecodeSubscriptionListSubscriptionsRequest, svcs.Subscription.ListSubscriptions, csil.EncodeSubscriptionListSubscriptionsResponse, "SubscriptionList"),
 		},
 		"read": {
 			"mark-read":      routeInfallible(csil.DecodeReadMarkReadRequest, svcs.Read.MarkRead, csil.EncodeReadMarkReadResponse, "Empty"),

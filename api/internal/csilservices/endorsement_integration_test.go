@@ -16,7 +16,6 @@ import (
 
 	"github.com/catalystcommunity/firepit/api/internal/csil"
 	"github.com/catalystcommunity/firepit/api/internal/csilservices"
-	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 	"github.com/catalystcommunity/firepit/coredb"
 )
@@ -24,17 +23,9 @@ import (
 // nilUUID (declared in board_integration_test.go) is reused here as the
 // stand-in for "a well-formed id that doesn't exist" in not-found assertions.
 
-// capturingPublisher records every notify.Event handed to it, so tests can
-// assert Endorse emits exactly one notify.KindEndorsed per actual new
-// endorsement (never on an idempotent re-endorse).
-type capturingPublisher struct {
-	events []notify.Event
-}
-
-func (p *capturingPublisher) Publish(_ context.Context, _ *gorm.DB, e notify.Event) error {
-	p.events = append(p.events, e)
-	return nil
-}
+// capturingPublisher (declared in thread_integration_test.go) is reused
+// here to assert Endorse emits exactly one notify.KindEndorsed per actual
+// new endorsement (never on an idempotent re-endorse).
 
 // endorsementTestEnv boots a real Postgres (coredb migrations 000001 +
 // 000002, so user_reputation exists), a *store.Store against it, and the

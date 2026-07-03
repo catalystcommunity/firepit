@@ -26,7 +26,7 @@ func stubServices() Services {
 	return Services{
 		Auth:         csilservices.NewAuthService(st, config.Config{}),
 		Board:        csilservices.NewBoardService(st),
-		Thread:       csilservices.NewThreadService(st),
+		Thread:       csilservices.NewThreadService(st, notify.Noop{}),
 		Endorsement:  csilservices.NewEndorsementService(st, notify.Noop{}),
 		Settings:     csilservices.NewSettingsService(st),
 		Social:       csilservices.NewSocialService(st),
@@ -77,18 +77,16 @@ func TestDispatchFallibleOpReturnsServiceError(t *testing.T) {
 // returns an error has no typed channel to carry it, so it must surface as
 // a transport-level internal failure.
 //
-// Uses thread/list-posts (still a B1 stub as of task B3) rather than
-// board/list-boards: BoardService is a real implementation now (task B3)
-// and its ListBoards touches *store.Store, which stubServices() sets up as
-// nil — exercising a still-unimplemented op is what this test actually
-// wants to cover, so it moved to one that stays a stub until B4 lands
-// rather than asserting on BoardService's stub behavior specifically.
+// Uses notification/mark-all-read, the one service still stubbed as Wave B
+// lands (this example has already moved twice as boards and threads became
+// real implementations — once NotificationService lands too, this test
+// should switch to a purpose-built fake rather than chasing stubs).
 func TestDispatchInfallibleOpReturnsTransportError(t *testing.T) {
 	routes := buildRoutes(stubServices())
 	req := &transport.RpcRequest{
-		Service: "thread",
-		Op:      "list-posts",
-		Payload: csil.EncodeThreadListPostsRequest(csil.ListPostsRequest{BoardId: "board-1"}),
+		Service: "notification",
+		Op:      "mark-all-read",
+		Payload: csil.EncodeNotificationMarkAllReadRequest(csil.Empty{}),
 	}
 
 	outcome := dispatch(context.Background(), routes, req)

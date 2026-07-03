@@ -23,6 +23,7 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/config"
 	"github.com/catalystcommunity/firepit/api/internal/csil"
 	"github.com/catalystcommunity/firepit/api/internal/csilservices"
+	"github.com/catalystcommunity/firepit/api/internal/notify"
 	"github.com/catalystcommunity/firepit/api/internal/server"
 	"github.com/catalystcommunity/firepit/api/internal/store"
 	"github.com/catalystcommunity/firepit/api/internal/transport"
@@ -99,8 +100,8 @@ func TestAuthLoginFlow(t *testing.T) {
 	svcs := server.Services{
 		Auth:         csilservices.NewAuthService(st, cfg),
 		Board:        csilservices.NewBoardService(st),
-		Thread:       csilservices.NewThreadService(st),
-		Endorsement:  csilservices.NewEndorsementService(st),
+		Thread:       csilservices.NewThreadService(st, notify.Noop{}),
+		Endorsement:  csilservices.NewEndorsementService(st, notify.Noop{}),
 		Settings:     csilservices.NewSettingsService(st),
 		Social:       csilservices.NewSocialService(st),
 		Subscription: csilservices.NewSubscriptionService(st),
@@ -254,7 +255,7 @@ func TestAuthLoginFlow(t *testing.T) {
 			userID:      "u-expired",
 			domain:      idpDomain,
 			audience:    rpDomain,
-			nonce:       nonce, // fresh, valid nonce ...
+			nonce:       nonce,                                                 // fresh, valid nonce ...
 			expiresAt:   time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), // ... but the assertion itself already expired
 			displayName: "Expired User",
 		})

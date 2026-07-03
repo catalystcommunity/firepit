@@ -59,7 +59,7 @@ func run(ctx context.Context) error {
 	svcs := server.Services{
 		Auth:         csilservices.NewAuthService(st, cfg),
 		Board:        csilservices.NewBoardService(st),
-		Thread:       csilservices.NewThreadService(st),
+		Thread:       csilservices.NewThreadService(st, notify.Noop{}),
 		Endorsement:  csilservices.NewEndorsementService(st, notify.Noop{}),
 		Settings:     csilservices.NewSettingsService(st),
 		Social:       csilservices.NewSocialService(st),
