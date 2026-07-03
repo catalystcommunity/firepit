@@ -1,0 +1,122 @@
+/* Board index + subscribe/mute toggle (task C2, PLANDOC.md §7). Mailing-list
+ * register: quiet rules instead of card shadows, unread signaled by a small
+ * dot + weight change rather than a colored badge. Shared `.unread-dot` /
+ * `.origin-glyph` also used by src/components/post-list (imported from
+ * there too) so both lists read as one visual system. */
+
+.unread-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.origin-glyph {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-size: 0.7rem;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text);
+  opacity: 0.55;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 0.3em;
+  vertical-align: middle;
+}
+
+.board-index {
+  max-width: 68ch;
+}
+
+.board-group {
+  margin-bottom: 1.75rem;
+}
+
+.board-group h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  font-weight: 600;
+  margin: 0 0 0.6rem;
+}
+
+.board-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.board-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.board-row:last-child {
+  border-bottom: none;
+}
+
+.board-row-main {
+  min-width: 0;
+}
+
+.board-row-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text-h);
+  text-decoration: none;
+}
+
+.board-row-title:hover {
+  color: var(--accent);
+}
+
+.board-row-desc {
+  margin: 0.15rem 0 0;
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+.subscribe-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+.subscribe-toggle-button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.subscribe-toggle-button.subscribed {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.subscribe-toggle-login {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.mute-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}

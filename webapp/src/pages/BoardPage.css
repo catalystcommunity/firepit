@@ -1,0 +1,21 @@
+/* /b/:slug (task C2, PLANDOC.md §7): board header + composer + post list. */
+
+.board-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+}
+
+.board-header h2 {
+  margin-bottom: 0.2rem;
+}
+
+.board-header-desc {
+  margin: 0;
+  opacity: 0.75;
+  font-size: 0.95rem;
+}

@@ -25,7 +25,9 @@ import {
   fromEditCommentRequestCbor,
   fromEditPostRequestCbor,
   fromEndorseRequestCbor,
+  fromGetThreadRequestCbor,
   fromListNotificationsRequestCbor,
+  fromListPostsRequestCbor,
   fromSetMutedRequestCbor,
   fromTargetRefCbor,
   fromUpdateBoardRequestCbor,
@@ -81,8 +83,8 @@ function buildRoutes(store: FixtureStore): Record<string, Record<string, Handler
       "remove-board-member": () => toEmptyCbor({}),
     },
     thread: {
-      "list-posts": (p) => toPostPageCbor(store.listPosts(fromTargetRefLikeBoardId(p))),
-      "get-thread": (p) => toThreadCbor(store.getThread(bareStringField(p, "post_id"))),
+      "list-posts": (p) => toPostPageCbor(store.listPosts(fromListPostsRequestCbor(p))),
+      "get-thread": (p) => toThreadCbor(store.getThread(fromGetThreadRequestCbor(p).postId)),
       "create-post": (p) => toPostCbor(store.createPost(fromCreatePostRequestCbor(p))),
       "create-comment": (p) => toCommentCbor(store.createComment(fromCreateCommentRequestCbor(p))),
       "edit-post": (p) => {
@@ -129,23 +131,6 @@ function buildRoutes(store: FixtureStore): Record<string, Record<string, Handler
       "revoke-mention": (p) => toEmptyCbor(store.revokeMention(bareString(p))),
     },
   };
-}
-
-// list-posts's request (ListPostsRequest) is a map with a `board_id` field
-// (plus cursor/limit the mock doesn't paginate on) — there's no standalone
-// generated decoder for just that field, so pull it out with the low-level
-// map helpers the same way the generated codec's own bare-type request
-// handling does.
-function fromTargetRefLikeBoardId(payload: Uint8Array): string {
-  return bareStringField(payload, "board_id");
-}
-
-function bareStringField(payload: Uint8Array, key: string): string {
-  const value = decode(payload);
-  if (!(value instanceof Map)) throw new Error(`expected a map decoding field "${key}"`);
-  const field = value.get(key);
-  if (field === undefined) throw new Error(`missing required field: ${key}`);
-  return asString(field);
 }
 
 export interface MockTransport extends AsyncServiceTransport {

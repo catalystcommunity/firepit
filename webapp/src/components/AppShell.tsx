@@ -4,13 +4,20 @@
 // inherits for free. Passed as `@solidjs/router`'s `Router` `root` prop
 // (see App.tsx) — `props.children` is whatever route matched.
 import { A } from "@solidjs/router";
-import { createResource, ErrorBoundary, For, Suspense, type ParentComponent } from "solid-js";
+import { createResource, ErrorBoundary, For, Show, Suspense, type ParentComponent } from "solid-js";
+import "~/components/board-list/board-list.css";
 import { api } from "~/lib/api";
 import { useSession } from "~/lib/session";
+import { boardUnreadCount, startUnreadPoller } from "~/lib/unread";
 
 const AppShell: ParentComponent = (props) => {
   const session = useSession();
   const [boardPage] = createResource(() => api.board.listBoards({}));
+  // Task C2's shared unread poller (~/lib/unread) — its own instance here so
+  // the rail's dots update independently of any page-level instance (see
+  // that module's "safe to call more than once" doc comment); C4's bell is
+  // expected to do the same rather than reach into this one.
+  const poller = startUnreadPoller(() => session.user() !== null);
 
   return (
     <div class="app-shell">
@@ -50,7 +57,12 @@ const AppShell: ParentComponent = (props) => {
                 <For each={boardPage()?.boards ?? []}>
                   {(board) => (
                     <li>
-                      <A href={`/b/${board.slug}`}>{board.title}</A>
+                      <A href={`/b/${board.slug}`}>
+                        <Show when={boardUnreadCount(poller.summary(), board.id) > 0}>
+                          <span class="unread-dot" aria-label="Unread activity" />
+                        </Show>
+                        {board.title}
+                      </A>
                     </li>
                   )}
                 </For>
