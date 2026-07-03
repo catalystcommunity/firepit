@@ -1,0 +1,46 @@
+{
+  "action": "closed",
+  "number": 7,
+  "pull_request": {
+    "id": 2046592881,
+    "node_id": "PR_kwDOJj8Ks85_abcd",
+    "number": 7,
+    "title": "Fix HMAC verification to use constant-time compare",
+    "user": {
+      "login": "octocat",
+      "id": 583231,
+      "type": "User"
+    },
+    "body": "Switches the webhook signature check to `hmac.Equal` over decoded bytes.",
+    "state": "closed",
+    "locked": false,
+    "merged": true,
+    "merged_at": "2026-07-03T19:05:00Z",
+    "merge_commit_sha": "6dcb09b5b57875f334f61aebed695e2e4193db5",
+    "html_url": "https://github.com/catalystcommunity/firepit/pull/7",
+    "base": {
+      "ref": "main"
+    },
+    "head": {
+      "ref": "fix-hmac-timing"
+    }
+  },
+  "repository": {
+    "id": 1296269,
+    "node_id": "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
+    "name": "firepit",
+    "full_name": "catalystcommunity/firepit",
+    "private": false,
+    "owner": {
+      "login": "catalystcommunity",
+      "id": 583231,
+      "type": "Organization"
+    },
+    "html_url": "https://github.com/catalystcommunity/firepit"
+  },
+  "sender": {
+    "login": "octocat",
+    "id": 583231,
+    "type": "User"
+  }
+}

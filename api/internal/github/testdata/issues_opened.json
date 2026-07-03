@@ -1,0 +1,38 @@
+{
+  "action": "opened",
+  "issue": {
+    "id": 1935423891,
+    "node_id": "I_kwDOJj8Ks85xwiqT",
+    "number": 42,
+    "title": "Flaky test in comment ltree fixture",
+    "user": {
+      "login": "octocat",
+      "id": 583231,
+      "type": "User"
+    },
+    "labels": [],
+    "state": "open",
+    "locked": false,
+    "comments": 0,
+    "body": "The `store_integration_test.go` round trip occasionally fails under load. Repro attached.",
+    "html_url": "https://github.com/catalystcommunity/firepit/issues/42"
+  },
+  "repository": {
+    "id": 1296269,
+    "node_id": "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
+    "name": "firepit",
+    "full_name": "catalystcommunity/firepit",
+    "private": false,
+    "owner": {
+      "login": "catalystcommunity",
+      "id": 583231,
+      "type": "Organization"
+    },
+    "html_url": "https://github.com/catalystcommunity/firepit"
+  },
+  "sender": {
+    "login": "octocat",
+    "id": 583231,
+    "type": "User"
+  }
+}

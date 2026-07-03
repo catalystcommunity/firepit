@@ -1,0 +1,34 @@
+{
+  "zen": "Design for failure.",
+  "hook_id": 500598237,
+  "hook": {
+    "type": "Repository",
+    "id": 500598237,
+    "name": "web",
+    "active": true,
+    "events": ["issues", "pull_request", "release"],
+    "config": {
+      "content_type": "json",
+      "insecure_ssl": "0",
+      "url": "https://firepit.catalystsquad.com/webhooks/github"
+    }
+  },
+  "repository": {
+    "id": 1296269,
+    "node_id": "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
+    "name": "firepit",
+    "full_name": "catalystcommunity/firepit",
+    "private": false,
+    "owner": {
+      "login": "catalystcommunity",
+      "id": 583231,
+      "type": "Organization"
+    },
+    "html_url": "https://github.com/catalystcommunity/firepit"
+  },
+  "sender": {
+    "login": "octocat",
+    "id": 583231,
+    "type": "User"
+  }
+}
