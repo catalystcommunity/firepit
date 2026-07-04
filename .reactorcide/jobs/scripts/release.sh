@@ -134,8 +134,8 @@ build_and_push() {
 # 6. Build and push firepit-api and firepit-webapp
 # -------------------------------------------------------------------
 echo "=== Building images ==="
-build_and_push api/Dockerfile "${REGISTRY}/catalystcommunity/firepit-api"
-build_and_push webapp/Dockerfile "${REGISTRY}/catalystcommunity/firepit-webapp"
+build_and_push api/Dockerfile "${REGISTRY}/public/catalystcommunity/firepit-api"
+build_and_push webapp/Dockerfile "${REGISTRY}/public/catalystcommunity/firepit-webapp"
 
 # -------------------------------------------------------------------
 # 7. GitHub release
@@ -159,6 +159,6 @@ fi
 echo ""
 echo "================================================"
 echo "firepit ${NEW_TAG} released"
-echo "  ${REGISTRY}/catalystcommunity/firepit-api:${VERSION}"
-echo "  ${REGISTRY}/catalystcommunity/firepit-webapp:${VERSION}"
+echo "  ${REGISTRY}/public/catalystcommunity/firepit-api:${VERSION}"
+echo "  ${REGISTRY}/public/catalystcommunity/firepit-webapp:${VERSION}"
 echo "================================================"

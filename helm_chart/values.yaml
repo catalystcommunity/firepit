@@ -26,11 +26,11 @@ replicaCount:
 
 image:
   api:
-    repository: containers.catalystsquad.com/catalystcommunity/firepit-api
+    repository: containers.catalystsquad.com/public/catalystcommunity/firepit-api
     pullPolicy: IfNotPresent
     tag: "" # defaults to .Chart.AppVersion
   webapp:
-    repository: containers.catalystsquad.com/catalystcommunity/firepit-webapp
+    repository: containers.catalystsquad.com/public/catalystcommunity/firepit-webapp
     pullPolicy: IfNotPresent
     tag: "" # defaults to .Chart.AppVersion
   linkkeysRp:
