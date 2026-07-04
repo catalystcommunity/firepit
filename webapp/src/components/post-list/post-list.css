@@ -1,18 +1,28 @@
-/* Board post list (task C2, PLANDOC.md §7): dense, chronological rows —
- * quiet rules between rows, no card shadows; unread is a dot + bold title,
- * never a colored count badge. `.unread-dot` / `.origin-glyph` come from
- * ~/components/board-list/board-list.css, imported alongside this file so
- * the board index and the post list read as one system. */
+/* Board post list (task C2, PLANDOC.md §7; reskinned for "Blue Flame",
+ * docs/DESIGN.md): one shared panel, dense rows separated by hairlines —
+ * no card shadows per row. Unread is --ember (the app's one unread signal)
+ * + bold title, never a colored count badge. `.unread-dot` / `.origin-glyph`
+ * come from ~/components/board-list/board-list.css, imported alongside this
+ * file so the board index and the post list read as one system. */
 
 .post-list ul {
   list-style: none;
-  margin: 0 0 1rem;
+  margin: 0 0 var(--space-2);
   padding: 0;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
 }
 
 .post-row {
-  padding: 0.7rem 0;
+  padding: 0.75rem var(--space-2);
   border-bottom: 1px solid var(--border);
+}
+
+.post-row:hover {
+  background: var(--bg2);
 }
 
 .post-row:last-child {
@@ -22,7 +32,7 @@
 .post-row-title {
   display: block;
   font-size: 1rem;
-  color: var(--text-h);
+  color: var(--text);
   text-decoration: none;
   font-weight: 500;
 }
@@ -36,8 +46,6 @@
 }
 
 .post-row-meta {
-  margin: 0.2rem 0 0;
-  font-size: 0.82rem;
+  margin: 0.25rem 0 0;
   font-variant-numeric: tabular-nums;
-  opacity: 0.65;
 }

@@ -1,43 +1,92 @@
-/* Typographic base + app shell layout (task C1, PLANDOC.md §7). Kept
- * deliberately minimal — system font stack, a readable measure, light/dark
- * via prefers-color-scheme custom properties — C2/C3 build the real screens
- * on top of this. */
+/* Firepit — "Blue Flame" visual design (docs/DESIGN.md has the full spec:
+ * the token table, the type rules, and the signature-motif/ember-means-
+ * unread usage contracts). Structure of this file: tokens, then base
+ * (resets, type, motion, focus), then the app shell, then everything else
+ * task C1-C4 already built page/component markup for — reskinned in place,
+ * no markup or behavior changes.
+ *
+ * The concept: the hottest part of a flame is blue. Dark (default) is the
+ * night around a campfire — layered navy surfaces, never pure black. Light
+ * is daylight sky. --ember is the one warm color and it means exactly one
+ * thing everywhere it appears: unread/still-burning. */
+
+/* --- tokens ------------------------------------------------------------ */
 
 :root {
-  --text: #3f3a46;
-  --text-h: #08060d;
-  --bg: #fff;
-  --bg-raised: #f8f7fb;
-  --border: #e5e4e7;
-  --accent: #8a3ffc;
-  --accent-contrast: #fff;
-  --danger: #b3261e;
+  color-scheme: dark;
 
-  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Blue Flame — dark (default, regardless of prefers-color-scheme; see
+   * ~/lib/theme.ts and index.html's paint-guard script). */
+  --bg0: #0b1220; /* page background */
+  --bg1: #111a2c; /* panel / card surface */
+  --bg2: #16233a; /* raised surface: hover, dropdowns, active nav */
+  --border: #233450; /* hairline panel borders */
+  --border-strong: #33496b;
+  --text: #e6edf7;
+  --text-muted: #8fa3c0;
+  --accent: #4d9fff; /* blue-flame core: links, buttons, active states */
+  --accent-hi: #77c4ff; /* cyan flame tip: hover, gradient end, focus ring */
+  --ember: #ff9f5a; /* unread dots/badges ONLY — never decorative */
+  --danger: #f2708a;
 
-  font: 16px/1.5 var(--sans);
-  color-scheme: light dark;
+  /* Dark mode separates surfaces by lightness, not shadow (light mode's
+   * override below adds one). */
+  --shadow-panel: none;
+
+  --font-sans: "IBM Plex Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --space-1: 0.5rem; /* 8px */
+  --space-2: 1rem; /* 16px */
+  --space-3: 1.5rem; /* 24px */
+
+  /* The signature gradient — used in exactly four places app-wide (the
+   * flame mark, the active nav rail edge, the focus-visible ring's color,
+   * and primary buttons). See docs/DESIGN.md's usage contract. No other
+   * gradients appear anywhere in this app. */
+  --gradient-flame: linear-gradient(135deg, var(--accent), var(--accent-hi));
+
+  --transition-fast: 140ms ease;
+
+  font: 16px/1.5 var(--font-sans);
   color: var(--text);
-  background: var(--bg);
+  background: var(--bg0);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #cbd0d8;
-    --text-h: #f3f4f6;
-    --bg: #14151a;
-    --bg-raised: #1c1d24;
-    --border: #2e303a;
-    --accent: #b794ff;
-    --accent-contrast: #14151a;
-    --danger: #ff8a80;
-  }
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg0: #f5f8fc;
+  --bg1: #ffffff;
+  --bg2: #edf3fb;
+  --border: #d8e2f0;
+  --border-strong: #b9c9e0;
+  --text: #17263d;
+  --text-muted: #5b6e8c;
+  /* Spec value #1F6FE0 measured 4.47:1 on --bg0 (#F5F8FC) — just under
+   * WCAG AA's 4.5:1 for normal text, and --accent doubles as link-text
+   * color, so it's read as text, not just decoration. Nudged minimally
+   * darker to #1D6BDA (4.73:1 on --bg0, 5.04:1 on --bg1); same hue, not
+   * visually distinguishable from the spec value at a glance. See
+   * docs/DESIGN.md's contrast note. */
+  --accent: #1d6bda;
+  --accent-hi: #1557b8;
+  --ember: #c96a1e;
+  --danger: #c4314f;
+
+  /* Light mode gets a subtle lift; dark mode never does. */
+  --shadow-panel:
+    0 1px 2px rgba(23, 38, 61, 0.06),
+    0 4px 12px rgba(23, 38, 61, 0.06);
 }
+
+/* --- base ---------------------------------------------------------------- */
 
 * {
   box-sizing: border-box;
@@ -45,14 +94,15 @@
 
 body {
   margin: 0;
+  background: var(--bg0);
 }
 
 h1,
 h2,
 h3 {
-  font-family: var(--sans);
+  font-family: var(--font-sans);
   font-weight: 600;
-  color: var(--text-h);
+  color: var(--text);
   line-height: 1.25;
 }
 
@@ -63,25 +113,182 @@ h2 {
 
 p {
   margin: 0 0 1em;
-  max-width: 68ch;
+  max-width: 72ch;
 }
 
 a {
   color: var(--accent);
 }
 
+a:hover {
+  color: var(--accent-hi);
+}
+
 code {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: 0.9em;
-  background: var(--bg-raised);
+  background: var(--bg2);
   border-radius: 4px;
   padding: 0.15em 0.4em;
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
   color: inherit;
+}
+
+/* Every metadata scrap in the app — timestamps, @handles, counts, board
+ * slugs, glyph chips, revision stamps — renders in mono, muted, small. This
+ * is the one structural device that makes "prose vs. data" legible at a
+ * glance everywhere in the app; see docs/DESIGN.md's type rules. */
+.mono,
+.timestamp,
+.author-name,
+.edited-marker,
+.origin-badge,
+.origin-backlink,
+.origin-glyph,
+.post-row-meta,
+.notif-time,
+.notif-label,
+.revision-meta,
+.depth-badge,
+.endorser,
+.role-badge,
+.board-index .board-row-title small {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: var(--text-muted);
+}
+
+/* Interactive elements get a calm, consistent transition on the properties
+ * the design actually animates — never layout, never entrance effects. */
+a,
+button,
+input,
+textarea,
+select,
+.content-card,
+.board-row,
+.post-row,
+.notif-row,
+.notif-row-item,
+.comment-children,
+.comment-rail {
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus-visible ring — one of the app's exactly-four signature-gradient
+ * usages (the ring color itself, --accent-hi; see docs/DESIGN.md). Applied
+ * broadly so keyboard focus is always visible, never suppressed. */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-hi) 45%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+/* --- buttons -------------------------------------------------------------
+ * Primary = the signature gradient (one of the exactly-four places it may
+ * appear); secondary = raised surface + border; ghost = transparent +
+ * border; destructive = a danger outline. See docs/DESIGN.md. */
+
+.btn-primary,
+.login-page button,
+.auth-callback button,
+.composer button[type="submit"],
+.inline-form button[type="submit"],
+.notifications-header button {
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--gradient-flame);
+  color: #0b1220;
+}
+
+:root[data-theme="light"] .btn-primary,
+:root[data-theme="light"] .login-page button,
+:root[data-theme="light"] .auth-callback button,
+:root[data-theme="light"] .composer button[type="submit"],
+:root[data-theme="light"] .inline-form button[type="submit"],
+:root[data-theme="light"] .notifications-header button {
+  color: #ffffff;
+}
+
+.btn-primary:disabled,
+.composer button[type="submit"]:disabled,
+.inline-form button[type="submit"]:disabled,
+.notifications-header button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg2);
+  color: var(--text-muted);
+}
+
+.btn-ghost,
+.composer-tabs button,
+.view-mode-toggle,
+.collapse-toggle,
+.subscribe-toggle-button,
+.endorse-btn,
+.settings-list button,
+.notif-mark-read {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.friend-group-header button {
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--danger);
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  color: var(--accent-hi);
+}
+
+.link-button.danger {
+  color: var(--danger);
 }
 
 /* --- app shell ------------------------------------------------------- */
@@ -100,21 +307,90 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
   padding: 0.75rem 1.25rem;
+  background: var(--bg1);
   border-bottom: 1px solid var(--border);
 }
 
+.topbar-start {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* The board-rail's mobile drawer toggle — a plain hamburger button, hidden
+ * above the ~760px breakpoint where the rail is a permanent column (see
+ * the "mobile nav" section below). */
+.rail-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .topbar .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
   font-weight: 700;
   font-size: 1.1rem;
-  color: var(--text-h);
+  color: var(--text);
   text-decoration: none;
+  white-space: nowrap;
+  /* Never shrunk/truncated — the wordmark is the one thing in the topbar
+   * that should always render in full. At the narrowest supported width
+   * (~360-390px) `.auth-name` (below) is what gives way instead; see the
+   * mobile section near the end of this file for the math. Note:
+   * text-overflow/ellipsis doesn't reliably apply to a multi-child flex
+   * box like this one anyway (it needs a single overflowing inline run),
+   * which is why this is solved by *not* shrinking rather than by
+   * truncating. */
+  flex-shrink: 0;
+}
+
+.topbar .brand:hover {
+  color: var(--text);
+}
+
+.flame-mark {
+  flex-shrink: 0;
+  display: block;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .topbar-actions .bell {
@@ -127,15 +403,14 @@ input {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.9rem;
+  min-width: 0;
 }
 
-.link-button {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--accent);
-  cursor: pointer;
-  text-decoration: underline;
+.auth-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 9rem;
 }
 
 .app-body {
@@ -145,18 +420,47 @@ input {
 }
 
 .board-rail {
-  width: 220px;
+  width: 240px;
   flex-shrink: 0;
+  background: var(--bg1);
   border-right: 1px solid var(--border);
-  padding: 1rem;
+  padding: var(--space-2);
+}
+
+.board-rail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .board-rail h2 {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text);
-  opacity: 0.7;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin: 0 0 var(--space-1);
+}
+
+/* Hidden on the permanent desktop rail — only meaningful once the mobile
+ * breakpoint turns the rail into a dismissible drawer. */
+.rail-close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.rail-backdrop {
+  display: none;
 }
 
 .board-rail ul {
@@ -165,22 +469,45 @@ input {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.15rem;
 }
 
 .board-rail a {
+  position: relative;
+  display: block;
   text-decoration: none;
-  color: var(--text-h);
+  color: var(--text);
+  padding: 0.45rem 0.6rem 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
 }
 
 .board-rail a:hover {
-  color: var(--accent);
+  color: var(--text);
+  background: var(--bg2);
+}
+
+/* The active nav item — one of the exactly-four signature-gradient
+ * usages: a 2px gradient left edge (docs/DESIGN.md). */
+.board-rail a.active {
+  background: var(--bg2);
+  font-weight: 600;
+}
+
+.board-rail a.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.2rem;
+  bottom: 0.2rem;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--gradient-flame);
 }
 
 .rail-status,
 .page-status {
   font-size: 0.85rem;
-  opacity: 0.7;
+  color: var(--text-muted);
 }
 
 .page-error {
@@ -189,12 +516,182 @@ input {
 
 .page {
   flex: 1;
-  padding: 1.5rem;
   min-width: 0;
+  padding: var(--space-3);
+  max-width: 880px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .not-built {
-  opacity: 0.8;
+  color: var(--text-muted);
+}
+
+/* --- mobile nav: the board rail becomes an off-canvas drawer -------------
+ * Below ~760px there's no room for a permanent rail column next to an
+ * 880px-measure content column, so it becomes a dismissible slide-in panel
+ * (docs/DESIGN.md "mobile patterns"): `.rail-toggle` (topbar) opens it,
+ * `.rail-close` / `.rail-backdrop` / Escape (AppShell.tsx) close it. Above
+ * this breakpoint all three are hidden/inert and `.board-rail` is just the
+ * static column it always was. */
+@media (max-width: 760px) {
+  .rail-toggle {
+    display: flex;
+  }
+
+  .rail-close {
+    display: flex;
+  }
+
+  .board-rail-header {
+    margin-bottom: var(--space-1);
+  }
+
+  .app-body {
+    position: relative;
+  }
+
+  .board-rail {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 30;
+    width: min(82vw, 300px);
+    border-right: 1px solid var(--border);
+    box-shadow: var(--shadow-panel);
+    overflow-y: auto;
+    transform: translateX(-100%);
+  }
+
+  .board-rail.is-open {
+    transform: translateX(0);
+  }
+
+  .rail-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 8, 16, 0.55);
+    z-index: 25;
+    border: none;
+    padding: 0;
+    cursor: default;
+  }
+
+  .page {
+    padding: var(--space-2);
+  }
+
+  /* Keep the topbar to a single row at phone widths. The wordmark
+   * (`.brand`, above) never shrinks, so `.auth-name` — the logged-in
+   * display name, the one piece of topbar content that's neither
+   * essential chrome nor already icon-only — is what gives way: it
+   * truncates first, then (at the narrowest widths this app supports)
+   * drops out of the row entirely, leaving just the "Log out" link. */
+  .topbar {
+    padding: 0.6rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .topbar-actions {
+    gap: 0.5rem;
+  }
+
+  .auth-name {
+    max-width: 4.5rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .auth-name {
+    display: none;
+  }
+}
+
+/* --- touch targets: >=44px on coarse (touch) pointers, per WCAG 2.5.5 ----
+ * Achieved with padding/min-size, never by inflating the visual layout —
+ * `.collapse-toggle` in particular stays visually small (it sits inside the
+ * comment-nesting indent computed above) and instead grows its *hit* area
+ * via an absolutely-positioned pseudo-element so deep threads don't get
+ * wider just because a mouse became a finger. */
+@media (pointer: coarse) {
+  .theme-toggle,
+  .rail-toggle,
+  .rail-close,
+  .notif-bell .bell {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .btn-primary,
+  .btn-ghost,
+  .link-button,
+  .endorse-btn,
+  .subscribe-toggle-button,
+  .notif-mark-read,
+  .settings-list button,
+  .friend-group-header button,
+  .view-mode-toggle,
+  .composer-tabs button,
+  .composer button[type="submit"],
+  .inline-form button[type="submit"],
+  .notifications-header button,
+  .login-page button,
+  .auth-callback button,
+  .board-rail a {
+    min-height: 44px;
+  }
+
+  .link-button {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .board-rail a {
+    display: flex;
+    align-items: center;
+  }
+
+  .board-row-title,
+  .post-row-title {
+    display: block;
+    min-height: 44px;
+    padding: 0.35rem 0;
+    box-sizing: border-box;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .collapse-toggle {
+    position: relative;
+  }
+
+  .collapse-toggle::after {
+    content: "";
+    position: absolute;
+    /* Expands a ~0.6rem (9.6px) visual box to a ~44px square hit target
+     * without widening the comment-tree indent it sits inside. */
+    inset: -17px;
+  }
+}
+
+/* iOS Safari zooms the viewport on focusing any input/textarea rendered
+ * under 16px — composers must stay comfortably usable on a phone, so every
+ * text field is at least 16px there regardless of its desktop size. */
+@media (max-width: 760px) {
+  .composer-input,
+  .composer-body,
+  .composer-title,
+  .composer-field input,
+  .inline-form input,
+  .login-page input {
+    font-size: 16px;
+  }
 }
 
 /* --- login / auth callback -------------------------------------------- */
@@ -216,19 +713,13 @@ input {
 .login-page input {
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+  border-radius: var(--radius-sm);
+  background: var(--bg0);
 }
 
 .login-page button,
 .auth-callback button {
   align-self: flex-start;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--accent-contrast);
-  cursor: pointer;
 }
 
 .form-error {
@@ -236,9 +727,8 @@ input {
 }
 
 /* --- notifications (task C4): bell + dropdown + inbox --------------------
- * Design direction: calm and quiet. Unread is a bold row + a small neutral
- * dot/count, never a red "look at me" badge — --danger is reserved for
- * actual errors, not for "you have mail". */
+ * Ember means exactly one thing everywhere in this app: unread. Unread
+ * notification rows get a 2px ember left edge; read rows go fully quiet. */
 
 .notif-bell {
   position: relative;
@@ -265,9 +755,9 @@ input {
   height: 1.1rem;
   padding: 0 0.3rem;
   border-radius: 999px;
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  color: var(--text-h);
+  background: var(--ember);
+  color: #0b1220;
+  font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 600;
   line-height: 1;
@@ -279,18 +769,12 @@ input {
   right: 0;
   width: 320px;
   max-width: 90vw;
-  background: var(--bg);
+  background: var(--bg1);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-  padding: 0.5rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
+  padding: var(--space-1);
   z-index: 20;
-}
-
-@media (prefers-color-scheme: dark) {
-  .notif-dropdown {
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  }
 }
 
 .notif-dropdown ul,
@@ -300,12 +784,18 @@ input {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+}
+
+.notif-list {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .notif-empty {
   font-size: 0.85rem;
-  opacity: 0.7;
+  color: var(--text-muted);
   padding: 0.5rem;
   margin: 0;
 }
@@ -314,6 +804,16 @@ input {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+
+.notif-dropdown .notif-row-item {
+  border-bottom: none;
+}
+
+.notif-row-item:last-child {
+  border-bottom: none;
 }
 
 .notif-row {
@@ -325,34 +825,38 @@ input {
   text-align: left;
   background: none;
   border: none;
-  padding: 0.5rem 0.6rem;
-  border-radius: 6px;
+  padding: 0.65rem 0.75rem;
   cursor: pointer;
   color: inherit;
   font: inherit;
 }
 
 .notif-row:hover {
-  background: var(--bg-raised);
+  background: var(--bg2);
+}
+
+.notif-row-item.unread {
+  padding-left: 2px;
+}
+
+.notif-row-item.unread::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.3rem;
+  bottom: 0.3rem;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--ember);
 }
 
 .notif-row-item.unread .notif-row {
   font-weight: 600;
-  color: var(--text-h);
-}
-
-.notif-row-item.unread .notif-row::before {
-  content: "";
-  display: inline-block;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 50%;
-  background: var(--accent);
-  flex-shrink: 0;
+  color: var(--text);
 }
 
 .notif-row-item:not(.unread) .notif-row {
-  opacity: 0.6;
+  color: var(--text-muted);
 }
 
 .notif-glyph {
@@ -369,33 +873,18 @@ input {
   font-size: 0.85rem;
 }
 
-.notif-label {
-  font-size: 0.8rem;
-}
-
 .notif-target {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 0.75;
+  color: var(--text-muted);
   font-size: 0.8rem;
-}
-
-.notif-time {
-  font-size: 0.75rem;
-  opacity: 0.6;
-  flex-shrink: 0;
-  white-space: nowrap;
 }
 
 .notif-mark-read {
   font-size: 0.75rem;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
   padding: 0.25rem 0.5rem;
-  cursor: pointer;
-  color: inherit;
+  margin-right: 0.5rem;
   flex-shrink: 0;
 }
 
@@ -411,24 +900,11 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  margin-bottom: var(--space-2);
 }
 
 .notifications-header h2 {
   margin: 0;
-}
-
-.notifications-header button {
-  border: 1px solid var(--border);
-  background: var(--bg-raised);
-  border-radius: 6px;
-  padding: 0.4rem 0.8rem;
-  cursor: pointer;
-  color: var(--text-h);
-}
-
-.notifications-header button:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 /* --- settings (task C4) ------------------------------------------------- */
@@ -456,7 +932,7 @@ input {
 .mention-policy legend {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-h);
+  color: var(--text);
   padding: 0;
   margin-bottom: 0.4rem;
 }
@@ -465,9 +941,10 @@ input {
   display: flex;
   gap: 0.6rem;
   align-items: flex-start;
-  padding: 0.5rem;
+  padding: var(--space-1);
+  background: var(--bg1);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
 .policy-option input {
@@ -477,7 +954,7 @@ input {
 .policy-option p {
   margin: 0.15rem 0 0;
   font-size: 0.85rem;
-  opacity: 0.8;
+  color: var(--text-muted);
 }
 
 .settings-toggle {
@@ -505,23 +982,9 @@ input {
 .inline-form input {
   padding: 0.4rem 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+  border-radius: var(--radius-sm);
+  background: var(--bg0);
   min-width: 16rem;
-}
-
-.inline-form button {
-  padding: 0.45rem 0.9rem;
-  border: none;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--accent-contrast);
-  cursor: pointer;
-}
-
-.inline-form button:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .settings-list {
@@ -530,7 +993,10 @@ input {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .settings-list li {
@@ -538,24 +1004,17 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.4rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  padding: 0.6rem var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-list li:last-child {
+  border-bottom: none;
 }
 
 .settings-list button {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
   padding: 0.25rem 0.6rem;
-  cursor: pointer;
-  color: inherit;
   font-size: 0.8rem;
-}
-
-.mono {
-  font-family: var(--mono);
-  font-size: 0.85rem;
 }
 
 .friend-groups {
@@ -568,9 +1027,10 @@ input {
 }
 
 .friend-group {
+  background: var(--bg1);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem;
+  border-radius: var(--radius);
+  padding: var(--space-2);
 }
 
 .friend-group-header {
@@ -582,23 +1042,14 @@ input {
 
 .friend-group-header h4 {
   margin: 0;
-  color: var(--text-h);
-}
-
-.friend-group-header button {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.25rem 0.6rem;
-  cursor: pointer;
-  color: var(--danger);
+  color: var(--text);
 }
 
 .subscription-group h4 {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  opacity: 0.7;
+  color: var(--text-muted);
   margin-bottom: 0.4rem;
 }
 
@@ -614,74 +1065,84 @@ input {
   max-width: 72ch;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--space-3);
 }
 
 .back-link {
   font-size: 0.85rem;
   text-decoration: none;
-  color: var(--text);
-  opacity: 0.75;
+  color: var(--text-muted);
 }
 
 .back-link:hover {
-  opacity: 1;
+  color: var(--accent);
 }
 
 .content-card {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
+/* The root post is one framed panel — the only "card" chrome in the whole
+ * thread view; comments below it are separated by hairline + spacing only
+ * (docs/DESIGN.md), never individually boxed. */
 .content-card.is-post {
-  padding-bottom: 0.75rem;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-panel);
+}
+
+.content-card.is-comment {
+  padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border);
 }
 
 .content-card.is-unread {
   position: relative;
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
-  border-radius: 8px;
-  padding: 0.5rem 0.6rem;
-  margin: -0.5rem -0.6rem 0;
 }
 
-.content-card.is-unread::before {
+.content-card.is-post.is-unread {
+  border-left: 2px solid var(--ember);
+}
+
+.content-card.is-comment.is-unread {
+  padding-left: 0.6rem;
+  margin-left: -0.6rem;
+}
+
+.content-card.is-comment.is-unread::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 0.4rem;
-  bottom: 0.4rem;
-  width: 3px;
+  top: 0.2rem;
+  bottom: 0.2rem;
+  width: 2px;
   border-radius: 2px;
-  background: var(--accent);
+  background: var(--ember);
 }
 
 .content-card.is-deleted .content-meta {
-  opacity: 0.6;
+  color: var(--text-muted);
 }
 
 .post-title {
   font-size: 1.5rem;
   margin: 0;
-  color: var(--text-h);
+  color: var(--text);
 }
 
 .content-meta {
   display: flex;
   align-items: baseline;
   gap: 0.6rem;
-  font-size: 0.85rem;
-  color: var(--text);
-  opacity: 0.85;
   flex-wrap: wrap;
 }
 
 .content-meta .author-name {
-  font-weight: 600;
-  color: var(--text-h);
-  opacity: 1;
+  font-weight: 500;
 }
 
 .content-meta .author-name.is-self {
@@ -689,31 +1150,28 @@ input {
 }
 
 .origin-badge {
-  font-size: 0.75rem;
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  opacity: 0.8;
+  padding: 0.05rem 0.4em;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
 }
 
 .origin-backlink {
-  font-size: 0.8rem;
+  text-decoration: underline;
 }
 
 .edited-marker {
   font-style: italic;
-  opacity: 0.7;
 }
 
 .tombstone {
-  color: var(--text);
-  opacity: 0.55;
+  color: var(--text-muted);
+  opacity: 0.6;
   font-style: italic;
   margin: 0;
 }
 
 .md-body {
-  max-width: 68ch;
+  max-width: 72ch;
   line-height: 1.6;
 }
 
@@ -725,6 +1183,12 @@ input {
   margin-bottom: 0;
 }
 
+.md-body table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
 .endorsements {
   display: flex;
   align-items: center;
@@ -734,38 +1198,37 @@ input {
 }
 
 .endorsement-list {
-  opacity: 0.9;
-}
-
-.endorser {
-  font-weight: 600;
+  color: var(--text);
 }
 
 .role-badge {
   margin-left: 0.25rem;
-  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 0.05rem 0.35rem;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--accent-contrast);
-  font-weight: 700;
+  padding: 0.05rem 0.4em;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: none;
+  font-weight: 600;
 }
 
 .endorse-btn {
   font-size: 0.8rem;
-  padding: 0.2rem 0.6rem;
+  padding: 0.2rem 0.7rem;
   border-radius: 999px;
   border: 1px solid var(--accent);
   background: transparent;
   color: var(--accent);
-  cursor: pointer;
 }
 
 .endorse-btn.is-endorsed {
   background: var(--accent);
-  color: var(--accent-contrast);
+  color: #0b1220;
+  border-color: var(--accent);
+}
+
+:root[data-theme="light"] .endorse-btn.is-endorsed {
+  color: #ffffff;
 }
 
 .endorsement-error {
@@ -780,20 +1243,16 @@ input {
   flex-wrap: wrap;
 }
 
-.content-actions .link-button.danger {
-  color: var(--danger);
-}
-
 .revision-history {
   font-size: 0.8rem;
 }
 
 .revision-panel {
   margin-top: 0.4rem;
-  padding: 0.6rem 0.75rem;
+  padding: var(--space-1) 0.75rem;
+  background: var(--bg2);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-raised);
+  border-radius: var(--radius);
 }
 
 .revision-list {
@@ -815,14 +1274,10 @@ input {
   padding-top: 0;
 }
 
-.revision-meta {
-  font-size: 0.75rem;
-  opacity: 0.7;
-}
-
 .revision-title {
   font-weight: 600;
   margin: 0.2rem 0;
+  color: var(--text);
 }
 
 .thread-controls {
@@ -835,35 +1290,31 @@ input {
 .comments-heading {
   margin: 0;
   font-size: 1rem;
-  opacity: 0.8;
+  color: var(--text-muted);
 }
 
 .view-mode-toggle {
   font-size: 0.8rem;
   padding: 0.3rem 0.7rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  cursor: pointer;
 }
 
-/* --- composer ------------------------------------------------------------ */
+/* --- composer (thread reply / edit-in-place — task C3) -------------------- */
 
 .composer {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-1);
+  background: var(--bg1);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem;
-  background: var(--bg-raised);
+  border-radius: var(--radius);
+  padding: var(--space-2);
 }
 
 .composer-title {
   padding: 0.4rem 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+  border-radius: var(--radius-sm);
+  background: var(--bg0);
   font-weight: 600;
 }
 
@@ -875,17 +1326,15 @@ input {
 .composer-tabs button {
   font-size: 0.8rem;
   padding: 0.2rem 0.6rem;
-  border-radius: 6px;
-  border: 1px solid transparent;
   background: none;
-  cursor: pointer;
-  opacity: 0.65;
+  border-color: transparent;
+  color: var(--text-muted);
 }
 
 .composer-tabs button.is-active {
-  opacity: 1;
+  color: var(--text);
   border-color: var(--border);
-  background: var(--bg);
+  background: var(--bg2);
 }
 
 .composer-input-wrap {
@@ -896,8 +1345,8 @@ input {
   width: 100%;
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+  border-radius: var(--radius-sm);
+  background: var(--bg0);
   resize: vertical;
   font-family: inherit;
 }
@@ -906,7 +1355,8 @@ input {
   min-height: 4.5em;
   padding: 0.5rem 0.6rem;
   border: 1px dashed var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
 }
 
 .mention-list {
@@ -917,10 +1367,10 @@ input {
   margin-top: 2px;
   list-style: none;
   padding: 0.25rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+  box-shadow: var(--shadow-panel);
   max-height: 10rem;
   overflow-y: auto;
 }
@@ -935,10 +1385,11 @@ input {
   cursor: pointer;
   border-radius: 4px;
   font: inherit;
+  color: var(--text);
 }
 
 .mention-option:hover {
-  background: var(--bg-raised);
+  background: var(--bg1);
 }
 
 .composer-actions {
@@ -950,26 +1401,7 @@ input {
 .btn-primary,
 .btn-ghost {
   padding: 0.35rem 0.9rem;
-  border-radius: 6px;
   font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.btn-primary {
-  border: none;
-  background: var(--accent);
-  color: var(--accent-contrast);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-ghost {
-  border: 1px solid var(--border);
-  background: none;
-  color: var(--text);
 }
 
 /* --- comment tree ---------------------------------------------------------- */
@@ -988,11 +1420,17 @@ input {
   margin-top: 0.5rem;
 }
 
+/* Indent rails: quiet --border by default, turning --accent on hover of
+ * that whole subtree (docs/DESIGN.md). */
 .comment-children {
   margin-top: 0.75rem;
   margin-left: 0.6rem;
   padding-left: 0.85rem;
   border-left: 1px solid var(--border);
+}
+
+.comment-children:hover {
+  border-left-color: var(--accent);
 }
 
 .comment-node {
@@ -1011,11 +1449,6 @@ input {
   width: 1.1rem;
   height: 1.1rem;
   line-height: 1;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text);
-  cursor: pointer;
   font-size: 0.75rem;
   padding: 0;
 }
@@ -1027,7 +1460,7 @@ input {
 
 .collapsed-summary {
   font-size: 0.8rem;
-  opacity: 0.65;
+  color: var(--text-muted);
   margin: 0.4rem 0 0;
   font-style: italic;
 }
@@ -1049,8 +1482,6 @@ input {
 
 .flat-row .depth-badge {
   flex-shrink: 0;
-  opacity: 0.4;
-  font-size: 0.8rem;
   letter-spacing: -0.05em;
   padding-top: 0.15rem;
 }
@@ -1061,9 +1492,39 @@ input {
 
 @keyframes permalink-flash {
   0% {
-    background: color-mix(in srgb, var(--accent) 25%, transparent);
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
   }
   100% {
     background: transparent;
+  }
+}
+
+/* Comments nest arbitrarily deep (the welcome thread's fixture goes six
+ * levels); a full-size rail + indent per level is fine at desktop widths
+ * but would eat the whole phone viewport, so both shrink together below
+ * ~760px — six levels of nesting stays comfortably under a third of a
+ * 390px-wide screen. Deliberately placed at the end of the file: it has to
+ * come after the unconditional `.comment-rail`/`.comment-children` rules
+ * above (same specificity either way — a `@media` block earlier in source
+ * order does *not* win over a later unconditional rule for the same
+ * selector) to actually take effect. */
+@media (max-width: 760px) {
+  .comment-rail {
+    width: 0.6rem;
+  }
+
+  .collapse-toggle {
+    width: 0.6rem;
+    height: 0.6rem;
+    font-size: 0.5rem;
+  }
+
+  .comment-children {
+    margin-left: 0.1rem;
+    padding-left: 0.15rem;
+  }
+
+  .comment-node {
+    gap: 0.15rem;
   }
 }

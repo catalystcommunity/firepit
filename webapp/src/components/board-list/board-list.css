@@ -1,15 +1,17 @@
-/* Board index + subscribe/mute toggle (task C2, PLANDOC.md §7). Mailing-list
- * register: quiet rules instead of card shadows, unread signaled by a small
- * dot + weight change rather than a colored badge. Shared `.unread-dot` /
- * `.origin-glyph` also used by src/components/post-list (imported from
- * there too) so both lists read as one visual system. */
+/* Board index + subscribe/mute toggle (task C2, PLANDOC.md §7; reskinned
+ * for "Blue Flame", docs/DESIGN.md). Mailing-list register: each board group
+ * is one shared panel, rows separated by hairlines (not floating cards);
+ * unread is --ember (the app's one unread signal) + a weight change, never
+ * --danger/--accent. `.unread-dot` / `.origin-glyph` also used by
+ * src/components/post-list (imported from there too) so both lists read as
+ * one visual system. */
 
 .unread-dot {
   display: inline-block;
-  width: 0.4rem;
-  height: 0.4rem;
+  width: 0.45rem;
+  height: 0.45rem;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--ember);
   margin-right: 0.5rem;
   vertical-align: middle;
 }
@@ -17,39 +19,39 @@
 .origin-glyph {
   display: inline-block;
   margin-left: 0.5rem;
-  font-size: 0.7rem;
-  font-family: var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--text);
-  opacity: 0.55;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 0 0.3em;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0 0.4em;
   vertical-align: middle;
 }
 
 .board-index {
-  max-width: 68ch;
+  max-width: 72ch;
 }
 
 .board-group {
-  margin-bottom: 1.75rem;
+  margin-bottom: var(--space-3);
 }
 
 .board-group h3 {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  opacity: 0.7;
+  color: var(--text-muted);
   font-weight: 600;
-  margin: 0 0 0.6rem;
+  margin: 0 0 var(--space-1);
 }
 
+/* Each group is one shared panel; rows inside separate by hairline only. */
 .board-group ul {
   list-style: none;
   margin: 0;
   padding: 0;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
 }
 
 .board-row {
@@ -57,8 +59,12 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 0;
+  padding: 0.85rem var(--space-2);
   border-bottom: 1px solid var(--border);
+}
+
+.board-row:hover {
+  background: var(--bg2);
 }
 
 .board-row:last-child {
@@ -72,7 +78,7 @@
 .board-row-title {
   font-weight: 600;
   font-size: 1.05rem;
-  color: var(--text-h);
+  color: var(--text);
   text-decoration: none;
 }
 
@@ -83,7 +89,7 @@
 .board-row-desc {
   margin: 0.15rem 0 0;
   font-size: 0.9rem;
-  opacity: 0.75;
+  color: var(--text-muted);
 }
 
 .subscribe-toggle {
@@ -95,22 +101,20 @@
 }
 
 .subscribe-toggle-button {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
   padding: 0.3rem 0.7rem;
-  color: var(--text);
-  cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .subscribe-toggle-button.subscribed {
   border-color: var(--accent);
   color: var(--accent);
+  background: transparent;
 }
 
 .subscribe-toggle-login {
   font-size: 0.85rem;
   white-space: nowrap;
+  color: var(--text-muted);
 }
 
 .mute-toggle {
@@ -118,5 +122,5 @@
   align-items: center;
   gap: 0.3rem;
   font-size: 0.85rem;
-  opacity: 0.8;
+  color: var(--text-muted);
 }
