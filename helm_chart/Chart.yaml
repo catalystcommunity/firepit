@@ -5,7 +5,7 @@ type: application
 
 # Chart version — bumped by .reactorcide/jobs/scripts/release.sh alongside
 # version/VERSION.txt, mirroring longhouse's release.sh convention.
-version: 0.2.0
+version: 0.2.1
 
 # Application version — matches version/VERSION.txt.
-appVersion: "0.2.0"
+appVersion: "0.2.1"
