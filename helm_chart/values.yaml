@@ -225,12 +225,12 @@ podLabels: {}
 
 podSecurityContext:
   runAsNonRoot: true
-  # Numeric UID/GID required: kubelet cannot verify runAsNonRoot against a
-  # NAMED image user (distroless's "nonroot") — the api pod hits
-  # CreateContainerConfigError without this. 65532 is distroless's nonroot
-  # uid; nginx-unprivileged (webapp) is built to run as any arbitrary UID.
-  runAsUser: 65532
-  runAsGroup: 65532
+  # No pod-wide numeric runAsUser here: each container needs a DIFFERENT
+  # uid. The api's distroless image has a named user ("nonroot") kubelet
+  # can't verify, so deployment-api.yaml pins its container to 65532; the
+  # webapp's nginx-unprivileged runs as its own built-in uid 101, which
+  # owns the dirs its entrypoint templating writes to — forcing 65532
+  # pod-wide broke that templating and nginx served its stock config.
 
 securityContext:
   allowPrivilegeEscalation: false
