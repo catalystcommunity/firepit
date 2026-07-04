@@ -13,6 +13,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
     "@solidjs/router": "^0.15.4",
     "dompurify": "^3.4.11",
     "marked": "^18.0.5",

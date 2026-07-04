@@ -1,16 +1,20 @@
-/* New-post composer (task C2, PLANDOC.md §7). Plain form, no card chrome —
- * a labeled title field, a write/preview tab pair, and a body textarea/
- * rendered-preview swap. Errors are quiet inline text (`.form-error`, from
- * index.css), never a modal or toast. */
+/* New-post composer (task C2, PLANDOC.md §7; reskinned for "Blue Flame",
+ * docs/DESIGN.md): a framed panel — labeled title field, a write/preview
+ * tab pair, and a body textarea/rendered-preview swap. Errors are quiet
+ * inline text (`.form-error`, from index.css), never a modal or toast.
+ * Inputs sit on --bg0 inside the --bg1 panel per the composer/forms rule. */
 
 .composer {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  max-width: 68ch;
-  margin: 1.25rem 0 1.75rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border);
+  gap: var(--space-1);
+  max-width: 72ch;
+  margin: var(--space-3) 0;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-2);
+  box-shadow: var(--shadow-panel);
 }
 
 .composer-field {
@@ -23,8 +27,8 @@
 .composer-field input {
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+  border-radius: var(--radius-sm);
+  background: var(--bg0);
 }
 
 .composer-field input[aria-invalid="true"] {
@@ -38,27 +42,27 @@
 
 .composer-tabs button {
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-bottom: none;
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   padding: 0.3rem 0.8rem;
   font-size: 0.85rem;
-  cursor: pointer;
-  opacity: 0.7;
+  color: var(--text-muted);
 }
 
 .composer-tabs button.active {
-  opacity: 1;
+  color: var(--text);
   font-weight: 600;
-  color: var(--text-h);
+  border-color: var(--border);
+  background: var(--bg0);
 }
 
 .composer-body {
   padding: 0.6rem 0.7rem;
   border: 1px solid var(--border);
-  border-radius: 0 6px 6px 6px;
-  background: var(--bg);
-  font-family: var(--mono);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm);
+  background: var(--bg0);
+  font-family: var(--font-mono);
   font-size: 0.9rem;
   resize: vertical;
 }
@@ -70,8 +74,8 @@
 .composer-preview {
   padding: 0.6rem 0.7rem;
   border: 1px solid var(--border);
-  border-radius: 0 6px 6px 6px;
-  background: var(--bg-raised);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm);
+  background: var(--bg2);
   min-height: 8rem;
 }
 
@@ -81,22 +85,27 @@
 
 .composer button[type="submit"] {
   align-self: flex-start;
-  padding: 0.5rem 1.1rem;
-  border: none;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--accent-contrast);
-  cursor: pointer;
-}
-
-.composer button[type="submit"]:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 
 .composer-login-prompt {
-  margin: 1.25rem 0 1.75rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--border);
+  margin: var(--space-3) 0;
+  padding: var(--space-2);
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   font-size: 0.95rem;
+}
+
+/* iOS Safari zooms the viewport on focusing any input/textarea under 16px;
+ * both this composer's fields would otherwise render smaller than that
+ * (0.9rem = 14.4px). Kept in this file rather than index.css's own mobile
+ * section: cross-file cascade order between index.css and each
+ * component's own CSS isn't guaranteed (they load as separate stylesheets
+ * in whatever order their components first mount), so a same-file
+ * override is what actually reaches these two selectors reliably. */
+@media (max-width: 760px) {
+  .composer-field input,
+  .composer-body {
+    font-size: 16px;
+  }
 }
