@@ -37,6 +37,12 @@ spec:
         - name: api
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
+            # distroless/static's user is the NAMED "nonroot" — kubelet
+            # cannot verify runAsNonRoot against a name, so pin the numeric
+            # distroless nonroot uid here (container-level: the webapp's
+            # nginx-unprivileged needs its own uid 101, see values.yaml).
+            runAsUser: 65532
+            runAsGroup: 65532
           image: "{{ .Values.image.api.repository }}:{{ .Values.image.api.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.api.pullPolicy }}
           ports:

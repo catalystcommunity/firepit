@@ -86,6 +86,32 @@ if [ -n "${REGISTRY_USER:-}" ] && [ -n "${REGISTRY_PASSWORD:-}" ]; then
 fi
 
 # ================================================
+# Wait for this tag's images to exist in the registry
+# ================================================
+# The tag_created event fires the moment release.sh pushes the git tag,
+# while its image builds are typically still running — racing straight
+# into `helm --wait` then times out on ImagePullBackOff (observed on the
+# v0.2.1/v0.2.2 deploys). Poll the registry manifest until both images
+# for this exact tag exist.
+if [ -n "${REGISTRY_USER:-}" ] && [ "${IMAGE_TAG}" != "latest" ]; then
+    for repo in public/catalystcommunity/firepit-api public/catalystcommunity/firepit-webapp; do
+        echo "Waiting for ${repo}:${IMAGE_TAG} in the registry..."
+        tries=0
+        until curl -fsS -o /dev/null -u "${REGISTRY_USER}:${REGISTRY_PASSWORD}" \
+            -H "Accept: application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json" \
+            "https://containers.catalystsquad.com/v2/${repo}/manifests/${IMAGE_TAG}" 2>/dev/null; do
+            tries=$((tries+1))
+            if [ "$tries" -ge 60 ]; then
+                echo "ERROR: ${repo}:${IMAGE_TAG} still absent after 10 minutes — did the release job fail?"
+                exit 1
+            fi
+            sleep 10
+        done
+        echo "  present."
+    done
+fi
+
+# ================================================
 # Deploy with Helm
 # ================================================
 echo ""
