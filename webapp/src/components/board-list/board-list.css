@@ -8,12 +8,13 @@
 
 .unread-dot {
   display: inline-block;
-  width: 0.45rem;
-  height: 0.45rem;
+  width: 0.55rem;
+  height: 0.55rem;
   border-radius: 50%;
   background: var(--ember);
   margin-right: 0.5rem;
   vertical-align: middle;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ember) 18%, transparent);
 }
 
 .origin-glyph {
@@ -26,20 +27,35 @@
 }
 
 .board-index {
-  max-width: 72ch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  max-width: 980px;
 }
 
 .board-group {
-  margin-bottom: var(--space-3);
+  margin: 0;
+}
+
+.group-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.65rem;
 }
 
 .board-group h3 {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin: 0 0 var(--space-1);
+  font-size: 1rem;
+  color: var(--text);
+  font-weight: 700;
+  margin: 0;
+}
+
+.group-heading p {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
 }
 
 /* Each group is one shared panel; rows inside separate by hairline only. */
@@ -56,15 +72,15 @@
 
 .board-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.85rem var(--space-2);
+  padding: 1rem;
   border-bottom: 1px solid var(--border);
 }
 
 .board-row:hover {
-  background: var(--bg2);
+  background: color-mix(in srgb, var(--bg2) 74%, transparent);
 }
 
 .board-row:last-child {
@@ -75,9 +91,19 @@
   min-width: 0;
 }
 
+.board-row-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.25rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
 .board-row-title {
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   color: var(--text);
   text-decoration: none;
 }
@@ -87,7 +113,7 @@
 }
 
 .board-row-desc {
-  margin: 0.15rem 0 0;
+  margin: 0.25rem 0 0;
   font-size: 0.9rem;
   color: var(--text-muted);
 }
@@ -101,14 +127,15 @@
 }
 
 .subscribe-toggle-button {
-  padding: 0.3rem 0.7rem;
+  padding: 0.45rem 0.8rem;
   font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .subscribe-toggle-button.subscribed {
   border-color: var(--accent);
-  color: var(--accent);
-  background: transparent;
+  color: var(--bg0);
+  background: var(--accent);
 }
 
 .subscribe-toggle-login {
@@ -123,4 +150,16 @@
   gap: 0.3rem;
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .board-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .subscribe-toggle {
+    width: 100%;
+    justify-content: space-between;
+  }
 }

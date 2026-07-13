@@ -42,6 +42,10 @@ const BoardIndexList: Component<BoardIndexListProps> = (props) => {
   const Row: Component<{ board: Board }> = (rowProps) => (
     <li class="board-row">
       <div class="board-row-main">
+        <div class="board-row-kicker">
+          <span>{rowProps.board.kind === "announce" ? "Announcement board" : "Discussion board"}</span>
+          <span>/{rowProps.board.slug}</span>
+        </div>
         <A href={`/b/${rowProps.board.slug}`} class="board-row-title">
           <Show when={boardUnreadCount(props.poller.summary(), rowProps.board.id) > 0}>
             <span class="unread-dot" aria-label="Unread activity" />
@@ -65,7 +69,10 @@ const BoardIndexList: Component<BoardIndexListProps> = (props) => {
     <div class="board-index">
       <Show when={announceBoards().length > 0}>
         <section class="board-group">
-          <h3>Announcements</h3>
+          <div class="group-heading">
+            <h3>Announcements</h3>
+            <p>Release notes and maintainer updates.</p>
+          </div>
           <ul>
             <For each={announceBoards()}>{(board) => <Row board={board} />}</For>
           </ul>
@@ -73,7 +80,10 @@ const BoardIndexList: Component<BoardIndexListProps> = (props) => {
       </Show>
       <Show when={discussionBoards().length > 0}>
         <section class="board-group">
-          <h3>Discussion</h3>
+          <div class="group-heading">
+            <h3>Discussion</h3>
+            <p>Questions, design work, support, and project decisions.</p>
+          </div>
           <ul>
             <For each={discussionBoards()}>{(board) => <Row board={board} />}</For>
           </ul>

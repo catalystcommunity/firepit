@@ -20,6 +20,8 @@ vi.mock("~/lib/api", () => ({
 
 const { SessionProvider } = await import("~/lib/session");
 const { default: PostComposer } = await import("./PostComposer");
+const submitButton = { name: "Start thread" };
+const bodyPlaceholder = /Add background, links, decisions needed/;
 
 const unauthenticated = () =>
   Promise.reject(new FirepitServiceError({ code: ServiceErrorCode.Unauthenticated, message: "no active session" }));
@@ -57,7 +59,7 @@ describe("PostComposer", () => {
     renderWithRouter(() => <PostComposer boardId="b1" boardSlug="board" />);
 
     await waitFor(() => expect(screen.getByText(/Log in/)).toBeInTheDocument());
-    expect(screen.queryByRole("textbox", { name: "Title" })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: "Thread title" })).toBeNull();
     expect(createPost).not.toHaveBeenCalled();
   });
 
@@ -65,8 +67,8 @@ describe("PostComposer", () => {
     whoami.mockResolvedValue(USER);
     renderWithRouter(() => <PostComposer boardId="b1" boardSlug="board" />);
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Post" })).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Post" }));
+    await waitFor(() => expect(screen.getByRole("button", submitButton)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", submitButton));
 
     await waitFor(() => expect(screen.getByText("Title is required.")).toBeInTheDocument());
     expect(createPost).not.toHaveBeenCalled();
@@ -79,11 +81,11 @@ describe("PostComposer", () => {
     );
     renderWithRouter(() => <PostComposer boardId="b1" boardSlug="board" />);
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Post" })).toBeInTheDocument());
-    const titleInput = screen.getByRole("textbox", { name: "Title" });
+    await waitFor(() => expect(screen.getByRole("button", submitButton)).toBeInTheDocument());
+    const titleInput = screen.getByRole("textbox", { name: "Thread title" });
     fireEvent.input(titleInput, { target: { value: "Duplicate title" } });
-    fireEvent.input(screen.getByPlaceholderText("Markdown supported."), { target: { value: "some body text" } });
-    fireEvent.click(screen.getByRole("button", { name: "Post" }));
+    fireEvent.input(screen.getByPlaceholderText(bodyPlaceholder), { target: { value: "some body text" } });
+    fireEvent.click(screen.getByRole("button", submitButton));
 
     await waitFor(() => expect(screen.getByText("That title is taken.")).toBeInTheDocument());
     expect(titleInput).toHaveAttribute("aria-invalid", "true");
@@ -107,10 +109,10 @@ describe("PostComposer", () => {
 
     const history = renderWithRouter(() => <PostComposer boardId="b1" boardSlug="board" onCreated={onCreated} />);
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Post" })).toBeInTheDocument());
-    fireEvent.input(screen.getByRole("textbox", { name: "Title" }), { target: { value: "A new thread" } });
-    fireEvent.input(screen.getByPlaceholderText("Markdown supported."), { target: { value: "hello there" } });
-    fireEvent.click(screen.getByRole("button", { name: "Post" }));
+    await waitFor(() => expect(screen.getByRole("button", submitButton)).toBeInTheDocument());
+    fireEvent.input(screen.getByRole("textbox", { name: "Thread title" }), { target: { value: "A new thread" } });
+    fireEvent.input(screen.getByPlaceholderText(bodyPlaceholder), { target: { value: "hello there" } });
+    fireEvent.click(screen.getByRole("button", submitButton));
 
     await waitFor(() =>
       expect(createPost).toHaveBeenCalledWith({ boardId: "b1", title: "A new thread", bodyMd: "hello there" }),
@@ -123,8 +125,8 @@ describe("PostComposer", () => {
     whoami.mockResolvedValue(USER);
     renderWithRouter(() => <PostComposer boardId="b1" boardSlug="board" />);
 
-    await waitFor(() => expect(screen.getByRole("button", { name: "Post" })).toBeInTheDocument());
-    fireEvent.input(screen.getByPlaceholderText("Markdown supported."), {
+    await waitFor(() => expect(screen.getByRole("button", submitButton)).toBeInTheDocument());
+    fireEvent.input(screen.getByPlaceholderText(bodyPlaceholder), {
       target: { value: "**bold** <script>alert(1)</script>" },
     });
     fireEvent.click(screen.getByRole("tab", { name: "Preview" }));

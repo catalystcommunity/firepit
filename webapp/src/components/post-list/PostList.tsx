@@ -64,6 +64,10 @@ const PostList: Component<PostListProps> = (props) => {
 
   return (
     <div class="post-list">
+      <div class="post-list-heading">
+        <h2>Threads</h2>
+        <p>Ordered by latest activity.</p>
+      </div>
       <Show when={error()}>
         <p class="page-error">Couldn't load posts: {error()}</p>
       </Show>
@@ -88,8 +92,11 @@ const PostList: Component<PostListProps> = (props) => {
                   </Show>
                 </A>
                 <p class="post-row-meta">
-                  {authorLabel(post.authorId, post.authorHandle, session.user())} · {post.commentCount}{" "}
-                  {post.commentCount === 1 ? "comment" : "comments"} · {relativeTime(post.lastActivityAt)}
+                  <span>{authorLabel(post.authorId, post.authorHandle, session.user())}</span>
+                  <span>
+                    {post.commentCount} {post.commentCount === 1 ? "comment" : "comments"}
+                  </span>
+                  <span>{relativeTime(post.lastActivityAt)}</span>
                 </p>
               </li>
             );
