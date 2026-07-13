@@ -1,10 +1,8 @@
-// Blue Flame theme mechanics (docs/DESIGN.md): dark is the default look
-// regardless of the OS `prefers-color-scheme` — a forum should look the
-// same for everyone unless they say otherwise. `index.html`'s inline
-// paint-guard script (a plain JS copy of this same "stored choice wins,
-// else dark" rule — it must run before any module loads, so it can't
-// import this file) sets `data-theme` on `<html>` before first paint; this
-// module is what the in-app toggle (AppShell's `ThemeToggle`) reads/writes
+// Theme mechanics: a stored user choice wins; otherwise Firepit defaults to
+// light so the forum reads as an approachable project workspace on first
+// load. `index.html`'s inline paint-guard script (a plain JS copy of this
+// same rule) sets `data-theme` on `<html>` before first paint; this module
+// is what the in-app toggle (AppShell's `ThemeToggle`) reads/writes
 // afterwards, so the two stay in lockstep.
 const STORAGE_KEY = "firepit-theme";
 
@@ -29,8 +27,8 @@ export function getStoredTheme(): Theme | null {
 /** Whatever `data-theme` is currently on `<html>` (set by the paint-guard script on load,
  * or by `setTheme` afterwards) — the single source of truth for "what's showing right now". */
 export function getCurrentTheme(): Theme {
-  if (typeof document === "undefined") return "dark";
-  return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+  if (typeof document === "undefined") return "light";
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
 }
 
 /** Applies `theme` to `<html>` and persists it as the caller's explicit choice. */

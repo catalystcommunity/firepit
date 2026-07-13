@@ -149,7 +149,7 @@ const ThreadPage: Component = () => {
   return (
     <section class="thread-page">
       <A href={`/b/${params.slug}`} class="back-link">
-        ← back to {params.slug}
+        Back to /{params.slug}
       </A>
 
       <Show when={threadRes()}>
@@ -174,11 +174,14 @@ const ThreadPage: Component = () => {
             />
 
             <div class="thread-controls">
-              <h2 class="comments-heading">
-                {thread().comments.length} {thread().comments.length === 1 ? "reply" : "replies"}
-              </h2>
+              <div>
+                <p class="eyebrow">Conversation</p>
+                <h2 class="comments-heading">
+                  {thread().comments.length} {thread().comments.length === 1 ? "reply" : "replies"}
+                </h2>
+              </div>
               <button type="button" class="view-mode-toggle" onClick={toggleMode}>
-                {mode() === "tree" ? "Switch to flat (mailing-list) view" : "Switch to tree view"}
+                {mode() === "tree" ? "Flat view" : "Tree view"}
               </button>
             </div>
 

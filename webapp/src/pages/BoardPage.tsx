@@ -42,7 +42,8 @@ const BoardPage: Component = () => {
         <section class="board-page">
           <header class="board-header">
             <div>
-              <h2>{b.title}</h2>
+              <p class="eyebrow">/{b.slug}</p>
+              <h1>{b.title}</h1>
               <Show when={b.description}>
                 <p class="board-header-desc">{b.description}</p>
               </Show>
@@ -56,7 +57,13 @@ const BoardPage: Component = () => {
             />
           </header>
 
-          <PostComposer boardId={b.id} boardSlug={b.slug} />
+          <section class="board-composer-section" aria-label="Start a new thread">
+            <div>
+              <h2>Start a thread</h2>
+              <p>Use a specific title and enough context that future readers can join in.</p>
+            </div>
+            <PostComposer boardId={b.id} boardSlug={b.slug} />
+          </section>
 
           <PostList boardId={b.id} boardSlug={b.slug} summary={poller.summary} />
         </section>

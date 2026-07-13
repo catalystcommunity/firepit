@@ -5,6 +5,24 @@
  * come from ~/components/board-list/board-list.css, imported alongside this
  * file so the board index and the post list read as one system. */
 
+.post-list-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.65rem;
+}
+
+.post-list-heading h2 {
+  margin: 0;
+}
+
+.post-list-heading p {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+
 .post-list ul {
   list-style: none;
   margin: 0 0 var(--space-2);
@@ -17,12 +35,13 @@
 }
 
 .post-row {
-  padding: 0.75rem var(--space-2);
+  position: relative;
+  padding: 1rem;
   border-bottom: 1px solid var(--border);
 }
 
 .post-row:hover {
-  background: var(--bg2);
+  background: color-mix(in srgb, var(--bg2) 72%, transparent);
 }
 
 .post-row:last-child {
@@ -31,7 +50,7 @@
 
 .post-row-title {
   display: block;
-  font-size: 1rem;
+  font-size: 1.08rem;
   color: var(--text);
   text-decoration: none;
   font-weight: 500;
@@ -46,6 +65,24 @@
 }
 
 .post-row-meta {
-  margin: 0.25rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  margin: 0.35rem 0 0;
   font-variant-numeric: tabular-nums;
+}
+
+.post-row-meta span {
+  position: relative;
+}
+
+.post-row-meta span + span::before {
+  content: "";
+  position: absolute;
+  left: -0.43rem;
+  top: 0.62em;
+  width: 0.2rem;
+  height: 0.2rem;
+  border-radius: 50%;
+  background: var(--border-strong);
 }

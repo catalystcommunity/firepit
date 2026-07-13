@@ -93,13 +93,14 @@ const PostComposer: Component<PostComposerProps> = (props) => {
     >
       <form class="composer" onSubmit={(e) => void submit(e)}>
         <label class="composer-field">
-          <span>Title</span>
+          <span>Thread title</span>
           <input
             type="text"
             name="title"
             value={title()}
             onInput={(e) => setTitle(e.currentTarget.value)}
             maxLength={TITLE_MAX}
+            placeholder="What should the project decide, fix, or discuss?"
             aria-invalid={fieldError()?.field === "title"}
           />
           <Show when={fieldError()?.field === "title"}>
@@ -144,7 +145,7 @@ const PostComposer: Component<PostComposerProps> = (props) => {
             rows={10}
             value={bodyMd()}
             onInput={(e) => setBodyMd(e.currentTarget.value)}
-            placeholder="Markdown supported."
+            placeholder="Add background, links, decisions needed, or what you already tried. Markdown is supported."
             aria-invalid={fieldError()?.field === "bodyMd"}
           />
         </Show>
@@ -156,7 +157,7 @@ const PostComposer: Component<PostComposerProps> = (props) => {
         </Show>
 
         <button type="submit" disabled={submitting()}>
-          {submitting() ? "Posting…" : "Post"}
+          {submitting() ? "Posting…" : "Start thread"}
         </button>
       </form>
     </Show>

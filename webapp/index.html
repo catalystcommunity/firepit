@@ -5,18 +5,17 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Firepit</title>
-    <!-- Paint guard (docs/DESIGN.md "theme mechanics"): sets data-theme on
-         <html> before the first paint, so there's never a flash of the
-         wrong theme. Mirrors ~/lib/theme.ts's "stored choice wins, else
-         dark by default regardless of prefers-color-scheme" rule in plain
-         JS, since it has to run before any module (incl. that file) loads. -->
+    <!-- Paint guard: sets data-theme on <html> before the first paint, so
+         there's never a flash of the wrong theme. Mirrors ~/lib/theme.ts's
+         "stored choice wins, else light" rule in plain JS, since it has to
+         run before any module loads. -->
     <script>
       (function () {
         try {
           var stored = localStorage.getItem("firepit-theme");
-          document.documentElement.setAttribute("data-theme", stored === "light" ? "light" : "dark");
+          document.documentElement.setAttribute("data-theme", stored === "dark" ? "dark" : "light");
         } catch (e) {
-          document.documentElement.setAttribute("data-theme", "dark");
+          document.documentElement.setAttribute("data-theme", "light");
         }
       })();
     </script>

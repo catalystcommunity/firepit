@@ -1,22 +1,68 @@
-/* /b/:slug (task C2, PLANDOC.md §7; reskinned for "Blue Flame",
- * docs/DESIGN.md): board header + composer + post list. */
-
 .board-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1.5rem;
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--border);
-  margin-bottom: var(--space-1);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%),
+    var(--bg1);
+  box-shadow: var(--shadow-panel);
+  margin-bottom: 1.25rem;
 }
 
-.board-header h2 {
-  margin-bottom: 0.2rem;
+.board-header h1 {
+  margin: 0.1rem 0 0.35rem;
 }
 
 .board-header-desc {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.95rem;
+  font-size: 1rem;
+}
+
+.board-composer-section {
+  display: grid;
+  grid-template-columns: minmax(13rem, 0.34fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
+
+.board-composer-section > div:first-child {
+  position: sticky;
+  top: 84px;
+}
+
+.board-composer-section h2 {
+  margin: 0 0 0.3rem;
+}
+
+.board-composer-section p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.board-composer-section .composer,
+.board-composer-section .composer-login-prompt {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .board-composer-section {
+    grid-template-columns: 1fr;
+  }
+
+  .board-composer-section > div:first-child {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .board-header {
+    flex-direction: column;
+  }
 }
