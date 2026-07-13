@@ -5,8 +5,12 @@
 #
 #   ./tools.sh gen               # csilgen -> api/internal/csil, webapp/src/gen, clients/
 #   ./tools.sh test               # go test (api + coredb) + npm test (webapp)
+#   ./tools.sh test-go            # go test (api + coredb)
+#   ./tools.sh test-web           # npm test (webapp)
 #   ./tools.sh test-integration   # testcontainers-backed integration suite
 #   ./tools.sh lint                # go vet (api + coredb) + eslint (webapp, if configured)
+#   ./tools.sh lint-go            # go vet (api + coredb)
+#   ./tools.sh lint-web           # eslint (webapp, if configured)
 #   ./tools.sh migrate [up|down|status]   # goose migrate against DB_URI (default: docker-compose postgres)
 #   ./tools.sh seed [--demo] [--admin domain:user_id ...] [--github-mappings]
 #                                    # idempotent data seeder (api/cmd/firepit-seed) against
@@ -38,8 +42,12 @@ Usage: ./tools.sh <command>
 Commands:
   gen                Regenerate CSIL-derived code (server, TS client, clients/)
   test               Run all tests: go test (api, coredb) + npm test (webapp)
+  test-go            Run Go tests: api + coredb
+  test-web           Run webapp tests
   test-integration   Run the testcontainers-backed integration suite
   lint               go vet (api, coredb) + eslint (webapp, if configured)
+  lint-go            go vet (api, coredb)
+  lint-web           eslint (webapp, if configured)
   migrate [verb]     Run goose against \$DB_URI (default: docker-compose postgres).
                      verb is one of up|down|status (default: up).
   seed [flags...]    Run the idempotent seeder (api/cmd/firepit-seed) against
@@ -182,22 +190,33 @@ cmd_gen() {
     echo "  clients/typescript:  $(find "$CLIENTS_OUT/typescript" -type f 2>/dev/null | wc -l) file(s)"
 }
 
-cmd_test() {
+cmd_test_go() {
     log_status "go test ./... (api)"
     ( cd "$SCRIPT_DIR/api" && go test ./... )
 
     log_status "go test ./... (coredb)"
     ( cd "$SCRIPT_DIR/coredb" && go test ./... )
+}
 
+cmd_test_web() {
     log_status "npm test (webapp)"
     ( cd "$SCRIPT_DIR/webapp" && npm test )
+}
+
+cmd_test() {
+    cmd_test_go
+    cmd_test_web
 
     log_status "all tests passed"
 }
 
 cmd_test_integration() {
     log_status "test-integration"
-    command -v docker >/dev/null 2>&1 || { err "docker is required for './tools.sh test-integration' (testcontainers)"; exit 1; }
+    if ! command -v docker >/dev/null 2>&1 && [ -z "${DOCKER_HOST:-}" ] && [ ! -S /var/run/docker.sock ]; then
+        err "docker engine access is required for './tools.sh test-integration' (testcontainers)"
+        err "expected a docker CLI, DOCKER_HOST, or /var/run/docker.sock"
+        exit 1
+    fi
 
     log_status "go test -tags=integration (api, all packages)"
     ( cd "$SCRIPT_DIR/api" && go test -tags=integration ./... )
@@ -205,13 +224,15 @@ cmd_test_integration() {
     log_status "test-integration passed"
 }
 
-cmd_lint() {
+cmd_lint_go() {
     log_status "go vet (api)"
     ( cd "$SCRIPT_DIR/api" && go vet ./... )
 
     log_status "go vet (coredb)"
     ( cd "$SCRIPT_DIR/coredb" && go vet ./... )
+}
 
+cmd_lint_web() {
     if [ -f "$SCRIPT_DIR/webapp/.eslintrc" ] || [ -f "$SCRIPT_DIR/webapp/.eslintrc.js" ] \
         || [ -f "$SCRIPT_DIR/webapp/.eslintrc.cjs" ] || [ -f "$SCRIPT_DIR/webapp/eslint.config.js" ] \
         || [ -f "$SCRIPT_DIR/webapp/eslint.config.ts" ]; then
@@ -220,6 +241,11 @@ cmd_lint() {
     else
         log_status "eslint (webapp) — skipped, no eslint config present yet"
     fi
+}
+
+cmd_lint() {
+    cmd_lint_go
+    cmd_lint_web
 
     log_status "lint passed"
 }
@@ -289,8 +315,12 @@ cmd_build_images() {
 case "${1:-}" in
     gen)               cmd_gen ;;
     test)              cmd_test ;;
+    test-go)           cmd_test_go ;;
+    test-web)          cmd_test_web ;;
     test-integration)  cmd_test_integration ;;
     lint)              cmd_lint ;;
+    lint-go)           cmd_lint_go ;;
+    lint-web)          cmd_lint_web ;;
     migrate)           cmd_migrate "$@" ;;
     seed)              cmd_seed "$@" ;;
     dev)               cmd_dev ;;

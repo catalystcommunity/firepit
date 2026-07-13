@@ -5,9 +5,10 @@ SEMVER_TAGS_VERSION="v0.4.0"
 BUILDKIT_VERSION="0.17.3"
 GHCLI_VERSION="2.63.2"
 
-# Script is invoked from the repo root (runnerbase:dev's job convention —
-# see test-go.yaml/test-web.yaml, which `cd /job/src` the same way).
-cd "${REACTORCIDE_REPOROOT:-/job/src}"
+# Reactorcide mounts or checks out source into REACTORCIDE_CODE_DIR and runs
+# job scripts from REACTORCIDE_JOB_DIR by convention. Keep /job/src as the
+# fallback for older local runners.
+cd "${REACTORCIDE_JOB_DIR:-${REACTORCIDE_CODE_DIR:-/job/src}}"
 
 # run-local parity (longhouse/reactorcide's own release.sh convention):
 # SKIP_GITHUB=true skips the version-bump push and the `gh release create`
