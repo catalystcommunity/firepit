@@ -8,7 +8,7 @@ GHCLI_VERSION="2.63.2"
 # Reactorcide mounts or checks out source into REACTORCIDE_CODE_DIR and runs
 # job scripts from REACTORCIDE_JOB_DIR by convention. Keep /job/src as the
 # fallback for older local runners.
-cd "${REACTORCIDE_JOB_DIR:-${REACTORCIDE_CODE_DIR:-/job/src}}"
+cd "${REACTORCIDE_CODE_DIR:-${REACTORCIDE_JOB_DIR:-/job/src}}"
 
 # run-local parity (longhouse/reactorcide's own release.sh convention):
 # SKIP_GITHUB=true skips the version-bump push and the `gh release create`

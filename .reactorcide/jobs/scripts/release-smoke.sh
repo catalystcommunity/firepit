@@ -2,7 +2,7 @@
 set -eu
 
 HELM_VERSION="${HELM_VERSION:-v3.18.4}"
-REPO_ROOT="${REACTORCIDE_JOB_DIR:-${REACTORCIDE_CODE_DIR:-/job/src}}"
+REPO_ROOT="${REACTORCIDE_CODE_DIR:-${REACTORCIDE_JOB_DIR:-/job/src}}"
 
 export HOME="${HOME:-/home/runner}"
 mkdir -p "$HOME/.local/bin"

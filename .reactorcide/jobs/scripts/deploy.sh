@@ -5,7 +5,7 @@ echo "================================================"
 echo "Firepit Deploy"
 echo "================================================"
 
-cd "${REACTORCIDE_JOB_DIR:-${REACTORCIDE_CODE_DIR:-/job/src}}"
+cd "${REACTORCIDE_CODE_DIR:-${REACTORCIDE_JOB_DIR:-/job/src}}"
 
 if [ -z "${K8S_NAMESPACE:-}" ]; then
     echo "ERROR: K8S_NAMESPACE must be set"

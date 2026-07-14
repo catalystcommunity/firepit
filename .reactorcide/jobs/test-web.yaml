@@ -17,7 +17,7 @@ job:
     set -eu
 
     NODE_VERSION="${NODE_VERSION:-26.1.0}"
-    REPO_ROOT="${REACTORCIDE_JOB_DIR:-${REACTORCIDE_CODE_DIR:-/job/src}}"
+    REPO_ROOT="${REACTORCIDE_CODE_DIR:-${REACTORCIDE_JOB_DIR:-/job/src}}"
 
     export HOME="${HOME:-/home/runner}"
     mkdir -p "$HOME/.local"
