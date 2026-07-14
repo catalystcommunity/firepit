@@ -5,18 +5,14 @@ triggers:
     - tag_created
 job:
   image: containers.catalystsquad.com/public/reactorcide/runnerbase:dev
-  # Clone at the triggering tag (REACTORCIDE_BRANCH carries the tag name
-  # for tag_created events). Public repo — unauthenticated read is fine.
   command: |
     set -e
-    git clone "https://github.com/catalystcommunity/firepit.git" /job/src
-    git -C /job/src checkout "${REACTORCIDE_BRANCH}"
     sh "${REACTORCIDE_JOB_DIR:-${REACTORCIDE_CODE_DIR:-/job/src}}/.reactorcide/jobs/scripts/deploy.sh"
   timeout: 900
   priority: 20
   working_dir: /job
-  raw_command: true
-  # Deploys straight to the target cluster with real credentials — not
+  # Runnerlib checks out the pushed tag before this command. Deploys
+  # straight to the target cluster with real credentials — not
   # something `reactorcide run-local` should be able to fire unattended.
   disable_run_local: true
 environment:

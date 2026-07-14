@@ -7,17 +7,14 @@ triggers:
     - main
 job:
   image: containers.catalystsquad.com/public/reactorcide/runnerbase:dev
-  # Job code is separated from source: clone the repo explicitly (same
-  # pattern as reactorcide's own release.yaml) — authenticated, because
-  # release.sh pushes the version-bump commit + tag back to main.
   command: |
     set -e
-    git clone "https://x-access-token:${GITHUB_PAT}@github.com/${REACTORCIDE_REPO}.git" /job/src
     sh "${REACTORCIDE_JOB_DIR:-${REACTORCIDE_CODE_DIR:-/job/src}}/.reactorcide/jobs/scripts/release.sh"
   timeout: 1800
   priority: 15
   working_dir: /job
-  raw_command: true
+  # Runnerlib checks out source before this command. release.sh then moves
+  # onto origin/main with write credentials before bumping versions.
   # Image builds need a BuildKit sidecar (BUILDKIT_HOST is injected by this
   # capability — see reactorcide/.reactorcide/jobs/scripts/release.sh and
   # reactorcide/jobs/build-all.yaml, which this job's script mirrors) and

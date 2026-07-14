@@ -13,8 +13,6 @@ cd "$REPO_ROOT"
 echo "=== shell syntax ==="
 sh -n .reactorcide/jobs/scripts/release.sh
 sh -n .reactorcide/jobs/scripts/deploy.sh
-sh -n .reactorcide/jobs/scripts/test-go.sh
-sh -n .reactorcide/jobs/scripts/test-web.sh
 
 if ! command -v helm >/dev/null 2>&1; then
     echo "=== Installing helm ${HELM_VERSION} ==="
