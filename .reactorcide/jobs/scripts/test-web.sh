@@ -7,6 +7,20 @@ REPO_ROOT="${REACTORCIDE_JOB_DIR:-${REACTORCIDE_CODE_DIR:-/job/src}}"
 export HOME="${HOME:-/home/runner}"
 mkdir -p "$HOME/.local"
 
+if [ ! -d "$REPO_ROOT/.git" ]; then
+    if [ -z "${REACTORCIDE_SOURCE_URL:-}" ]; then
+        echo "ERROR: REACTORCIDE_SOURCE_URL is required when $REPO_ROOT is not already checked out"
+        exit 1
+    fi
+    echo "=== Checking out source ==="
+    mkdir -p "$(dirname "$REPO_ROOT")"
+    cd "$(dirname "$REPO_ROOT")"
+    rm -rf "$REPO_ROOT"
+    git clone "$REACTORCIDE_SOURCE_URL" "$REPO_ROOT"
+    cd "$REPO_ROOT"
+    git checkout "${REACTORCIDE_SHA:-${REACTORCIDE_SOURCE_REF:-HEAD}}"
+fi
+
 echo "=== Installing Node ${NODE_VERSION} ==="
 curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" -o /tmp/node.tar.xz
 rm -rf "$HOME/.local/node"
