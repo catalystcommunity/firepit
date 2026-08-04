@@ -5,7 +5,7 @@ type: application
 
 # The trusted Reactorcide release plugin updates this value with
 # version/VERSION.txt after it creates a release tag.
-version: 0.3.1
+version: 0.4.0
 
 # This application version matches version/VERSION.txt.
-appVersion: "0.3.1"
+appVersion: "0.4.0"
