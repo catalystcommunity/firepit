@@ -22,6 +22,10 @@ Post = {
 
     board_id: BoardID,
 
+    ;;; Stored categories. An empty list means the virtual Uncategorized
+    ;;; state. Category details come from CategoryService.
+    category_ids: [* CategoryID],
+
     @receive-only
     author_id: UserID,
 
@@ -109,6 +113,10 @@ Comment = {
 ;;; activity first).
 ListPostsRequest = {
     board_id: BoardID,
+    ;;; Match a post that has any selected category. When this list and
+    ;;; include_uncategorized are absent, the server returns all posts.
+    ? category_ids: [* CategoryID],
+    ? include_uncategorized: bool,
     ? cursor: PageCursor,
     ? limit: uint .default 50 .le 200
 }
@@ -133,6 +141,7 @@ Thread = {
 
 CreatePostRequest = {
     board_id: BoardID,
+    ? category_ids: [* CategoryID],
     title: text .size (1..512),
     body_md: text .size (1..100000)
 }
@@ -147,6 +156,7 @@ CreateCommentRequest = {
 ;;; applying, in the same transaction.
 EditPostRequest = {
     id: PostID,
+    ? category_ids: [* CategoryID],
     title: text .size (1..512),
     body_md: text .size (1..100000)
 }

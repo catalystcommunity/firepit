@@ -41,6 +41,23 @@ const BoardServiceOpArchiveBoardWireID uint64 = 4
 const BoardServiceOpSetBoardMemberWireID uint64 = 5
 const BoardServiceOpRemoveBoardMemberWireID uint64 = 6
 
+// CategoryService defines the service interface
+type CategoryService interface {
+	ListBoardCategories(ctx context.Context, req BoardID) (CategoryList, error)
+	CreateCategory(ctx context.Context, req CreateCategoryRequest) (Category, error)
+	UpdateCategory(ctx context.Context, req UpdateCategoryRequest) (Category, error)
+	DeleteCategory(ctx context.Context, req DeleteCategoryRequest) (Empty, error)
+	ListCategories(ctx context.Context, req Empty) (CategoryList, error)
+}
+
+// Wire-id ordinals for the CategoryService service (transport compact profiles).
+const CategoryServiceServiceWireID uint64 = 11
+const CategoryServiceOpListBoardCategoriesWireID uint64 = 0
+const CategoryServiceOpCreateCategoryWireID uint64 = 1
+const CategoryServiceOpUpdateCategoryWireID uint64 = 2
+const CategoryServiceOpDeleteCategoryWireID uint64 = 3
+const CategoryServiceOpListCategoriesWireID uint64 = 4
+
 // ThreadService defines the service interface
 type ThreadService interface {
 	ListPosts(ctx context.Context, req ListPostsRequest) (PostPage, error)

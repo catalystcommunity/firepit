@@ -254,7 +254,7 @@ func TestCursorPaginationStabilityUnderConcurrentInserts(t *testing.T) {
 	p3 := mkPost("post 3", base.Add(-1*time.Minute))
 
 	// Page 1: newest first, page size 2 -> [p3, p2].
-	page1, err := st.ListPostsByBoard(ctx, gdb, board.ID, nil, 2)
+	page1, err := st.ListPostsByBoard(ctx, gdb, board.ID, nil, false, false, nil, 2)
 	require.NoError(t, err)
 	require.Len(t, page1, 2)
 	require.Equal(t, p3.ID, page1[0].ID)
@@ -271,7 +271,7 @@ func TestCursorPaginationStabilityUnderConcurrentInserts(t *testing.T) {
 	// [p1] — the raced-in post must not appear (it's newer than the
 	// cursor, i.e. "before" it in DESC order, so the "< cursor" predicate
 	// correctly excludes it), and p2/p3 must not repeat.
-	page2, err := st.ListPostsByBoard(ctx, gdb, board.ID, cursor, 2)
+	page2, err := st.ListPostsByBoard(ctx, gdb, board.ID, nil, false, false, cursor, 2)
 	require.NoError(t, err)
 	require.Len(t, page2, 1)
 	require.Equal(t, p1.ID, page2[0].ID)

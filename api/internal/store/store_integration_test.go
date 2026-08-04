@@ -155,6 +155,14 @@ func roundTripModels(t *testing.T, db *gorm.DB) {
 	require.NoError(t, db.First(&gotPost, "id = ?", post.ID).Error)
 	require.Equal(t, "Hello", gotPost.Title)
 
+	category := &store.Category{Slug: "design", Name: "Design", CreatedBy: user.ID}
+	require.NoError(t, db.Create(category).Error)
+	require.NoError(t, db.Create(&store.BoardCategory{BoardID: board.ID, CategoryID: category.ID}).Error)
+	require.NoError(t, db.Create(&store.PostCategory{PostID: post.ID, CategoryID: category.ID}).Error)
+	var gotPostCategory store.PostCategory
+	require.NoError(t, db.First(&gotPostCategory, "post_id = ? AND category_id = ?", post.ID, category.ID).Error)
+	require.Equal(t, category.ID, gotPostCategory.CategoryID)
+
 	comment := &store.Comment{
 		PostID:   post.ID,
 		AuthorID: editor.ID,

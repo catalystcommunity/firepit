@@ -66,3 +66,6 @@
     flex-direction: column;
   }
 }
+.thread-category-bar {
+  margin-bottom: 0.75rem;
+}

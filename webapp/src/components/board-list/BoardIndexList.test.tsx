@@ -50,6 +50,7 @@ const BOARD_ANNOUNCE: Board = {
   title: "Announce Board",
   description: "Announcements only.",
   kind: "announce",
+  categoryLimit: 0,
   createdBy: "u2",
   createdAt: new Date("2026-01-01T00:00:00Z"),
 };
@@ -60,6 +61,7 @@ const BOARD_DISCUSSION: Board = {
   title: "Discuss Board",
   description: "General discussion.",
   kind: "discussion",
+  categoryLimit: 0,
   createdBy: "u2",
   createdAt: new Date("2026-01-01T00:00:00Z"),
 };

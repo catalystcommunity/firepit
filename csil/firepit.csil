@@ -38,6 +38,7 @@ include "types/subscriptions.csil"
 include "types/read.csil"
 include "types/notifications.csil"
 include "types/integrations.csil"
+include "types/categories.csil"
 
 options {
     package: "firepit",
@@ -102,6 +103,34 @@ service BoardService {
     ;;; Maintainer/moderator: remove a user's role on a board.
     @wire-id(6)
     remove-board-member: RemoveBoardMemberRequest -> Empty / ServiceError
+}
+
+;;; Category configuration and discovery. Categories can belong to several
+;;; boards. An administrator can enable cross-board posting for a category.
+;;; In that case, one thread is visible in each board that has the category.
+@wire-id(11)
+service CategoryService {
+    ;;; List the categories that are available in one board.
+    @wire-id(0)
+    list-board-categories: BoardID -> CategoryList,
+
+    ;;; Admin-only: create a category and attach it to one or more boards.
+    @wire-id(1)
+    create-category: CreateCategoryRequest -> Category / ServiceError,
+
+    ;;; Admin-only: change category details, board assignments, or routing.
+    @wire-id(2)
+    update-category: UpdateCategoryRequest -> Category / ServiceError,
+
+    ;;; Admin-only: remove a category. The caller must confirm removal from
+    ;;; all posts. Affected posts then use the virtual Uncategorized state.
+    @wire-id(3)
+    delete-category: DeleteCategoryRequest -> Empty / ServiceError,
+
+    ;;; List all categories. The admin view uses this for categories that
+    ;;; are assigned only to archived boards.
+    @wire-id(4)
+    list-categories: Empty -> CategoryList
 }
 
 ;;; Posts (thread roots) and threaded comments of arbitrary depth,

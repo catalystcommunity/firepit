@@ -289,10 +289,8 @@ cmd_build_images() {
     # Dev-oriented: plain `docker build` from the repo root (both
     # Dockerfiles expect that context — api/Dockerfile needs the sibling
     # coredb/ module, webapp/Dockerfile needs clients/ and version/). CI's
-    # release job (.reactorcide/jobs/release.yaml) instead uses BuildKit's
-    # buildctl directly against a builder-capability sidecar — see that
-    # job's script for the multi-arch/registry-push path this verb doesn't
-    # need to cover.
+    # The Reactorcide image jobs use BuildKit against a builder-capability
+    # sidecar. This local verb does not push images to the registry.
     log_status "build-images: firepit-api -> firepit/api:${tag}"
     docker build \
         -f "$SCRIPT_DIR/api/Dockerfile" \

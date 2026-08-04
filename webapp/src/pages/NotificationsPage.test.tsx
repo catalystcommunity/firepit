@@ -47,6 +47,7 @@ const BOARD: Board = {
   slug: "firepit",
   title: "Firepit Meta",
   kind: "discussion",
+  categoryLimit: 0,
   createdBy: "someone",
   createdAt: new Date("2026-01-01T00:00:00Z"),
 };
@@ -69,6 +70,7 @@ function threadFor(postId: string, title: string): Thread {
     post: {
       id: postId,
       boardId: BOARD.id,
+      categoryIds: [],
       authorId: "someone",
       title,
       bodyMd: "body",

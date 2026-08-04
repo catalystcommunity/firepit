@@ -1,0 +1,17 @@
+name: firepit-image
+description: "Build and push one versioned Firepit container image."
+job:
+  image: containers.catalystsquad.com/public/reactorcide/runnerbase:latest
+  command: "runnerlib run --job-command true"
+  timeout: 2400
+  priority: 15
+  working_dir: /job
+  capabilities:
+    - builder
+  run_as:
+    user: root
+  disable_run_local: true
+environment:
+  REGISTRY: containers.catalystsquad.com
+  REGISTRY_USER: "${secret:catalystcommunity/registry:user}"
+  REGISTRY_PASSWORD: "${secret:catalystcommunity/registry:password}"

@@ -8,7 +8,7 @@ import { MemoryRouter, Route } from "@solidjs/router";
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ListPostsRequest, Post, UnreadSummary } from "~/gen/types.gen";
+import type { Category, ListPostsRequest, Post, UnreadSummary } from "~/gen/types.gen";
 import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
 
 const { whoami, listPosts } = vi.hoisted(() => ({ whoami: vi.fn(), listPosts: vi.fn() }));
@@ -26,6 +26,7 @@ const unauthenticated = () =>
 const post = (id: string, overrides: Partial<Post> = {}): Post => ({
   id,
   boardId: "b1",
+  categoryIds: [],
   authorId: "01FPMOCKUSERBOB00000000",
   title: `Post ${id}`,
   bodyMd: "body",
@@ -54,6 +55,24 @@ beforeEach(() => {
 });
 
 describe("PostList", () => {
+  it("sends selected categories to the backend and can include Uncategorized", async () => {
+    const categories: Category[] = [{
+      id: "cat-1", slug: "design", name: "Design", crossBoardPosting: false, boardIds: ["b1"], createdAt: new Date(),
+    }];
+    listPosts.mockResolvedValue({ posts: [], nextCursor: undefined });
+    renderWithRouter(() => <PostList boardId="b1" boardSlug="board" summary={() => null} categories={categories} />);
+
+    await waitFor(() => expect(listPosts).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Design" }));
+    await waitFor(() => expect(listPosts).toHaveBeenLastCalledWith({
+      boardId: "b1", categoryIds: ["cat-1"], includeUncategorized: false, cursor: undefined, limit: 20,
+    }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Uncategorized" }));
+    await waitFor(() => expect(listPosts).toHaveBeenLastCalledWith({
+      boardId: "b1", categoryIds: ["cat-1"], includeUncategorized: true, cursor: undefined, limit: 20,
+    }));
+  });
+
   it("loads the first page, then appends the next page on 'Load more'", async () => {
     listPosts.mockImplementation((req: ListPostsRequest) => {
       if (!req.cursor) return Promise.resolve({ posts: [post("1"), post("2")], nextCursor: "2" });

@@ -1,0 +1,12 @@
+name: firepit-conventional-commits
+description: "Validate pull request commit subjects."
+job:
+  image: containers.catalystsquad.com/public/reactorcide/runnerbase:latest
+  command: "runnerlib run --job-command true"
+  timeout: 300
+  priority: 10
+  working_dir: /job
+environment:
+  REACTORCIDE_FIREPIT_JOB: conventional-commits
+run_local:
+  user: host

@@ -41,6 +41,10 @@ Board = {
 
     kind: BoardKind,
 
+    ;;; Maximum categories on a post created in this board. Zero means that
+    ;;; there is no maximum. Uncategorized posts do not use this limit.
+    category_limit: uint,
+
     @receive-only
     created_by: UserID,
 
@@ -73,7 +77,8 @@ CreateBoardRequest = {
     slug: text .size (1..64) .regex "^[a-z0-9]+(-[a-z0-9]+)*$",
     title: text .size (1..256),
     ? description: text .size (0..2000),
-    kind: BoardKind
+    kind: BoardKind,
+    ? category_limit: uint .le 100
 }
 
 ;;; Admin-only: update-board. Only the fields present are changed; `slug`
@@ -82,7 +87,8 @@ CreateBoardRequest = {
 UpdateBoardRequest = {
     id: BoardID,
     ? title: text .size (1..256),
-    ? description: text .size (0..2000)
+    ? description: text .size (0..2000),
+    ? category_limit: uint .le 100
 }
 
 ;;; Admin: assign or change a user's role on a board. Idempotent — setting

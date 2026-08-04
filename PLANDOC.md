@@ -311,7 +311,7 @@ firepit/
 │   └── src/{gen,lib,components,pages}
 ├── clients/                 # generated: go/, typescript/ (more languages later)
 ├── helm_chart/              # api + linkkeys-rp sidecar + HTTPRoute
-└── .reactorcide/jobs/       # test-go.yaml test-web.yaml release.yaml deploy.yaml
+└── .reactorcide/            # trusted plugins, workflow DAGs, jobs, tests, grants
 ```
 
 `tools.sh` verbs: `gen` (csilgen → api/internal/csil, webapp/src/gen, clients/), `test`,
@@ -443,8 +443,8 @@ Chart modeled on longhouse/reactorcide: api Deployment, linkkeys-rp sidecar
 (`ENABLE_RP_ENDPOINTS=true`), `HTTPRoute` for `firepit.catalystsquad.com`. **Postgres is
 a Zalando postgres-operator CR** (created alongside, not owned by this chart); the chart
 consumes a `DB_URI` secret. Build/deploy secrets via reactorcide vault (`${secret:…}`).
-`.reactorcide/jobs/release.yaml` (BuildKit → `containers.catalystsquad.com`) +
-`deploy.yaml` (`helm upgrade` on tag). *Accept:* `helm template` + kind smoke test via
+`.reactorcide/workflows/release.yaml` (BuildKit → `containers.catalystsquad.com`) +
+`.reactorcide/jobs/deploy.yaml` (`helm upgrade` on tag). *Accept:* `helm template` + kind smoke test via
 `action-kind-test` conventions; dry-run deploy job local via `reactorcide run-local`.
 
 **D2. End-to-end integration suite** *(deps: B2–B9, C1)*
@@ -498,3 +498,34 @@ are PRs against `csil/` first, regen, then implementations.
    deferred until we want write-back.
 7. **Postgres** — provisioned as a Zalando postgres-operator CR; the chart consumes a
    `DB_URI` secret and never owns the database.
+
+## 10. Categories and shared threads (2026-08-03)
+
+Categories classify posts in boards. A post can have zero or more categories. Each board
+has a `category_limit` value. Zero means that the board does not set a limit. A positive
+value is the maximum number of categories that a post can have.
+
+`categories` stores each category once. `board_categories` assigns a category to one or
+more boards. `post_categories` assigns categories to a post. A category slug does not
+change after creation. This gives stable links and stable filter values.
+
+A post with no `post_categories` rows is **Uncategorized**. Uncategorized is a virtual
+category. The database does not store a category row for it. If an administrator deletes
+the last category from a post, the post becomes Uncategorized. The post is not deleted.
+
+Category filters are part of `ThreadService.list-posts`. The database applies the filter
+before keyset pagination. The API does not send posts that do not match. Selected stored
+categories use OR logic. A separate `include_uncategorized` value selects posts that have
+no category rows. If the request has no category filter, the API returns all posts.
+
+One post has one origin board and one comment tree. If `cross_board_posting` is true for a
+category, the post is also visible in every board that has that category. The system does
+not copy the post. Edits, replies, revisions, endorsements, and read marks therefore use
+the same post ID in all boards. Board notification fan-out includes all boards that get
+the shared thread. Unread summaries also use the board in which the shared thread is
+visible.
+
+Only an instance administrator can create, change, or delete categories. Category delete
+requests must set `remove_from_posts=true`. The database then removes all post and board
+assignments in the same transaction. The admin UI shows this effect before it sends the
+request. The admin UI also controls each board's category limit.

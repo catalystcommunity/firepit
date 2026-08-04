@@ -99,14 +99,15 @@ type BoardSlug string
 
 // Board represents a structured data type
 type Board struct {
-	Id          BoardID    `json:"id" yaml:"id"`
-	Slug        string     `json:"slug" yaml:"slug"`
-	Title       string     `json:"title" yaml:"title"`
-	Description *string    `json:"description,omitempty" yaml:"description,omitempty"`
-	Kind        BoardKind  `json:"kind" yaml:"kind"`
-	CreatedBy   UserID     `json:"created_by" yaml:"created_by"`
-	ArchivedAt  *time.Time `json:"archived_at,omitempty" yaml:"archived_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at" yaml:"created_at"`
+	Id            BoardID    `json:"id" yaml:"id"`
+	Slug          string     `json:"slug" yaml:"slug"`
+	Title         string     `json:"title" yaml:"title"`
+	Description   *string    `json:"description,omitempty" yaml:"description,omitempty"`
+	Kind          BoardKind  `json:"kind" yaml:"kind"`
+	CategoryLimit uint64     `json:"category_limit" yaml:"category_limit"`
+	CreatedBy     UserID     `json:"created_by" yaml:"created_by"`
+	ArchivedAt    *time.Time `json:"archived_at,omitempty" yaml:"archived_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at" yaml:"created_at"`
 }
 
 // ListBoardsRequest represents a structured data type
@@ -123,17 +124,19 @@ type BoardPage struct {
 
 // CreateBoardRequest represents a structured data type
 type CreateBoardRequest struct {
-	Slug        string    `json:"slug" yaml:"slug"`
-	Title       string    `json:"title" yaml:"title"`
-	Description *string   `json:"description,omitempty" yaml:"description,omitempty"`
-	Kind        BoardKind `json:"kind" yaml:"kind"`
+	Slug          string    `json:"slug" yaml:"slug"`
+	Title         string    `json:"title" yaml:"title"`
+	Description   *string   `json:"description,omitempty" yaml:"description,omitempty"`
+	Kind          BoardKind `json:"kind" yaml:"kind"`
+	CategoryLimit *uint64   `json:"category_limit,omitempty" yaml:"category_limit,omitempty"`
 }
 
 // UpdateBoardRequest represents a structured data type
 type UpdateBoardRequest struct {
-	Id          BoardID `json:"id" yaml:"id"`
-	Title       *string `json:"title,omitempty" yaml:"title,omitempty"`
-	Description *string `json:"description,omitempty" yaml:"description,omitempty"`
+	Id            BoardID `json:"id" yaml:"id"`
+	Title         *string `json:"title,omitempty" yaml:"title,omitempty"`
+	Description   *string `json:"description,omitempty" yaml:"description,omitempty"`
+	CategoryLimit *uint64 `json:"category_limit,omitempty" yaml:"category_limit,omitempty"`
 }
 
 // SetBoardMemberRequest represents a structured data type
@@ -151,19 +154,20 @@ type RemoveBoardMemberRequest struct {
 
 // Post represents a structured data type
 type Post struct {
-	Id             PostID     `json:"id" yaml:"id"`
-	BoardId        BoardID    `json:"board_id" yaml:"board_id"`
-	AuthorId       UserID     `json:"author_id" yaml:"author_id"`
-	AuthorHandle   *string    `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
-	Title          string     `json:"title" yaml:"title"`
-	BodyMd         string     `json:"body_md" yaml:"body_md"`
-	Origin         OriginKind `json:"origin" yaml:"origin"`
-	OriginRef      *string    `json:"origin_ref,omitempty" yaml:"origin_ref,omitempty"`
-	CommentCount   uint64     `json:"comment_count" yaml:"comment_count"`
-	LastActivityAt time.Time  `json:"last_activity_at" yaml:"last_activity_at"`
-	EditedAt       *time.Time `json:"edited_at,omitempty" yaml:"edited_at,omitempty"`
-	DeletedAt      *time.Time `json:"deleted_at,omitempty" yaml:"deleted_at,omitempty"`
-	CreatedAt      time.Time  `json:"created_at" yaml:"created_at"`
+	Id             PostID       `json:"id" yaml:"id"`
+	BoardId        BoardID      `json:"board_id" yaml:"board_id"`
+	CategoryIds    []CategoryID `json:"category_ids" yaml:"category_ids"`
+	AuthorId       UserID       `json:"author_id" yaml:"author_id"`
+	AuthorHandle   *string      `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
+	Title          string       `json:"title" yaml:"title"`
+	BodyMd         string       `json:"body_md" yaml:"body_md"`
+	Origin         OriginKind   `json:"origin" yaml:"origin"`
+	OriginRef      *string      `json:"origin_ref,omitempty" yaml:"origin_ref,omitempty"`
+	CommentCount   uint64       `json:"comment_count" yaml:"comment_count"`
+	LastActivityAt time.Time    `json:"last_activity_at" yaml:"last_activity_at"`
+	EditedAt       *time.Time   `json:"edited_at,omitempty" yaml:"edited_at,omitempty"`
+	DeletedAt      *time.Time   `json:"deleted_at,omitempty" yaml:"deleted_at,omitempty"`
+	CreatedAt      time.Time    `json:"created_at" yaml:"created_at"`
 }
 
 // Comment represents a structured data type
@@ -183,9 +187,11 @@ type Comment struct {
 
 // ListPostsRequest represents a structured data type
 type ListPostsRequest struct {
-	BoardId BoardID     `json:"board_id" yaml:"board_id"`
-	Cursor  *PageCursor `json:"cursor,omitempty" yaml:"cursor,omitempty"`
-	Limit   *uint64     `json:"limit,omitempty" yaml:"limit,omitempty"`
+	BoardId              BoardID      `json:"board_id" yaml:"board_id"`
+	CategoryIds          []CategoryID `json:"category_ids,omitempty" yaml:"category_ids,omitempty"`
+	IncludeUncategorized *bool        `json:"include_uncategorized,omitempty" yaml:"include_uncategorized,omitempty"`
+	Cursor               *PageCursor  `json:"cursor,omitempty" yaml:"cursor,omitempty"`
+	Limit                *uint64      `json:"limit,omitempty" yaml:"limit,omitempty"`
 }
 
 // PostPage represents a structured data type
@@ -207,9 +213,10 @@ type Thread struct {
 
 // CreatePostRequest represents a structured data type
 type CreatePostRequest struct {
-	BoardId BoardID `json:"board_id" yaml:"board_id"`
-	Title   string  `json:"title" yaml:"title"`
-	BodyMd  string  `json:"body_md" yaml:"body_md"`
+	BoardId     BoardID      `json:"board_id" yaml:"board_id"`
+	CategoryIds []CategoryID `json:"category_ids,omitempty" yaml:"category_ids,omitempty"`
+	Title       string       `json:"title" yaml:"title"`
+	BodyMd      string       `json:"body_md" yaml:"body_md"`
 }
 
 // CreateCommentRequest represents a structured data type
@@ -221,9 +228,10 @@ type CreateCommentRequest struct {
 
 // EditPostRequest represents a structured data type
 type EditPostRequest struct {
-	Id     PostID `json:"id" yaml:"id"`
-	Title  string `json:"title" yaml:"title"`
-	BodyMd string `json:"body_md" yaml:"body_md"`
+	Id          PostID       `json:"id" yaml:"id"`
+	CategoryIds []CategoryID `json:"category_ids,omitempty" yaml:"category_ids,omitempty"`
+	Title       string       `json:"title" yaml:"title"`
+	BodyMd      string       `json:"body_md" yaml:"body_md"`
 }
 
 // EditCommentRequest represents a structured data type
@@ -437,4 +445,47 @@ type DomainEntry struct {
 // DomainList represents a structured data type
 type DomainList struct {
 	Domains []DomainEntry `json:"domains" yaml:"domains"`
+}
+
+// CategoryID is a type alias
+type CategoryID string
+
+// Category represents a structured data type
+type Category struct {
+	Id                CategoryID `json:"id" yaml:"id"`
+	Slug              string     `json:"slug" yaml:"slug"`
+	Name              string     `json:"name" yaml:"name"`
+	Description       *string    `json:"description,omitempty" yaml:"description,omitempty"`
+	CrossBoardPosting bool       `json:"cross_board_posting" yaml:"cross_board_posting"`
+	BoardIds          []BoardID  `json:"board_ids" yaml:"board_ids"`
+	CreatedAt         time.Time  `json:"created_at" yaml:"created_at"`
+}
+
+// CategoryList represents a structured data type
+type CategoryList struct {
+	Categories []Category `json:"categories" yaml:"categories"`
+}
+
+// CreateCategoryRequest represents a structured data type
+type CreateCategoryRequest struct {
+	Slug              string    `json:"slug" yaml:"slug"`
+	Name              string    `json:"name" yaml:"name"`
+	Description       *string   `json:"description,omitempty" yaml:"description,omitempty"`
+	CrossBoardPosting bool      `json:"cross_board_posting" yaml:"cross_board_posting"`
+	BoardIds          []BoardID `json:"board_ids" yaml:"board_ids"`
+}
+
+// UpdateCategoryRequest represents a structured data type
+type UpdateCategoryRequest struct {
+	Id                CategoryID `json:"id" yaml:"id"`
+	Name              *string    `json:"name,omitempty" yaml:"name,omitempty"`
+	Description       *string    `json:"description,omitempty" yaml:"description,omitempty"`
+	CrossBoardPosting *bool      `json:"cross_board_posting,omitempty" yaml:"cross_board_posting,omitempty"`
+	BoardIds          []BoardID  `json:"board_ids,omitempty" yaml:"board_ids,omitempty"`
+}
+
+// DeleteCategoryRequest represents a structured data type
+type DeleteCategoryRequest struct {
+	Id              CategoryID `json:"id" yaml:"id"`
+	RemoveFromPosts bool       `json:"remove_from_posts" yaml:"remove_from_posts"`
 }

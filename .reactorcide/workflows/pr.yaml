@@ -1,0 +1,26 @@
+name: Firepit PR
+description: "Validate commits, application code, integration behavior, and release configuration."
+on:
+  events:
+    - pull_request_opened
+    - pull_request_updated
+  branches:
+    - main
+jobs:
+  conventional-commits:
+    job_file: conventional-commits.yaml
+
+  test-go:
+    job_file: test-go.yaml
+    depends_on:
+      - conventional-commits
+
+  test-web:
+    job_file: test-web.yaml
+    depends_on:
+      - conventional-commits
+
+  release-smoke:
+    job_file: release-smoke.yaml
+    depends_on:
+      - conventional-commits

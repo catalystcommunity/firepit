@@ -4,7 +4,7 @@
 // revision history, tombstones, read marks, and comment permalinks. See
 // src/components/thread/ for the component breakdown.
 import { A, useParams } from "@solidjs/router";
-import { createEffect, createMemo, createResource, createSignal, onCleanup, Show, type Component } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, type Component } from "solid-js";
 import { api } from "~/lib/api";
 import { extractMentionHandles } from "~/lib/markdown";
 import { useSession } from "~/lib/session";
@@ -29,6 +29,32 @@ const ThreadPage: Component = () => {
   const session = useSession();
 
   const [threadRes, { refetch }] = createResource(() => params.postId, (postId) => api.thread.getThread({ postId }));
+  const [board] = createResource(() => params.slug, (slug) => api.board.getBoard(slug));
+  const [categories] = createResource(() => board()?.id, (boardId) => api.category.listBoardCategories(boardId));
+  const [editingCategories, setEditingCategories] = createSignal(false);
+  const [postCategoryIds, setPostCategoryIds] = createSignal<string[]>([]);
+
+  createEffect(() => {
+    const post = threadRes()?.post;
+    if (post) setPostCategoryIds([...post.categoryIds]);
+  });
+
+  const togglePostCategory = (id: string): void => {
+    setPostCategoryIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
+
+  const savePostCategories = async (): Promise<void> => {
+    const thread = threadRes();
+    if (!thread) return;
+    await api.thread.editPost({
+      id: thread.post.id,
+      title: thread.post.title,
+      bodyMd: thread.post.bodyMd,
+      categoryIds: postCategoryIds(),
+    });
+    setEditingCategories(false);
+    await refetch();
+  };
 
   const [mode, setMode] = createSignal<ThreadViewMode>(readViewMode());
   const toggleMode = (): void => {
@@ -155,6 +181,42 @@ const ThreadPage: Component = () => {
       <Show when={threadRes()}>
         {(thread) => (
           <>
+            <section class="thread-category-bar" aria-label="Post categories">
+              <Show when={thread().post.categoryIds.length > 0} fallback={<span>Uncategorized</span>}>
+                <For each={thread().post.categoryIds}>
+                  {(id) => <span>{categories()?.categories.find((category) => category.id === id)?.name ?? id}</span>}
+                </For>
+              </Show>
+              <Show when={session.user()?.id === thread().post.authorId && !thread().post.deletedAt}>
+                <button type="button" class="link-button" onClick={() => setEditingCategories((value) => !value)}>
+                  Change categories
+                </button>
+              </Show>
+            </section>
+            <Show when={editingCategories()}>
+              <fieldset class="category-picker">
+                <legend>Post categories</legend>
+                <For each={categories()?.categories ?? []}>
+                  {(category) => (
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={postCategoryIds().includes(category.id)}
+                        onChange={() => togglePostCategory(category.id)}
+                      />
+                      {category.name}
+                    </label>
+                  )}
+                </For>
+                <button
+                  type="button"
+                  disabled={(board()?.categoryLimit ?? 0) > 0 && postCategoryIds().length > (board()?.categoryLimit ?? 0)}
+                  onClick={() => void savePostCategories()}
+                >
+                  Save categories
+                </button>
+              </fieldset>
+            </Show>
             <ContentCard
               targetType="post"
               id={thread().post.id}

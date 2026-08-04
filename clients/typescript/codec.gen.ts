@@ -2,7 +2,7 @@
 // Source: <csil spec>
 // Target: typescript-codec
 
-import type { AddFriendRequest, BeginLoginRequest, BeginLoginResponse, Board, BoardID, BoardKind, BoardPage, BoardRole, BoardUnread, Comment, CommentID, CreateBoardRequest, CreateCommentRequest, CreateFriendGroupRequest, CreateMappingRequest, CreatePostRequest, DomainEntry, DomainList, EditCommentRequest, EditPostRequest, Empty, EndorseRequest, Endorsement, EndorsementID, EndorsementList, FriendGroup, FriendGroupList, GetThreadRequest, GithubMapping, GroupID, ListBoardsRequest, ListNotificationsRequest, ListPostsRequest, MappingID, MappingList, MentionGrant, MentionGrantList, MentionPolicy, Notification, NotificationEvent, NotificationID, NotificationPage, OriginKind, PageCursor, Post, PostID, PostPage, RemoveBoardMemberRequest, RemoveFriendRequest, Revision, RevisionID, RevisionList, ServiceError, SetBoardMemberRequest, SetMutedRequest, Subscription, SubscriptionID, SubscriptionList, TargetRef, TargetType, Thread, ThreadMode, UnreadSummary, UpdateBoardRequest, UpdateSettingsRequest, UserID, UserKind, UserProfile, UserSettings } from "./types.gen";
+import type { AddFriendRequest, BeginLoginRequest, BeginLoginResponse, Board, BoardID, BoardKind, BoardPage, BoardRole, BoardUnread, Category, CategoryID, CategoryList, Comment, CommentID, CreateBoardRequest, CreateCategoryRequest, CreateCommentRequest, CreateFriendGroupRequest, CreateMappingRequest, CreatePostRequest, DeleteCategoryRequest, DomainEntry, DomainList, EditCommentRequest, EditPostRequest, Empty, EndorseRequest, Endorsement, EndorsementID, EndorsementList, FriendGroup, FriendGroupList, GetThreadRequest, GithubMapping, GroupID, ListBoardsRequest, ListNotificationsRequest, ListPostsRequest, MappingID, MappingList, MentionGrant, MentionGrantList, MentionPolicy, Notification, NotificationEvent, NotificationID, NotificationPage, OriginKind, PageCursor, Post, PostID, PostPage, RemoveBoardMemberRequest, RemoveFriendRequest, Revision, RevisionID, RevisionList, ServiceError, SetBoardMemberRequest, SetMutedRequest, Subscription, SubscriptionID, SubscriptionList, TargetRef, TargetType, Thread, ThreadMode, UnreadSummary, UpdateBoardRequest, UpdateCategoryRequest, UpdateSettingsRequest, UserID, UserKind, UserProfile, UserSettings } from "./types.gen.ts";
 
 /** A CBOR semantic tag wrapping an inner value (e.g. tag 0 timestamp, tag 4 decimal). */
 export type CborTag = { readonly tag: number; readonly value: CborValue };
@@ -256,6 +256,46 @@ export function asMap(value: CborValue): Map<CborValue, CborValue> {
   throw new Error("expected a map");
 }
 
+/** A decoded integer may surface as `bigint` (see `decInto`'s large-value path), so a
+ * numeric literal's expected `number` is compared against the `bigint`-normalized form
+ * rather than failing on a type mismatch that isn't a value mismatch. */
+export function asLiteral<T extends CborValue>(value: CborValue, expected: T): T {
+  const norm = typeof value === "bigint" && typeof expected === "number" ? Number(value) : value;
+  if (norm !== expected) throw new Error(`literal mismatch: expected ${JSON.stringify(expected)}`);
+  return expected;
+}
+
+/** Validate a decoded scalar against a literal-enum's declared vocabulary, erroring
+ * on an unknown value. The caller reads through `asNumber`/`asString`/`asBool`, which
+ * already normalize a decoded `bigint` to `number`, so a plain membership check suffices. */
+export function asEnumMember<T extends number | string | boolean | null>(
+  value: T,
+  members: readonly T[],
+): T {
+  if (!members.includes(value)) {
+    throw new Error(`unknown enum value: ${JSON.stringify(value)}`);
+  }
+  return value;
+}
+
+/** Read a decoded CBOR scalar without narrowing to one JS type, normalizing a
+ * decoded integer `bigint` to `number` the same way `asNumber` does. Used for a
+ * MIXED-kind literal enum (`"a" / 1`), where no single `asNumber`/`asString`/
+ * `asBool` reader fits every member's runtime type — `asEnumMember`'s membership
+ * check does the real narrowing instead. */
+export function asEnumScalar(value: CborValue): string | number | boolean | null {
+  if (typeof value === "bigint") return Number(value);
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    value === null
+  ) {
+    return value;
+  }
+  throw new Error("expected an enum scalar (string, number, boolean, or null)");
+}
+
 function asTagged(value: CborValue, tag: number): CborValue {
   if (
     typeof value === "object" &&
@@ -299,7 +339,7 @@ export function toTargetRefCborValue(v: TargetRef): CborValue {
 
 export function fromTargetRefCborValue(value: CborValue): TargetRef {
   return {
-    targetType: (requireKey(value, "target_type") as unknown as TargetType),
+    targetType: (asEnumMember(asString(requireKey(value, "target_type")), ["board", "post", "comment"]) as "board" | "post" | "comment"),
     targetId: asString(requireKey(value, "target_id")),
   };
 }
@@ -414,7 +454,7 @@ export function fromUserProfileCborValue(value: CborValue): UserProfile {
     linkkeysDomain: asString(requireKey(value, "linkkeys_domain")),
     handle: asString(requireKey(value, "handle")),
     displayName: asString(requireKey(value, "display_name")),
-    kind: (requireKey(value, "kind") as unknown as UserKind),
+    kind: (asEnumMember(asString(requireKey(value, "kind")), ["human", "system"]) as "human" | "system"),
     roles: asArray(requireKey(value, "roles")).map((csilE) => asString(csilE)),
     createdAt: asTimestamp(requireKey(value, "created_at")),
   };
@@ -438,6 +478,7 @@ export function toBoardCborValue(v: Board): CborValue {
   csilMap.set("created_by", v.createdBy);
   if (v.archivedAt !== undefined) csilMap.set("archived_at", { tag: 0, value: csilTsToText(v.archivedAt) });
   if (v.description !== undefined) csilMap.set("description", v.description);
+  csilMap.set("category_limit", v.categoryLimit);
   return csilMap;
 }
 
@@ -447,7 +488,8 @@ export function fromBoardCborValue(value: CborValue): Board {
     slug: asString(requireKey(value, "slug")),
     title: asString(requireKey(value, "title")),
     description: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "description")),
-    kind: (requireKey(value, "kind") as unknown as BoardKind),
+    kind: (asEnumMember(asString(requireKey(value, "kind")), ["discussion", "announce"]) as "discussion" | "announce"),
+    categoryLimit: asNumber(requireKey(value, "category_limit")),
     createdBy: asString(requireKey(value, "created_by")),
     archivedAt: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asTimestamp(csilV))(mapGet(value, "archived_at")),
     createdAt: asTimestamp(requireKey(value, "created_at")),
@@ -512,6 +554,7 @@ export function toCreateBoardRequestCborValue(v: CreateBoardRequest): CborValue 
   csilMap.set("slug", v.slug);
   csilMap.set("title", v.title);
   if (v.description !== undefined) csilMap.set("description", v.description);
+  if (v.categoryLimit !== undefined) csilMap.set("category_limit", v.categoryLimit);
   return csilMap;
 }
 
@@ -520,7 +563,8 @@ export function fromCreateBoardRequestCborValue(value: CborValue): CreateBoardRe
     slug: asString(requireKey(value, "slug")),
     title: asString(requireKey(value, "title")),
     description: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "description")),
-    kind: (requireKey(value, "kind") as unknown as BoardKind),
+    kind: (asEnumMember(asString(requireKey(value, "kind")), ["discussion", "announce"]) as "discussion" | "announce"),
+    categoryLimit: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asNumber(csilV))(mapGet(value, "category_limit")),
   };
 }
 
@@ -537,6 +581,7 @@ export function toUpdateBoardRequestCborValue(v: UpdateBoardRequest): CborValue 
   csilMap.set("id", v.id);
   if (v.title !== undefined) csilMap.set("title", v.title);
   if (v.description !== undefined) csilMap.set("description", v.description);
+  if (v.categoryLimit !== undefined) csilMap.set("category_limit", v.categoryLimit);
   return csilMap;
 }
 
@@ -545,6 +590,7 @@ export function fromUpdateBoardRequestCborValue(value: CborValue): UpdateBoardRe
     id: asString(requireKey(value, "id")),
     title: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "title")),
     description: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "description")),
+    categoryLimit: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asNumber(csilV))(mapGet(value, "category_limit")),
   };
 }
 
@@ -568,7 +614,7 @@ export function fromSetBoardMemberRequestCborValue(value: CborValue): SetBoardMe
   return {
     boardId: asString(requireKey(value, "board_id")),
     userId: asString(requireKey(value, "user_id")),
-    role: (requireKey(value, "role") as unknown as BoardRole),
+    role: (asEnumMember(asString(requireKey(value, "role")), ["maintainer", "moderator"]) as "maintainer" | "moderator"),
   };
 }
 
@@ -614,6 +660,7 @@ export function toPostCborValue(v: Post): CborValue {
   csilMap.set("created_at", { tag: 0, value: csilTsToText(v.createdAt) });
   if (v.deletedAt !== undefined) csilMap.set("deleted_at", { tag: 0, value: csilTsToText(v.deletedAt) });
   if (v.originRef !== undefined) csilMap.set("origin_ref", v.originRef);
+  csilMap.set("category_ids", v.categoryIds);
   if (v.authorHandle !== undefined) csilMap.set("author_handle", v.authorHandle);
   csilMap.set("comment_count", v.commentCount);
   csilMap.set("last_activity_at", { tag: 0, value: csilTsToText(v.lastActivityAt) });
@@ -624,11 +671,12 @@ export function fromPostCborValue(value: CborValue): Post {
   return {
     id: asString(requireKey(value, "id")),
     boardId: asString(requireKey(value, "board_id")),
+    categoryIds: asArray(requireKey(value, "category_ids")).map((csilE) => asString(csilE)),
     authorId: asString(requireKey(value, "author_id")),
     authorHandle: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "author_handle")),
     title: asString(requireKey(value, "title")),
     bodyMd: asString(requireKey(value, "body_md")),
-    origin: (requireKey(value, "origin") as unknown as OriginKind),
+    origin: (asEnumMember(asString(requireKey(value, "origin")), ["user", "github", "system"]) as "user" | "github" | "system"),
     originRef: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "origin_ref")),
     commentCount: asNumber(requireKey(value, "comment_count")),
     lastActivityAt: asTimestamp(requireKey(value, "last_activity_at")),
@@ -670,7 +718,7 @@ export function fromCommentCborValue(value: CborValue): Comment {
     authorId: asString(requireKey(value, "author_id")),
     authorHandle: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "author_handle")),
     bodyMd: asString(requireKey(value, "body_md")),
-    origin: (requireKey(value, "origin") as unknown as OriginKind),
+    origin: (asEnumMember(asString(requireKey(value, "origin")), ["user", "github", "system"]) as "user" | "github" | "system"),
     originRef: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "origin_ref")),
     editedAt: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asTimestamp(csilV))(mapGet(value, "edited_at")),
     deletedAt: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asTimestamp(csilV))(mapGet(value, "deleted_at")),
@@ -691,12 +739,16 @@ export function toListPostsRequestCborValue(v: ListPostsRequest): CborValue {
   if (v.limit !== undefined) csilMap.set("limit", v.limit);
   if (v.cursor !== undefined) csilMap.set("cursor", v.cursor);
   csilMap.set("board_id", v.boardId);
+  if (v.categoryIds !== undefined) csilMap.set("category_ids", v.categoryIds);
+  if (v.includeUncategorized !== undefined) csilMap.set("include_uncategorized", v.includeUncategorized);
   return csilMap;
 }
 
 export function fromListPostsRequestCborValue(value: CborValue): ListPostsRequest {
   return {
     boardId: asString(requireKey(value, "board_id")),
+    categoryIds: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asArray(csilV).map((csilE) => asString(csilE)))(mapGet(value, "category_ids")),
+    includeUncategorized: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asBool(csilV))(mapGet(value, "include_uncategorized")),
     cursor: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "cursor")),
     limit: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asNumber(csilV))(mapGet(value, "limit")),
   };
@@ -779,12 +831,14 @@ export function toCreatePostRequestCborValue(v: CreatePostRequest): CborValue {
   csilMap.set("title", v.title);
   csilMap.set("body_md", v.bodyMd);
   csilMap.set("board_id", v.boardId);
+  if (v.categoryIds !== undefined) csilMap.set("category_ids", v.categoryIds);
   return csilMap;
 }
 
 export function fromCreatePostRequestCborValue(value: CborValue): CreatePostRequest {
   return {
     boardId: asString(requireKey(value, "board_id")),
+    categoryIds: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asArray(csilV).map((csilE) => asString(csilE)))(mapGet(value, "category_ids")),
     title: asString(requireKey(value, "title")),
     bodyMd: asString(requireKey(value, "body_md")),
   };
@@ -827,12 +881,14 @@ export function toEditPostRequestCborValue(v: EditPostRequest): CborValue {
   csilMap.set("id", v.id);
   csilMap.set("title", v.title);
   csilMap.set("body_md", v.bodyMd);
+  if (v.categoryIds !== undefined) csilMap.set("category_ids", v.categoryIds);
   return csilMap;
 }
 
 export function fromEditPostRequestCborValue(value: CborValue): EditPostRequest {
   return {
     id: asString(requireKey(value, "id")),
+    categoryIds: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asArray(csilV).map((csilE) => asString(csilE)))(mapGet(value, "category_ids")),
     title: asString(requireKey(value, "title")),
     bodyMd: asString(requireKey(value, "body_md")),
   };
@@ -883,7 +939,7 @@ export function toRevisionCborValue(v: Revision): CborValue {
 export function fromRevisionCborValue(value: CborValue): Revision {
   return {
     id: asString(requireKey(value, "id")),
-    targetType: (requireKey(value, "target_type") as unknown as TargetType),
+    targetType: (asEnumMember(asString(requireKey(value, "target_type")), ["board", "post", "comment"]) as "board" | "post" | "comment"),
     targetId: asString(requireKey(value, "target_id")),
     editorId: asString(requireKey(value, "editor_id")),
     prevTitle: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "prev_title")),
@@ -929,7 +985,7 @@ export function toEndorseRequestCborValue(v: EndorseRequest): CborValue {
 
 export function fromEndorseRequestCborValue(value: CborValue): EndorseRequest {
   return {
-    targetType: (requireKey(value, "target_type") as unknown as TargetType),
+    targetType: (asEnumMember(asString(requireKey(value, "target_type")), ["board", "post", "comment"]) as "board" | "post" | "comment"),
     targetId: asString(requireKey(value, "target_id")),
   };
 }
@@ -959,7 +1015,7 @@ export function fromEndorsementCborValue(value: CborValue): Endorsement {
     id: asString(requireKey(value, "id")),
     userId: asString(requireKey(value, "user_id")),
     authorHandle: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "author_handle")),
-    targetType: (requireKey(value, "target_type") as unknown as TargetType),
+    targetType: (asEnumMember(asString(requireKey(value, "target_type")), ["board", "post", "comment"]) as "board" | "post" | "comment"),
     targetId: asString(requireKey(value, "target_id")),
     roleBadge: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "role_badge")),
     createdAt: asTimestamp(requireKey(value, "created_at")),
@@ -1004,7 +1060,7 @@ export function toUserSettingsCborValue(v: UserSettings): CborValue {
 
 export function fromUserSettingsCborValue(value: CborValue): UserSettings {
   return {
-    mentionPolicy: (requireKey(value, "mention_policy") as unknown as MentionPolicy),
+    mentionPolicy: (asEnumMember(asString(requireKey(value, "mention_policy")), ["subscribed", "everyone", "authorized", "nobody"]) as "subscribed" | "everyone" | "authorized" | "nobody"),
     notifyOnEndorse: asBool(requireKey(value, "notify_on_endorse")),
     updatedAt: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asTimestamp(csilV))(mapGet(value, "updated_at")),
   };
@@ -1027,7 +1083,7 @@ export function toUpdateSettingsRequestCborValue(v: UpdateSettingsRequest): Cbor
 
 export function fromUpdateSettingsRequestCborValue(value: CborValue): UpdateSettingsRequest {
   return {
-    mentionPolicy: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : (csilV as unknown as MentionPolicy))(mapGet(value, "mention_policy")),
+    mentionPolicy: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : (asEnumMember(asString(csilV), ["subscribed", "everyone", "authorized", "nobody"]) as "subscribed" | "everyone" | "authorized" | "nobody"))(mapGet(value, "mention_policy")),
     notifyOnEndorse: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asBool(csilV))(mapGet(value, "notify_on_endorse")),
   };
 }
@@ -1205,7 +1261,7 @@ export function toSubscriptionCborValue(v: Subscription): CborValue {
 export function fromSubscriptionCborValue(value: CborValue): Subscription {
   return {
     id: asString(requireKey(value, "id")),
-    targetType: (requireKey(value, "target_type") as unknown as TargetType),
+    targetType: (asEnumMember(asString(requireKey(value, "target_type")), ["board", "post", "comment"]) as "board" | "post" | "comment"),
     targetId: asString(requireKey(value, "target_id")),
     muted: asBool(requireKey(value, "muted")),
     createdAt: asTimestamp(requireKey(value, "created_at")),
@@ -1230,7 +1286,7 @@ export function toSetMutedRequestCborValue(v: SetMutedRequest): CborValue {
 
 export function fromSetMutedRequestCborValue(value: CborValue): SetMutedRequest {
   return {
-    targetType: (requireKey(value, "target_type") as unknown as TargetType),
+    targetType: (asEnumMember(asString(requireKey(value, "target_type")), ["board", "post", "comment"]) as "board" | "post" | "comment"),
     targetId: asString(requireKey(value, "target_id")),
     muted: asBool(requireKey(value, "muted")),
   };
@@ -1326,11 +1382,11 @@ export function toNotificationCborValue(v: Notification): CborValue {
 export function fromNotificationCborValue(value: CborValue): Notification {
   return {
     id: asString(requireKey(value, "id")),
-    event: (requireKey(value, "event") as unknown as NotificationEvent),
+    event: (asEnumMember(asString(requireKey(value, "event")), ["new_post", "new_comment", "mention", "github_event", "endorsed"]) as "new_post" | "new_comment" | "mention" | "github_event" | "endorsed"),
     actorId: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "actor_id")),
     actorHandle: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "actor_handle")),
     actorDisplayName: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "actor_display_name")),
-    targetType: (requireKey(value, "target_type") as unknown as TargetType),
+    targetType: (asEnumMember(asString(requireKey(value, "target_type")), ["board", "post", "comment"]) as "board" | "post" | "comment"),
     targetId: asString(requireKey(value, "target_id")),
     postId: asString(requireKey(value, "post_id")),
     readAt: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asTimestamp(csilV))(mapGet(value, "read_at")),
@@ -1410,7 +1466,7 @@ export function fromGithubMappingCborValue(value: CborValue): GithubMapping {
     boardId: asString(requireKey(value, "board_id")),
     repo: asString(requireKey(value, "repo")),
     events: asArray(requireKey(value, "events")).map((csilE) => asString(csilE)),
-    threadMode: (requireKey(value, "thread_mode") as unknown as ThreadMode),
+    threadMode: (asEnumMember(asString(requireKey(value, "thread_mode")), ["post_per_issue", "post_per_release", "post_per_pull_request"]) as "post_per_issue" | "post_per_release" | "post_per_pull_request"),
     createdBy: asString(requireKey(value, "created_by")),
     createdAt: asTimestamp(requireKey(value, "created_at")),
   };
@@ -1440,7 +1496,7 @@ export function fromCreateMappingRequestCborValue(value: CborValue): CreateMappi
     repo: asString(requireKey(value, "repo")),
     events: asArray(requireKey(value, "events")).map((csilE) => asString(csilE)),
     secretRef: asString(requireKey(value, "secret_ref")),
-    threadMode: (requireKey(value, "thread_mode") as unknown as ThreadMode),
+    threadMode: (asEnumMember(asString(requireKey(value, "thread_mode")), ["post_per_issue", "post_per_release", "post_per_pull_request"]) as "post_per_issue" | "post_per_release" | "post_per_pull_request"),
   };
 }
 
@@ -1514,5 +1570,135 @@ export function toDomainListCbor(v: DomainList): Uint8Array {
 
 export function fromDomainListCbor(bytes: Uint8Array): DomainList {
   return fromDomainListCborValue(decode(bytes));
+}
+
+export function toCategoryCborValue(v: Category): CborValue {
+  const csilMap = new Map<CborValue, CborValue>();
+  csilMap.set("id", v.id);
+  csilMap.set("name", v.name);
+  csilMap.set("slug", v.slug);
+  csilMap.set("board_ids", v.boardIds);
+  csilMap.set("created_at", { tag: 0, value: csilTsToText(v.createdAt) });
+  if (v.description !== undefined) csilMap.set("description", v.description);
+  csilMap.set("cross_board_posting", v.crossBoardPosting);
+  return csilMap;
+}
+
+export function fromCategoryCborValue(value: CborValue): Category {
+  return {
+    id: asString(requireKey(value, "id")),
+    slug: asString(requireKey(value, "slug")),
+    name: asString(requireKey(value, "name")),
+    description: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "description")),
+    crossBoardPosting: asBool(requireKey(value, "cross_board_posting")),
+    boardIds: asArray(requireKey(value, "board_ids")).map((csilE) => asString(csilE)),
+    createdAt: asTimestamp(requireKey(value, "created_at")),
+  };
+}
+
+export function toCategoryCbor(v: Category): Uint8Array {
+  return encodeValue(toCategoryCborValue(v));
+}
+
+export function fromCategoryCbor(bytes: Uint8Array): Category {
+  return fromCategoryCborValue(decode(bytes));
+}
+
+export function toCategoryListCborValue(v: CategoryList): CborValue {
+  const csilMap = new Map<CborValue, CborValue>();
+  csilMap.set("categories", v.categories.map((csilE): CborValue => toCategoryCborValue(csilE)));
+  return csilMap;
+}
+
+export function fromCategoryListCborValue(value: CborValue): CategoryList {
+  return {
+    categories: asArray(requireKey(value, "categories")).map((csilE) => fromCategoryCborValue(csilE)),
+  };
+}
+
+export function toCategoryListCbor(v: CategoryList): Uint8Array {
+  return encodeValue(toCategoryListCborValue(v));
+}
+
+export function fromCategoryListCbor(bytes: Uint8Array): CategoryList {
+  return fromCategoryListCborValue(decode(bytes));
+}
+
+export function toCreateCategoryRequestCborValue(v: CreateCategoryRequest): CborValue {
+  const csilMap = new Map<CborValue, CborValue>();
+  csilMap.set("name", v.name);
+  csilMap.set("slug", v.slug);
+  csilMap.set("board_ids", v.boardIds);
+  if (v.description !== undefined) csilMap.set("description", v.description);
+  csilMap.set("cross_board_posting", v.crossBoardPosting);
+  return csilMap;
+}
+
+export function fromCreateCategoryRequestCborValue(value: CborValue): CreateCategoryRequest {
+  return {
+    slug: asString(requireKey(value, "slug")),
+    name: asString(requireKey(value, "name")),
+    description: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "description")),
+    crossBoardPosting: asBool(requireKey(value, "cross_board_posting")),
+    boardIds: asArray(requireKey(value, "board_ids")).map((csilE) => asString(csilE)),
+  };
+}
+
+export function toCreateCategoryRequestCbor(v: CreateCategoryRequest): Uint8Array {
+  return encodeValue(toCreateCategoryRequestCborValue(v));
+}
+
+export function fromCreateCategoryRequestCbor(bytes: Uint8Array): CreateCategoryRequest {
+  return fromCreateCategoryRequestCborValue(decode(bytes));
+}
+
+export function toUpdateCategoryRequestCborValue(v: UpdateCategoryRequest): CborValue {
+  const csilMap = new Map<CborValue, CborValue>();
+  csilMap.set("id", v.id);
+  if (v.name !== undefined) csilMap.set("name", v.name);
+  if (v.boardIds !== undefined) csilMap.set("board_ids", v.boardIds);
+  if (v.description !== undefined) csilMap.set("description", v.description);
+  if (v.crossBoardPosting !== undefined) csilMap.set("cross_board_posting", v.crossBoardPosting);
+  return csilMap;
+}
+
+export function fromUpdateCategoryRequestCborValue(value: CborValue): UpdateCategoryRequest {
+  return {
+    id: asString(requireKey(value, "id")),
+    name: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "name")),
+    description: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asString(csilV))(mapGet(value, "description")),
+    crossBoardPosting: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asBool(csilV))(mapGet(value, "cross_board_posting")),
+    boardIds: ((csilV: CborValue | undefined) => csilV === undefined ? undefined : asArray(csilV).map((csilE) => asString(csilE)))(mapGet(value, "board_ids")),
+  };
+}
+
+export function toUpdateCategoryRequestCbor(v: UpdateCategoryRequest): Uint8Array {
+  return encodeValue(toUpdateCategoryRequestCborValue(v));
+}
+
+export function fromUpdateCategoryRequestCbor(bytes: Uint8Array): UpdateCategoryRequest {
+  return fromUpdateCategoryRequestCborValue(decode(bytes));
+}
+
+export function toDeleteCategoryRequestCborValue(v: DeleteCategoryRequest): CborValue {
+  const csilMap = new Map<CborValue, CborValue>();
+  csilMap.set("id", v.id);
+  csilMap.set("remove_from_posts", v.removeFromPosts);
+  return csilMap;
+}
+
+export function fromDeleteCategoryRequestCborValue(value: CborValue): DeleteCategoryRequest {
+  return {
+    id: asString(requireKey(value, "id")),
+    removeFromPosts: asBool(requireKey(value, "remove_from_posts")),
+  };
+}
+
+export function toDeleteCategoryRequestCbor(v: DeleteCategoryRequest): Uint8Array {
+  return encodeValue(toDeleteCategoryRequestCborValue(v));
+}
+
+export function fromDeleteCategoryRequestCbor(bytes: Uint8Array): DeleteCategoryRequest {
+  return fromDeleteCategoryRequestCborValue(decode(bytes));
 }
 

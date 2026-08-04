@@ -80,7 +80,10 @@ func (s *threadService) ListPosts(ctx context.Context, req csil.ListPostsRequest
 		}
 	}
 
-	posts, err := s.store.ListPostsByBoard(ctx, s.store.DB, string(req.BoardId), after, limit+1)
+	categoryIDs := categoryIDStrings(req.CategoryIds)
+	filterActive := req.CategoryIds != nil || req.IncludeUncategorized != nil
+	includeUncategorized := req.IncludeUncategorized != nil && *req.IncludeUncategorized
+	posts, err := s.store.ListPostsByBoard(ctx, s.store.DB, string(req.BoardId), categoryIDs, includeUncategorized, filterActive, after, limit+1)
 	if err != nil {
 		return csil.PostPage{}, err
 	}
@@ -101,10 +104,18 @@ func (s *threadService) ListPosts(ctx context.Context, req csil.ListPostsRequest
 	if err != nil {
 		return csil.PostPage{}, err
 	}
+	postIDs := make([]string, len(posts))
+	for i := range posts {
+		postIDs[i] = posts[i].ID
+	}
+	postCategories, err := s.store.CategoryIDsForPosts(ctx, s.store.DB, postIDs)
+	if err != nil {
+		return csil.PostPage{}, err
+	}
 
 	out := csil.PostPage{Posts: make([]csil.Post, 0, len(posts)), NextCursor: next}
 	for i := range posts {
-		out.Posts = append(out.Posts, toCSILPost(&posts[i], authors[posts[i].AuthorID].Handle))
+		out.Posts = append(out.Posts, toCSILPost(&posts[i], authors[posts[i].AuthorID].Handle, postCategories[posts[i].ID]))
 	}
 	return out, nil
 }
@@ -144,7 +155,11 @@ func (s *threadService) GetThread(ctx context.Context, req csil.GetThreadRequest
 		return csil.Thread{}, err
 	}
 
-	out := csil.Thread{Post: toCSILPost(post, authors[post.AuthorID].Handle), Comments: make([]csil.Comment, 0, len(comments))}
+	postCategories, err := s.store.CategoryIDsForPosts(ctx, s.store.DB, []string{post.ID})
+	if err != nil {
+		return csil.Thread{}, err
+	}
+	out := csil.Thread{Post: toCSILPost(post, authors[post.AuthorID].Handle, postCategories[post.ID]), Comments: make([]csil.Comment, 0, len(comments))}
 	for i := range comments {
 		out.Comments = append(out.Comments, toCSILComment(&comments[i], authors[comments[i].AuthorID].Handle))
 	}
@@ -165,6 +180,7 @@ func (s *threadService) CreatePost(ctx context.Context, req csil.CreatePostReque
 	}
 
 	var post *store.Post
+	categoryIDs := distinctCategoryIDs(req.CategoryIds)
 	txErr := s.store.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var board store.Board
 		if err := tx.First(&board, "id = ?", string(req.BoardId)).Error; err != nil {
@@ -176,13 +192,17 @@ func (s *threadService) CreatePost(ctx context.Context, req csil.CreatePostReque
 		if board.ArchivedAt != nil {
 			return Validation("board_id", "board is archived; new posts are not accepted")
 		}
+		if err := validatePostCategories(ctx, s.store, tx, &board, categoryIDs); err != nil {
+			return err
+		}
 
 		var err error
 		post, err = content.CreatePost(ctx, tx, s.store, s.notify, content.CreatePostParams{
-			BoardID:  board.ID,
-			AuthorID: user.ID,
-			Title:    title,
-			BodyMD:   body,
+			BoardID:     board.ID,
+			AuthorID:    user.ID,
+			Title:       title,
+			BodyMD:      body,
+			CategoryIDs: categoryIDs,
 		})
 		return err
 	})
@@ -191,7 +211,7 @@ func (s *threadService) CreatePost(ctx context.Context, req csil.CreatePostReque
 	}
 	// The author is always the caller here — no extra lookup needed, we
 	// already hold their handle from reqctx.
-	return toCSILPost(post, user.Handle), nil
+	return toCSILPost(post, user.Handle, categoryIDs), nil
 }
 
 // CreateComment replies to a post, optionally nested under an existing
@@ -286,6 +306,7 @@ func (s *threadService) EditPost(ctx context.Context, req csil.EditPostRequest) 
 	}
 
 	var post store.Post
+	var categoryIDs []string
 	txErr := s.store.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.First(&post, "id = ?", string(req.Id)).Error; err != nil {
 			if store.IsNotFound(err) {
@@ -298,6 +319,25 @@ func (s *threadService) EditPost(ctx context.Context, req csil.EditPostRequest) 
 		}
 		if post.AuthorID != user.ID {
 			return Forbidden("only the author can edit this post")
+		}
+		if req.CategoryIds != nil {
+			categoryIDs = distinctCategoryIDs(req.CategoryIds)
+			var board store.Board
+			if err := tx.First(&board, "id = ?", post.BoardID).Error; err != nil {
+				return err
+			}
+			if err := validatePostCategories(ctx, s.store, tx, &board, categoryIDs); err != nil {
+				return err
+			}
+			if err := s.store.ReplacePostCategories(ctx, tx, post.ID, categoryIDs); err != nil {
+				return err
+			}
+		} else {
+			existing, err := s.store.CategoryIDsForPosts(ctx, tx, []string{post.ID})
+			if err != nil {
+				return err
+			}
+			categoryIDs = existing[post.ID]
 		}
 
 		if err := s.store.CreateRevision(ctx, tx, &store.Revision{
@@ -330,7 +370,7 @@ func (s *threadService) EditPost(ctx context.Context, req csil.EditPostRequest) 
 		return csil.Post{}, asAppError(txErr)
 	}
 	// Only the author may reach here (checked above) — that's the caller.
-	return toCSILPost(&post, user.Handle), nil
+	return toCSILPost(&post, user.Handle, categoryIDs), nil
 }
 
 // EditComment is author-only. Snapshots the prior body into a Revision
@@ -576,10 +616,15 @@ func asAppError(err error) *AppError {
 // create/edit response, the caller's own already-in-hand handle); "" means
 // no handle is known, which comes across the wire as an absent
 // author_handle.
-func toCSILPost(p *store.Post, authorHandle string) csil.Post {
+func toCSILPost(p *store.Post, authorHandle string, categoryIDs []string) csil.Post {
+	wireCategoryIDs := make([]csil.CategoryID, 0, len(categoryIDs))
+	for _, id := range categoryIDs {
+		wireCategoryIDs = append(wireCategoryIDs, csil.CategoryID(id))
+	}
 	out := csil.Post{
 		Id:             csil.PostID(p.ID),
 		BoardId:        csil.BoardID(p.BoardID),
+		CategoryIds:    wireCategoryIDs,
 		AuthorId:       csil.UserID(p.AuthorID),
 		Title:          p.Title,
 		BodyMd:         p.BodyMD,
@@ -605,6 +650,45 @@ func toCSILPost(p *store.Post, authorHandle string) csil.Post {
 		out.AuthorHandle = nil
 	}
 	return out
+}
+
+func categoryIDStrings(ids []csil.CategoryID) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, string(id))
+	}
+	return out
+}
+
+func distinctCategoryIDs(ids []csil.CategoryID) []string {
+	seen := make(map[string]struct{}, len(ids))
+	out := make([]string, 0, len(ids))
+	for _, raw := range ids {
+		id := strings.TrimSpace(string(raw))
+		if id == "" {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
+}
+
+func validatePostCategories(ctx context.Context, st *store.Store, tx *gorm.DB, board *store.Board, ids []string) error {
+	if board.CategoryLimit > 0 && len(ids) > board.CategoryLimit {
+		return Validation("category_ids", fmt.Sprintf("select no more than %d categories", board.CategoryLimit))
+	}
+	count, err := st.ValidatePostCategories(ctx, tx, board.ID, ids)
+	if err != nil {
+		return err
+	}
+	if count != int64(len(ids)) {
+		return Validation("category_ids", "each category must be available in this board")
+	}
+	return nil
 }
 
 // toCSILComment converts a store.Comment to its wire representation,

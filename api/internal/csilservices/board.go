@@ -189,6 +189,9 @@ func (s *boardService) CreateBoard(ctx context.Context, req csil.CreateBoardRequ
 		Kind:        string(req.Kind),
 		CreatedBy:   user.ID,
 	}
+	if req.CategoryLimit != nil {
+		b.CategoryLimit = int(*req.CategoryLimit)
+	}
 	if err := s.store.CreateBoard(ctx, b); err != nil {
 		if store.IsUniqueViolation(err) {
 			// The BoardSlugExists pre-check above raced with a concurrent
@@ -235,6 +238,12 @@ func (s *boardService) UpdateBoard(ctx context.Context, req csil.UpdateBoardRequ
 			return csil.Board{}, appErr
 		}
 		updates["description"] = *req.Description
+	}
+	if req.CategoryLimit != nil {
+		if *req.CategoryLimit > 100 {
+			return csil.Board{}, Validation("category_limit", "category limit must be 0-100")
+		}
+		updates["category_limit"] = int(*req.CategoryLimit)
 	}
 	if len(updates) == 0 {
 		return boardToWire(*board), nil
@@ -365,12 +374,13 @@ func canManageBoardMetadata(ctx context.Context, st *store.Store, user *store.Us
 // boardToWire maps a store.Board row to its csil.Board wire representation.
 func boardToWire(b store.Board) csil.Board {
 	wire := csil.Board{
-		Id:        csil.BoardID(b.ID),
-		Slug:      b.Slug,
-		Title:     b.Title,
-		Kind:      csil.BoardKind(b.Kind),
-		CreatedBy: csil.UserID(b.CreatedBy),
-		CreatedAt: b.CreatedAt,
+		Id:            csil.BoardID(b.ID),
+		Slug:          b.Slug,
+		Title:         b.Title,
+		Kind:          csil.BoardKind(b.Kind),
+		CategoryLimit: uint64(b.CategoryLimit),
+		CreatedBy:     csil.UserID(b.CreatedBy),
+		CreatedAt:     b.CreatedAt,
 	}
 	if b.Description != "" {
 		d := b.Description

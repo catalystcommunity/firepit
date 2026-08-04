@@ -84,6 +84,9 @@ const AppShell: ParentComponent = (props) => {
         <nav class="topbar-actions">
           <ThemeToggle />
           <NotificationBell />
+          <Show when={session.user()?.roles.includes("admin")}>
+            <A href="/admin/categories" class="auth-state">Categories</A>
+          </Show>
           <Suspense fallback={<span class="auth-state">…</span>}>
             {session.loading() ? (
               <span class="auth-state">…</span>

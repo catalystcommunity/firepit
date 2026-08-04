@@ -151,27 +151,39 @@ muted_comment_subtrees AS (
     WHERE s.target_type = 'comment' AND s.muted
 ),
 scoped_posts AS (
-    SELECT target_id AS post_id
-    FROM my_subs
-    WHERE target_type = 'post' AND NOT muted
+	SELECT p.id AS post_id, p.board_id
+	FROM my_subs s
+	JOIN posts p ON p.id = s.target_id
+	WHERE s.target_type = 'post' AND NOT s.muted
 
     UNION
 
-    SELECT c.post_id
+	SELECT c.post_id, p.board_id
     FROM my_subs s
     JOIN comments c ON c.id = s.target_id
+	JOIN posts p ON p.id = c.post_id
     WHERE s.target_type = 'comment' AND NOT s.muted
 
     UNION
 
-    SELECT p.id AS post_id
+	SELECT p.id AS post_id, s.target_id AS board_id
     FROM my_subs s
-    JOIN posts p ON p.board_id = s.target_id
+	JOIN posts p ON p.board_id = s.target_id
     WHERE s.target_type = 'board' AND NOT s.muted
       AND p.id NOT IN (SELECT post_id FROM muted_posts)
+
+	UNION
+
+	SELECT pc.post_id, s.target_id AS board_id
+	FROM my_subs s
+	JOIN board_categories bc ON bc.board_id = s.target_id
+	JOIN categories cat ON cat.id = bc.category_id AND cat.cross_board_posting
+	JOIN post_categories pc ON pc.category_id = cat.id
+	WHERE s.target_type = 'board' AND NOT s.muted
+	  AND pc.post_id NOT IN (SELECT post_id FROM muted_posts)
 ),
 unread_comments AS (
-    SELECT c.id AS item_id, c.post_id, p.board_id
+	SELECT c.id AS item_id, c.post_id, sp.board_id
     FROM comments c
     JOIN posts p ON p.id = c.post_id
     JOIN scoped_posts sp ON sp.post_id = c.post_id
@@ -184,7 +196,7 @@ unread_comments AS (
       )
 ),
 unread_roots AS (
-    SELECT p.id AS item_id, p.id AS post_id, p.board_id
+	SELECT p.id AS item_id, p.id AS post_id, sp.board_id
     FROM posts p
     JOIN scoped_posts sp ON sp.post_id = p.id
     LEFT JOIN read_marks rm ON rm.user_id = @user_id AND rm.post_id = p.id
@@ -193,14 +205,14 @@ unread_roots AS (
       AND rm.user_id IS NULL
 ),
 override_posts AS (
-    SELECT p.id AS item_id, p.id AS post_id, p.board_id
+	SELECT p.id AS item_id, p.id AS post_id, sp.board_id
     FROM unread_overrides o
     JOIN posts p ON p.id = o.target_id
     JOIN scoped_posts sp ON sp.post_id = p.id
     WHERE o.user_id = @user_id AND o.target_type = 'post' AND p.deleted_at IS NULL
 ),
 override_comments AS (
-    SELECT c.id AS item_id, c.post_id, p.board_id
+	SELECT c.id AS item_id, c.post_id, sp.board_id
     FROM unread_overrides o
     JOIN comments c ON c.id = o.target_id
     JOIN posts p ON p.id = c.post_id

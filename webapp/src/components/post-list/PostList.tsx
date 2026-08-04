@@ -4,7 +4,7 @@
 // `~/pages/BoardPage`.
 import { A } from "@solidjs/router";
 import { createEffect, createSignal, For, on, Show, type Accessor, type Component } from "solid-js";
-import type { Post, UnreadSummary } from "~/gen/types.gen";
+import type { Category, Post, UnreadSummary } from "~/gen/types.gen";
 import { api } from "~/lib/api";
 import { useSession } from "~/lib/session";
 import { postIsUnread } from "~/lib/unread";
@@ -20,6 +20,7 @@ export interface PostListProps {
   boardSlug: string;
   /** Latest unread summary (from `~/lib/unread`'s poller) — read-only here. */
   summary: Accessor<UnreadSummary | null>;
+  categories?: readonly Category[];
 }
 
 const PostList: Component<PostListProps> = (props) => {
@@ -29,6 +30,12 @@ const PostList: Component<PostListProps> = (props) => {
   const [loading, setLoading] = createSignal(false);
   const [initialLoaded, setInitialLoaded] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  const [selectedCategoryIds, setSelectedCategoryIds] = createSignal<string[]>([]);
+  const [includeUncategorized, setIncludeUncategorized] = createSignal(false);
+
+  const toggleCategory = (id: string): void => {
+    setSelectedCategoryIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
 
   const load = async (reset: boolean): Promise<void> => {
     setLoading(true);
@@ -36,6 +43,8 @@ const PostList: Component<PostListProps> = (props) => {
     try {
       const page = await api.thread.listPosts({
         boardId: props.boardId,
+        categoryIds: selectedCategoryIds().length > 0 ? selectedCategoryIds() : includeUncategorized() ? [] : undefined,
+        includeUncategorized: includeUncategorized() ? true : selectedCategoryIds().length > 0 ? false : undefined,
         cursor: reset ? undefined : cursor(),
         limit: PAGE_SIZE,
       });
@@ -52,7 +61,7 @@ const PostList: Component<PostListProps> = (props) => {
   // Re-load from scratch whenever the board changes (navigating board -> board).
   createEffect(
     on(
-      () => props.boardId,
+      () => [props.boardId, selectedCategoryIds().join(","), includeUncategorized()] as const,
       () => {
         setPosts([]);
         setCursor(undefined);
@@ -68,6 +77,31 @@ const PostList: Component<PostListProps> = (props) => {
         <h2>Threads</h2>
         <p>Ordered by latest activity.</p>
       </div>
+      <Show when={(props.categories?.length ?? 0) > 0}>
+        <fieldset class="category-filter">
+          <legend>Filter categories</legend>
+          <For each={props.categories ?? []}>
+            {(category) => (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={selectedCategoryIds().includes(category.id)}
+                  onChange={() => toggleCategory(category.id)}
+                />
+                {category.name}
+              </label>
+            )}
+          </For>
+          <label>
+            <input
+              type="checkbox"
+              checked={includeUncategorized()}
+              onChange={(event) => setIncludeUncategorized(event.currentTarget.checked)}
+            />
+            Uncategorized
+          </label>
+        </fieldset>
+      </Show>
       <Show when={error()}>
         <p class="page-error">Couldn't load posts: {error()}</p>
       </Show>
@@ -98,6 +132,13 @@ const PostList: Component<PostListProps> = (props) => {
                   </span>
                   <span>{relativeTime(post.lastActivityAt)}</span>
                 </p>
+                <div class="post-categories">
+                  <Show when={post.categoryIds.length > 0} fallback={<span>Uncategorized</span>}>
+                    <For each={post.categoryIds}>
+                      {(id) => <span>{props.categories?.find((category) => category.id === id)?.name ?? id}</span>}
+                    </For>
+                  </Show>
+                </div>
               </li>
             );
           }}

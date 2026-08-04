@@ -1,55 +1,12 @@
 name: firepit-test-web
-description: "Typecheck and test the SolidJS webapp via tools.sh"
-triggers:
-  events:
-    - pull_request_opened
-    - pull_request_updated
-  branches:
-    - main
-paths:
-  # csil/** and clients/** included because the SPA will consume the
-  # generated TS client (once task A2 lands) via a path alias, same as
-  # longhouse's webapp-test.yaml convention.
-  include: ["webapp/**", "clients/**", "csil/**", "tools.sh"]
+description: "Lint, test, type-check, and build the web application."
 job:
-  image: containers.catalystsquad.com/public/reactorcide/runnerbase:dev
-  command: |
-    set -eu
-
-    NODE_VERSION="${NODE_VERSION:-26.1.0}"
-    REPO_ROOT="${REACTORCIDE_CODE_DIR:-${REACTORCIDE_JOB_DIR:-/job/src}}"
-
-    export HOME="${HOME:-/home/runner}"
-    mkdir -p "$HOME/.local"
-
-    echo "=== Installing Node ${NODE_VERSION} ==="
-    curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" -o /tmp/node.tar.xz
-    rm -rf "$HOME/.local/node"
-    tar -xJf /tmp/node.tar.xz -C "$HOME/.local"
-    mv "$HOME/.local/node-v${NODE_VERSION}-linux-x64" "$HOME/.local/node"
-    rm /tmp/node.tar.xz
-    export PATH="$HOME/.local/node/bin:$PATH"
-
-    cd "$REPO_ROOT"
-
-    echo "=== npm ci (webapp) ==="
-    ( cd webapp && npm ci )
-
-    echo "=== ./tools.sh lint-web ==="
-    ./tools.sh lint-web
-
-    echo "=== ./tools.sh test-web ==="
-    ./tools.sh test-web
-
-    echo "=== webapp typecheck ==="
-    ( cd webapp && npm run typecheck )
-
-    echo "=== webapp build ==="
-    ( cd webapp && npm run build )
-  timeout: 900
+  image: containers.catalystsquad.com/public/reactorcide/runnerbase:latest
+  command: "runnerlib run --job-command true"
+  timeout: 1200
   priority: 10
   working_dir: /job
-  run_as:
-    user: runner
+environment:
+  REACTORCIDE_FIREPIT_JOB: test-web
 run_local:
   user: host

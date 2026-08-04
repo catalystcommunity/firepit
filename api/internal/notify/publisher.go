@@ -117,9 +117,17 @@ func resolveContentSubscribers(ctx context.Context, tx *gorm.DB, e Event) ([]sub
 	isComment := e.CommentID != ""
 
 	var b strings.Builder
-	args := []any{e.BoardID}
+	args := []any{e.BoardID, e.PostID}
 	b.WriteString(`WITH candidates AS (
-    SELECT 'board'::text AS target_type, ?::uuid AS target_id, 0 AS priority`)
+    SELECT 'board'::text AS target_type, visible.board_id AS target_id, 0 AS priority
+    FROM (
+      SELECT ?::uuid AS board_id
+      UNION
+      SELECT bc.board_id FROM post_categories pc
+      JOIN categories c ON c.id = pc.category_id AND c.cross_board_posting
+      JOIN board_categories bc ON bc.category_id = c.id
+      WHERE pc.post_id = ?
+    ) visible`)
 
 	if isComment {
 		b.WriteString(`
@@ -362,11 +370,18 @@ func subscribedToContentScope(ctx context.Context, tx *gorm.DB, e Event, userID 
 	isComment := e.CommentID != ""
 
 	var b strings.Builder
-	args := []any{userID, e.BoardID, e.PostID}
+	args := []any{userID, e.BoardID, e.PostID, e.PostID}
 	b.WriteString(`
 SELECT count(*) FROM subscriptions s
 WHERE s.user_id = ? AND (
-  (s.target_type = 'board' AND s.target_id = ?)
+  (s.target_type = 'board' AND s.target_id IN (
+      SELECT ?::uuid
+      UNION
+      SELECT bc.board_id FROM post_categories pc
+      JOIN categories c ON c.id = pc.category_id AND c.cross_board_posting
+      JOIN board_categories bc ON bc.category_id = c.id
+      WHERE pc.post_id = ?
+  ))
   OR (s.target_type = 'post' AND s.target_id = ?)`)
 
 	if isComment {

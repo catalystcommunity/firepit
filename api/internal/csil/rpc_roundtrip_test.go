@@ -70,15 +70,34 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "BoardPage",
-			respPayload: EncodeBoardPage(BoardPage{Boards: []Board{{Id: "01H000000000000000000BOARD", Slug: "firepit", Title: "Firepit"}}}),
+			respPayload: EncodeBoardPage(BoardPage{Boards: []Board{{Id: "01H000000000000000000BOARD", Slug: "firepit", Title: "Firepit", Kind: "discussion"}}}),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeBoardPage(payload)
 				if err != nil {
 					t.Fatalf("decode: %v", err)
 				}
-				want := BoardPage{Boards: []Board{{Id: "01H000000000000000000BOARD", Slug: "firepit", Title: "Firepit"}}}
+				want := BoardPage{Boards: []Board{{Id: "01H000000000000000000BOARD", Slug: "firepit", Title: "Firepit", Kind: "discussion"}}}
 				if !reflect.DeepEqual(got, want) {
 					t.Errorf("got %+v want %+v", got, want)
+				}
+			},
+		},
+		{
+			service:    "CategoryService",
+			op:         "list-board-categories",
+			reqPayload: EncodeCategoryListBoardCategoriesRequest("01H000000000000000000BOARD"),
+			reqDecodeEq: func(t *testing.T, payload []byte) {
+				got, err := DecodeCategoryListBoardCategoriesRequest(payload)
+				if err != nil || got != "01H000000000000000000BOARD" {
+					t.Fatalf("decode: %v, value: %s", err, got)
+				}
+			},
+			respVariant: "CategoryList",
+			respPayload: EncodeCategoryList(CategoryList{Categories: []Category{{Id: "01H000000000000000CATEGORY", Slug: "release", Name: "Release", BoardIds: []BoardID{"01H000000000000000000BOARD"}}}}),
+			respDecodeEq: func(t *testing.T, payload []byte) {
+				got, err := DecodeCategoryList(payload)
+				if err != nil || len(got.Categories) != 1 || got.Categories[0].Slug != "release" {
+					t.Fatalf("decode: %v, value: %+v", err, got)
 				}
 			},
 		},
@@ -97,13 +116,13 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "PostPage",
-			respPayload: EncodePostPage(PostPage{Posts: []Post{{Id: "01H0000000000000000POST01", Title: "Hello firepit"}}}),
+			respPayload: EncodePostPage(PostPage{Posts: []Post{{Id: "01H0000000000000000POST01", CategoryIds: []CategoryID{}, Title: "Hello firepit", Origin: "user"}}}),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodePostPage(payload)
 				if err != nil {
 					t.Fatalf("decode: %v", err)
 				}
-				want := PostPage{Posts: []Post{{Id: "01H0000000000000000POST01", Title: "Hello firepit"}}}
+				want := PostPage{Posts: []Post{{Id: "01H0000000000000000POST01", CategoryIds: []CategoryID{}, Title: "Hello firepit", Origin: "user"}}}
 				if !reflect.DeepEqual(got, want) {
 					t.Errorf("got %+v want %+v", got, want)
 				}
@@ -124,13 +143,13 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "EndorsementList",
-			respPayload: EncodeEndorsementList(EndorsementList{Endorsements: []Endorsement{{Id: "01H00000000000000ENDORSE1", UserId: "01H000000000000000000USER"}}}),
+			respPayload: EncodeEndorsementList(EndorsementList{Endorsements: []Endorsement{{Id: "01H00000000000000ENDORSE1", UserId: "01H000000000000000000USER", TargetType: "post"}}}),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeEndorsementList(payload)
 				if err != nil {
 					t.Fatalf("decode: %v", err)
 				}
-				want := EndorsementList{Endorsements: []Endorsement{{Id: "01H00000000000000ENDORSE1", UserId: "01H000000000000000000USER"}}}
+				want := EndorsementList{Endorsements: []Endorsement{{Id: "01H00000000000000ENDORSE1", UserId: "01H000000000000000000USER", TargetType: "post"}}}
 				if !reflect.DeepEqual(got, want) {
 					t.Errorf("got %+v want %+v", got, want)
 				}
@@ -254,13 +273,13 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "NotificationPage",
-			respPayload: EncodeNotificationPage(NotificationPage{Notifications: []Notification{{Id: "01H00000000NOTIFICATION01", Event: "mention"}}}),
+			respPayload: EncodeNotificationPage(NotificationPage{Notifications: []Notification{{Id: "01H00000000NOTIFICATION01", Event: "mention", TargetType: "post"}}}),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeNotificationPage(payload)
 				if err != nil {
 					t.Fatalf("decode: %v", err)
 				}
-				want := NotificationPage{Notifications: []Notification{{Id: "01H00000000NOTIFICATION01", Event: "mention"}}}
+				want := NotificationPage{Notifications: []Notification{{Id: "01H00000000NOTIFICATION01", Event: "mention", TargetType: "post"}}}
 				if !reflect.DeepEqual(got, want) {
 					t.Errorf("got %+v want %+v", got, want)
 				}
@@ -280,13 +299,13 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "MappingList",
-			respPayload: EncodeMappingList(MappingList{Mappings: []GithubMapping{{Id: "01H00000000000000MAPPING1", Repo: "catalystcommunity/firepit", Events: []string{}}}}),
+			respPayload: EncodeMappingList(MappingList{Mappings: []GithubMapping{{Id: "01H00000000000000MAPPING1", Repo: "catalystcommunity/firepit", Events: []string{}, ThreadMode: "post_per_issue"}}}),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeMappingList(payload)
 				if err != nil {
 					t.Fatalf("decode: %v", err)
 				}
-				want := MappingList{Mappings: []GithubMapping{{Id: "01H00000000000000MAPPING1", Repo: "catalystcommunity/firepit", Events: []string{}}}}
+				want := MappingList{Mappings: []GithubMapping{{Id: "01H00000000000000MAPPING1", Repo: "catalystcommunity/firepit", Events: []string{}, ThreadMode: "post_per_issue"}}}
 				if !reflect.DeepEqual(got, want) {
 					t.Errorf("got %+v want %+v", got, want)
 				}

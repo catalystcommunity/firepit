@@ -1,0 +1,42 @@
+;; Category types. A category is stored once and can be assigned to one or
+;; more boards. Posts with no category rows are Uncategorized. That value is
+;; virtual and does not have a Category record or identifier.
+
+CategoryID = text
+
+Category = {
+    @receive-only
+    id: CategoryID,
+    slug: text .size (1..64) .regex "^[a-z0-9]+(-[a-z0-9]+)*$",
+    name: text .size (1..80),
+    ? description: text .size (0..500),
+    cross_board_posting: bool,
+    board_ids: [1* BoardID],
+    @receive-only
+    created_at: timestamp
+}
+
+CategoryList = {
+    categories: [* Category]
+}
+
+CreateCategoryRequest = {
+    slug: text .size (1..64) .regex "^[a-z0-9]+(-[a-z0-9]+)*$",
+    name: text .size (1..80),
+    ? description: text .size (0..500),
+    cross_board_posting: bool,
+    board_ids: [1* BoardID]
+}
+
+UpdateCategoryRequest = {
+    id: CategoryID,
+    ? name: text .size (1..80),
+    ? description: text .size (0..500),
+    ? cross_board_posting: bool,
+    ? board_ids: [1* BoardID]
+}
+
+DeleteCategoryRequest = {
+    id: CategoryID,
+    remove_from_posts: bool
+}
