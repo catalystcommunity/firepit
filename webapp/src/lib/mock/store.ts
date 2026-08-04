@@ -11,12 +11,16 @@ import type {
   AddFriendRequest,
   Board,
   BoardPage,
+  Category,
+  CategoryList,
   Comment,
   CreateBoardRequest,
+  CreateCategoryRequest,
   CreateCommentRequest,
   CreateFriendGroupRequest,
   CreatePostRequest,
   Empty,
+  DeleteCategoryRequest,
   Endorsement,
   EndorsementList,
   FriendGroup,
@@ -36,6 +40,7 @@ import type {
   Thread,
   UnreadSummary,
   UpdateBoardRequest,
+  UpdateCategoryRequest,
   UpdateSettingsRequest,
   UserProfile,
   UserSettings,
@@ -168,6 +173,7 @@ export class FixtureStore {
       title: req.title,
       description: req.description,
       kind: req.kind,
+      categoryLimit: req.categoryLimit ?? 0,
       createdBy: caller.id,
       createdAt: new Date(),
     };
@@ -181,7 +187,57 @@ export class FixtureStore {
     if (!board) throw notFound("board", `no board with id "${req.id}"`);
     if (req.title !== undefined) board.title = req.title;
     if (req.description !== undefined) board.description = req.description;
+    if (req.categoryLimit !== undefined) board.categoryLimit = req.categoryLimit;
     return structuredClone(board);
+  }
+
+  // ----------------------------------------------------------- categories --
+
+  listBoardCategories(boardId: string): CategoryList {
+    return { categories: structuredClone(this.seed.categories.filter((category) => category.boardIds.includes(boardId))) };
+  }
+
+  listCategories(): CategoryList {
+    return { categories: structuredClone(this.seed.categories) };
+  }
+
+  createCategory(req: CreateCategoryRequest): Category {
+    this.requireAuth();
+    if (this.seed.categories.some((category) => category.slug === req.slug)) {
+      throw conflict(`a category with slug "${req.slug}" already exists`);
+    }
+    const category: Category = {
+      id: this.nextId("category"),
+      slug: req.slug,
+      name: req.name,
+      description: req.description,
+      crossBoardPosting: req.crossBoardPosting,
+      boardIds: [...new Set(req.boardIds)],
+      createdAt: new Date(),
+    };
+    this.seed.categories.push(category);
+    return structuredClone(category);
+  }
+
+  updateCategory(req: UpdateCategoryRequest): Category {
+    this.requireAuth();
+    const category = this.seed.categories.find((item) => item.id === req.id);
+    if (!category) throw notFound("category", "category not found");
+    if (req.name !== undefined) category.name = req.name;
+    if (req.description !== undefined) category.description = req.description;
+    if (req.crossBoardPosting !== undefined) category.crossBoardPosting = req.crossBoardPosting;
+    if (req.boardIds !== undefined) category.boardIds = [...new Set(req.boardIds)];
+    return structuredClone(category);
+  }
+
+  deleteCategory(req: DeleteCategoryRequest): Empty {
+    this.requireAuth();
+    if (!req.removeFromPosts) throw validation("removeFromPosts", "confirm removal from all posts");
+    const index = this.seed.categories.findIndex((category) => category.id === req.id);
+    if (index < 0) throw notFound("category", "category not found");
+    this.seed.categories.splice(index, 1);
+    for (const post of this.seed.posts) post.categoryIds = post.categoryIds.filter((id) => id !== req.id);
+    return {};
   }
 
   archiveBoard(id: string): Empty {
@@ -200,7 +256,19 @@ export class FixtureStore {
   // back verbatim" shape the real cursor will have.
   listPosts(req: ListPostsRequest): PostPage {
     const boardPosts = this.seed.posts
-      .filter((p) => p.boardId === req.boardId)
+      .filter((p) => {
+        if (p.boardId === req.boardId) return true;
+        return p.categoryIds.some((id) => {
+          const category = this.seed.categories.find((item) => item.id === id);
+          return category?.crossBoardPosting === true && category.boardIds.includes(req.boardId);
+        });
+      })
+      .filter((p) => {
+        const filterActive = req.categoryIds !== undefined || req.includeUncategorized !== undefined;
+        if (!filterActive) return true;
+        const categoryMatch = (req.categoryIds ?? []).some((id) => p.categoryIds.includes(id));
+        return categoryMatch || (req.includeUncategorized === true && p.categoryIds.length === 0);
+      })
       .sort((a, b) => b.lastActivityAt.getTime() - a.lastActivityAt.getTime());
     const start = req.cursor ? Number(req.cursor) : 0;
     const limit = req.limit ?? 20;
@@ -227,6 +295,7 @@ export class FixtureStore {
     const post: Post = {
       id: this.nextId("post"),
       boardId: req.boardId,
+      categoryIds: req.categoryIds ?? [],
       authorId: caller.id,
       authorHandle: caller.handle,
       title: req.title,
@@ -265,7 +334,7 @@ export class FixtureStore {
     return structuredClone(comment);
   }
 
-  editPost(id: string, title: string, bodyMd: string): Post {
+  editPost(id: string, title: string, bodyMd: string, categoryIds?: string[]): Post {
     this.requireAuth();
     const post = this.seed.posts.find((p) => p.id === id);
     if (!post) throw notFound("post", `no post with id "${id}"`);
@@ -280,6 +349,7 @@ export class FixtureStore {
     });
     post.title = title;
     post.bodyMd = bodyMd;
+    if (categoryIds !== undefined) post.categoryIds = categoryIds;
     post.editedAt = new Date();
     return structuredClone(post);
   }

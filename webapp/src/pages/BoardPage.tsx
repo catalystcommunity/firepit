@@ -18,6 +18,10 @@ const BoardPage: Component = () => {
   const poller = startUnreadPoller(() => session.user() !== null);
 
   const [board] = createResource(() => params.slug, (slug) => api.board.getBoard(slug));
+  const [categories] = createResource(
+    () => board()?.id,
+    (boardId) => api.category.listBoardCategories(boardId),
+  );
   const [subsResource, { mutate: mutateSubs }] = createResource(
     () => (session.user() && board() ? board()!.id : undefined),
     () => api.subscription.listSubscriptions({}),
@@ -62,10 +66,20 @@ const BoardPage: Component = () => {
               <h2>Start a thread</h2>
               <p>Use a specific title and enough context that future readers can join in.</p>
             </div>
-            <PostComposer boardId={b.id} boardSlug={b.slug} />
+            <PostComposer
+              boardId={b.id}
+              boardSlug={b.slug}
+              categories={categories()?.categories ?? []}
+              categoryLimit={b.categoryLimit}
+            />
           </section>
 
-          <PostList boardId={b.id} boardSlug={b.slug} summary={poller.summary} />
+          <PostList
+            boardId={b.id}
+            boardSlug={b.slug}
+            summary={poller.summary}
+            categories={categories()?.categories ?? []}
+          />
         </section>
       )}
     </Show>

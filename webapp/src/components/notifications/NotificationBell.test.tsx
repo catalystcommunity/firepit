@@ -55,6 +55,7 @@ function threadFor(): Thread {
     post: {
       id: "post-1",
       boardId: "board-1",
+      categoryIds: [],
       authorId: "someone",
       title: "Welcome to Firepit",
       bodyMd: "body",

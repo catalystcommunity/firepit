@@ -86,3 +86,37 @@
   border-radius: 50%;
   background: var(--border-strong);
 }
+.category-filter,
+.category-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.category-filter label,
+.category-picker label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.post-categories,
+.thread-category-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.post-categories span,
+.thread-category-bar > span {
+  padding: 0.12rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}

@@ -339,6 +339,7 @@ func TestFirepitEndToEnd(t *testing.T) {
 	svcs := server.Services{
 		Auth:         csilservices.NewAuthService(st, cfg),
 		Board:        csilservices.NewBoardService(st),
+		Category:     csilservices.NewCategoryService(st),
 		Thread:       csilservices.NewThreadService(st, pub),
 		Endorsement:  csilservices.NewEndorsementService(st, pub),
 		Settings:     csilservices.NewSettingsService(st),

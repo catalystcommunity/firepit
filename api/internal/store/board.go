@@ -11,14 +11,15 @@ import (
 
 // Board mirrors the `boards` table.
 type Board struct {
-	ID          string     `gorm:"column:id;type:uuid;primaryKey;default:generate_ulid()"`
-	Slug        string     `gorm:"column:slug;not null"`
-	Title       string     `gorm:"column:title;not null"`
-	Description string     `gorm:"column:description;not null;default:''"`
-	Kind        string     `gorm:"column:kind;type:board_kind;not null;default:'discussion'"`
-	CreatedBy   string     `gorm:"column:created_by;type:uuid;not null"`
-	ArchivedAt  *time.Time `gorm:"column:archived_at"`
-	CreatedAt   time.Time  `gorm:"column:created_at;not null"`
+	ID            string     `gorm:"column:id;type:uuid;primaryKey;default:generate_ulid()"`
+	Slug          string     `gorm:"column:slug;not null"`
+	Title         string     `gorm:"column:title;not null"`
+	Description   string     `gorm:"column:description;not null;default:''"`
+	Kind          string     `gorm:"column:kind;type:board_kind;not null;default:'discussion'"`
+	CategoryLimit int        `gorm:"column:category_limit;not null;default:0"`
+	CreatedBy     string     `gorm:"column:created_by;type:uuid;not null"`
+	ArchivedAt    *time.Time `gorm:"column:archived_at"`
+	CreatedAt     time.Time  `gorm:"column:created_at;not null"`
 }
 
 func (Board) TableName() string { return "boards" }

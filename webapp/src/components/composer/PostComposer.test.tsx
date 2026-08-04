@@ -96,6 +96,7 @@ describe("PostComposer", () => {
     const created: Post = {
       id: "p9",
       boardId: "b1",
+      categoryIds: [],
       authorId: USER.id,
       title: "A new thread",
       bodyMd: "hello there",
@@ -115,7 +116,7 @@ describe("PostComposer", () => {
     fireEvent.click(screen.getByRole("button", submitButton));
 
     await waitFor(() =>
-      expect(createPost).toHaveBeenCalledWith({ boardId: "b1", title: "A new thread", bodyMd: "hello there" }),
+      expect(createPost).toHaveBeenCalledWith({ boardId: "b1", categoryIds: [], title: "A new thread", bodyMd: "hello there" }),
     );
     await waitFor(() => expect(history.get()).toBe("/b/board/p/p9"));
     expect(onCreated).toHaveBeenCalledWith(created);

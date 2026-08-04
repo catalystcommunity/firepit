@@ -23,7 +23,7 @@ import { fromServiceErrorCbor } from "~/gen/codec.gen";
 import { Status, statusName } from "~/transport/csil/conventions";
 import { RpcRequest, RpcResponse } from "~/transport/csil/rpc";
 import { FirepitServiceError, FirepitTransportError } from "./errors";
-import { methodToOp } from "./opNaming";
+import { methodToOp, serviceToWire } from "./opNaming";
 
 export const RPC_ENDPOINT = "/csil/v1/rpc";
 
@@ -39,7 +39,7 @@ export function createHttpTransport(opts: HttpTransportOptions = {}): AsyncServi
 
   return {
     async call(service: string, op: string, payload: Uint8Array): Promise<Uint8Array> {
-      const envelope = new RpcRequest(service, methodToOp(op), payload).encode();
+      const envelope = new RpcRequest(serviceToWire(service), methodToOp(op), payload).encode();
 
       let res: Response;
       try {

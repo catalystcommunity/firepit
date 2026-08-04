@@ -12,6 +12,7 @@ import Login from "~/pages/Login";
 import NotificationsPage from "~/pages/NotificationsPage";
 import SettingsPage from "~/pages/SettingsPage";
 import ThreadPage from "~/pages/ThreadPage";
+import CategoryAdminPage from "~/pages/CategoryAdminPage";
 
 const App: Component = () => (
   <SessionProvider>
@@ -23,6 +24,7 @@ const App: Component = () => (
       <Route path="/b/:slug/p/:postId" component={ThreadPage} />
       <Route path="/notifications" component={NotificationsPage} />
       <Route path="/settings" component={SettingsPage} />
+      <Route path="/admin/categories" component={CategoryAdminPage} />
     </Router>
   </SessionProvider>
 );

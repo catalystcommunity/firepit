@@ -94,12 +94,13 @@ import (
 // stays nil), the github package sets Origin="github" and a populated
 // OriginRef (see github.OriginRef).
 type CreatePostParams struct {
-	BoardID   string
-	AuthorID  string
-	Title     string
-	BodyMD    string
-	Origin    string
-	OriginRef datatypes.JSON
+	BoardID     string
+	AuthorID    string
+	Title       string
+	BodyMD      string
+	Origin      string
+	OriginRef   datatypes.JSON
+	CategoryIDs []string
 }
 
 // CreatePost inserts a new post and publishes the notify.KindContentCreated
@@ -118,6 +119,9 @@ func CreatePost(ctx context.Context, tx *gorm.DB, st *store.Store, pub notify.Pu
 		LastActivityAt: time.Now().UTC(),
 	}
 	if err := st.CreatePost(ctx, tx, post); err != nil {
+		return nil, err
+	}
+	if err := st.ReplacePostCategories(ctx, tx, post.ID, p.CategoryIDs); err != nil {
 		return nil, err
 	}
 

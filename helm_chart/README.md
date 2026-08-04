@@ -70,8 +70,8 @@ this chart existed).
 
 `containers.catalystsquad.com` is a private registry. Create a
 `kubernetes.io/dockerconfigjson` Secret (conventionally named `regcred`) in
-the release namespace yourself — `.reactorcide/jobs/scripts/deploy.sh` does
-this before `helm upgrade` in CI — and reference it:
+the release namespace yourself. The trusted Reactorcide deploy plugin creates
+this secret before `helm upgrade` in CI. The values file references it:
 
 ```yaml
 imagePullSecrets:
@@ -139,7 +139,7 @@ Before enabling this, confirm:
    # the reactorcide vault (set-secrets.sh prompts for it)
    ```
 
-   `.reactorcide/jobs/deploy.yaml` sources it from
+   `.reactorcide/jobs/deploy.yaml` supplies it to the trusted deploy plugin from
    `${secret:catalystsquad/firepit:linkkeys_api_key}` on every
    tag-triggered deploy.
 
@@ -149,10 +149,10 @@ Before enabling this, confirm:
    the RP pod, publish the domain's DNS TXT records per
    `linkkeys domain dns-check`, feed the key back in, and redeploy.)*
 
-3. **Deploy** — merge to main (release job builds + tags) and the
-   `tag_created` deploy job runs `helm upgrade --install` with
-   `deploy/values-catalystsquad.yaml`; or run the equivalent helm command
-   by hand for a first manual deploy.
+3. **Deploy** — merge to `main`. The merge workflow creates the next version
+   tag. The tag workflow builds both images, deploys them with
+   `deploy/values-catalystsquad.yaml`, and publishes the GitHub release. You can
+   run the equivalent Helm command by hand for the first deployment.
 
 4. **Gateway routes** are enabled in the values overlay
    (`gateway.enabled: true`); external-dns picks the HTTPRoute hostname up

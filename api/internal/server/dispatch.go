@@ -37,6 +37,7 @@ package server
 import (
 	"context"
 	"errors"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -52,6 +53,7 @@ import (
 type Services struct {
 	Auth         csil.AuthService
 	Board        csil.BoardService
+	Category     csil.CategoryService
 	Thread       csil.ThreadService
 	Endorsement  csil.EndorsementService
 	Settings     csil.SettingsService
@@ -127,73 +129,80 @@ func routeInfallible[Req any, Resp any](
 func buildRoutes(svcs Services) map[string]map[string]typedHandler {
 	return map[string]map[string]typedHandler{
 		"auth": {
-			"begin-login": routeFallible(csil.DecodeAuthBeginLoginRequest, svcs.Auth.BeginLogin, csil.EncodeAuthBeginLoginResponse, "BeginLoginResponse"),
-			"logout":      routeInfallible(csil.DecodeAuthLogoutRequest, svcs.Auth.Logout, csil.EncodeAuthLogoutResponse, "Empty"),
-			"whoami":      routeFallible(csil.DecodeAuthWhoamiRequest, svcs.Auth.Whoami, csil.EncodeAuthWhoamiResponse, "UserProfile"),
+			"begin-login": routeFallible(csil.DecodeBeginLoginRequest, svcs.Auth.BeginLogin, csil.EncodeBeginLoginResponse, "BeginLoginResponse"),
+			"logout":      routeInfallible(csil.DecodeEmpty, svcs.Auth.Logout, csil.EncodeEmpty, "Empty"),
+			"whoami":      routeFallible(csil.DecodeEmpty, svcs.Auth.Whoami, csil.EncodeUserProfile, "UserProfile"),
 		},
 		"board": {
-			"list-boards":         routeInfallible(csil.DecodeBoardListBoardsRequest, svcs.Board.ListBoards, csil.EncodeBoardListBoardsResponse, "BoardPage"),
-			"get-board":           routeFallible(csil.DecodeBoardGetBoardRequest, svcs.Board.GetBoard, csil.EncodeBoardGetBoardResponse, "Board"),
-			"create-board":        routeFallible(csil.DecodeBoardCreateBoardRequest, svcs.Board.CreateBoard, csil.EncodeBoardCreateBoardResponse, "Board"),
-			"update-board":        routeFallible(csil.DecodeBoardUpdateBoardRequest, svcs.Board.UpdateBoard, csil.EncodeBoardUpdateBoardResponse, "Board"),
-			"archive-board":       routeFallible(csil.DecodeBoardArchiveBoardRequest, svcs.Board.ArchiveBoard, csil.EncodeBoardArchiveBoardResponse, "Empty"),
-			"set-board-member":    routeFallible(csil.DecodeBoardSetBoardMemberRequest, svcs.Board.SetBoardMember, csil.EncodeBoardSetBoardMemberResponse, "Empty"),
-			"remove-board-member": routeFallible(csil.DecodeBoardRemoveBoardMemberRequest, svcs.Board.RemoveBoardMember, csil.EncodeBoardRemoveBoardMemberResponse, "Empty"),
+			"list-boards":         routeInfallible(csil.DecodeListBoardsRequest, svcs.Board.ListBoards, csil.EncodeBoardPage, "BoardPage"),
+			"get-board":           routeFallible(csil.DecodeBoardGetBoardRequest, svcs.Board.GetBoard, csil.EncodeBoard, "Board"),
+			"create-board":        routeFallible(csil.DecodeCreateBoardRequest, svcs.Board.CreateBoard, csil.EncodeBoard, "Board"),
+			"update-board":        routeFallible(csil.DecodeUpdateBoardRequest, svcs.Board.UpdateBoard, csil.EncodeBoard, "Board"),
+			"archive-board":       routeFallible(csil.DecodeBoardArchiveBoardRequest, svcs.Board.ArchiveBoard, csil.EncodeEmpty, "Empty"),
+			"set-board-member":    routeFallible(csil.DecodeSetBoardMemberRequest, svcs.Board.SetBoardMember, csil.EncodeEmpty, "Empty"),
+			"remove-board-member": routeFallible(csil.DecodeRemoveBoardMemberRequest, svcs.Board.RemoveBoardMember, csil.EncodeEmpty, "Empty"),
+		},
+		"category": {
+			"list-board-categories": routeInfallible(csil.DecodeCategoryListBoardCategoriesRequest, svcs.Category.ListBoardCategories, csil.EncodeCategoryList, "CategoryList"),
+			"create-category":       routeFallible(csil.DecodeCreateCategoryRequest, svcs.Category.CreateCategory, csil.EncodeCategory, "Category"),
+			"update-category":       routeFallible(csil.DecodeUpdateCategoryRequest, svcs.Category.UpdateCategory, csil.EncodeCategory, "Category"),
+			"delete-category":       routeFallible(csil.DecodeDeleteCategoryRequest, svcs.Category.DeleteCategory, csil.EncodeEmpty, "Empty"),
+			"list-categories":       routeInfallible(csil.DecodeEmpty, svcs.Category.ListCategories, csil.EncodeCategoryList, "CategoryList"),
 		},
 		"thread": {
-			"list-posts":     routeInfallible(csil.DecodeThreadListPostsRequest, svcs.Thread.ListPosts, csil.EncodeThreadListPostsResponse, "PostPage"),
-			"get-thread":     routeInfallible(csil.DecodeThreadGetThreadRequest, svcs.Thread.GetThread, csil.EncodeThreadGetThreadResponse, "Thread"),
-			"create-post":    routeFallible(csil.DecodeThreadCreatePostRequest, svcs.Thread.CreatePost, csil.EncodeThreadCreatePostResponse, "Post"),
-			"create-comment": routeFallible(csil.DecodeThreadCreateCommentRequest, svcs.Thread.CreateComment, csil.EncodeThreadCreateCommentResponse, "Comment"),
-			"edit-post":      routeFallible(csil.DecodeThreadEditPostRequest, svcs.Thread.EditPost, csil.EncodeThreadEditPostResponse, "Post"),
-			"edit-comment":   routeFallible(csil.DecodeThreadEditCommentRequest, svcs.Thread.EditComment, csil.EncodeThreadEditCommentResponse, "Comment"),
-			"list-revisions": routeInfallible(csil.DecodeThreadListRevisionsRequest, svcs.Thread.ListRevisions, csil.EncodeThreadListRevisionsResponse, "RevisionList"),
-			"delete-post":    routeFallible(csil.DecodeThreadDeletePostRequest, svcs.Thread.DeletePost, csil.EncodeThreadDeletePostResponse, "Empty"),
-			"delete-comment": routeFallible(csil.DecodeThreadDeleteCommentRequest, svcs.Thread.DeleteComment, csil.EncodeThreadDeleteCommentResponse, "Empty"),
+			"list-posts":     routeInfallible(csil.DecodeListPostsRequest, svcs.Thread.ListPosts, csil.EncodePostPage, "PostPage"),
+			"get-thread":     routeInfallible(csil.DecodeGetThreadRequest, svcs.Thread.GetThread, csil.EncodeThread, "Thread"),
+			"create-post":    routeFallible(csil.DecodeCreatePostRequest, svcs.Thread.CreatePost, csil.EncodePost, "Post"),
+			"create-comment": routeFallible(csil.DecodeCreateCommentRequest, svcs.Thread.CreateComment, csil.EncodeComment, "Comment"),
+			"edit-post":      routeFallible(csil.DecodeEditPostRequest, svcs.Thread.EditPost, csil.EncodePost, "Post"),
+			"edit-comment":   routeFallible(csil.DecodeEditCommentRequest, svcs.Thread.EditComment, csil.EncodeComment, "Comment"),
+			"list-revisions": routeInfallible(csil.DecodeTargetRef, svcs.Thread.ListRevisions, csil.EncodeRevisionList, "RevisionList"),
+			"delete-post":    routeFallible(csil.DecodeThreadDeletePostRequest, svcs.Thread.DeletePost, csil.EncodeEmpty, "Empty"),
+			"delete-comment": routeFallible(csil.DecodeThreadDeleteCommentRequest, svcs.Thread.DeleteComment, csil.EncodeEmpty, "Empty"),
 		},
 		"endorsement": {
-			"endorse":           routeFallible(csil.DecodeEndorsementEndorseRequest, svcs.Endorsement.Endorse, csil.EncodeEndorsementEndorseResponse, "Endorsement"),
-			"retract":           routeFallible(csil.DecodeEndorsementRetractRequest, svcs.Endorsement.Retract, csil.EncodeEndorsementRetractResponse, "Empty"),
-			"list-endorsements": routeInfallible(csil.DecodeEndorsementListEndorsementsRequest, svcs.Endorsement.ListEndorsements, csil.EncodeEndorsementListEndorsementsResponse, "EndorsementList"),
+			"endorse":           routeFallible(csil.DecodeEndorseRequest, svcs.Endorsement.Endorse, csil.EncodeEndorsement, "Endorsement"),
+			"retract":           routeFallible(csil.DecodeEndorseRequest, svcs.Endorsement.Retract, csil.EncodeEmpty, "Empty"),
+			"list-endorsements": routeInfallible(csil.DecodeTargetRef, svcs.Endorsement.ListEndorsements, csil.EncodeEndorsementList, "EndorsementList"),
 		},
 		"settings": {
-			"get-settings":        routeInfallible(csil.DecodeSettingsGetSettingsRequest, svcs.Settings.GetSettings, csil.EncodeSettingsGetSettingsResponse, "UserSettings"),
-			"update-settings":     routeFallible(csil.DecodeSettingsUpdateSettingsRequest, svcs.Settings.UpdateSettings, csil.EncodeSettingsUpdateSettingsResponse, "UserSettings"),
-			"list-mention-grants": routeInfallible(csil.DecodeSettingsListMentionGrantsRequest, svcs.Settings.ListMentionGrants, csil.EncodeSettingsListMentionGrantsResponse, "MentionGrantList"),
-			"grant-mention":       routeFallible(csil.DecodeSettingsGrantMentionRequest, svcs.Settings.GrantMention, csil.EncodeSettingsGrantMentionResponse, "Empty"),
-			"revoke-mention":      routeFallible(csil.DecodeSettingsRevokeMentionRequest, svcs.Settings.RevokeMention, csil.EncodeSettingsRevokeMentionResponse, "Empty"),
+			"get-settings":        routeInfallible(csil.DecodeEmpty, svcs.Settings.GetSettings, csil.EncodeUserSettings, "UserSettings"),
+			"update-settings":     routeFallible(csil.DecodeUpdateSettingsRequest, svcs.Settings.UpdateSettings, csil.EncodeUserSettings, "UserSettings"),
+			"list-mention-grants": routeInfallible(csil.DecodeEmpty, svcs.Settings.ListMentionGrants, csil.EncodeMentionGrantList, "MentionGrantList"),
+			"grant-mention":       routeFallible(csil.DecodeSettingsGrantMentionRequest, svcs.Settings.GrantMention, csil.EncodeEmpty, "Empty"),
+			"revoke-mention":      routeFallible(csil.DecodeSettingsRevokeMentionRequest, svcs.Settings.RevokeMention, csil.EncodeEmpty, "Empty"),
 		},
 		"social": {
-			"list-friend-groups":  routeInfallible(csil.DecodeSocialListFriendGroupsRequest, svcs.Social.ListFriendGroups, csil.EncodeSocialListFriendGroupsResponse, "FriendGroupList"),
-			"create-friend-group": routeFallible(csil.DecodeSocialCreateFriendGroupRequest, svcs.Social.CreateFriendGroup, csil.EncodeSocialCreateFriendGroupResponse, "FriendGroup"),
-			"delete-friend-group": routeFallible(csil.DecodeSocialDeleteFriendGroupRequest, svcs.Social.DeleteFriendGroup, csil.EncodeSocialDeleteFriendGroupResponse, "Empty"),
-			"add-friend":          routeFallible(csil.DecodeSocialAddFriendRequest, svcs.Social.AddFriend, csil.EncodeSocialAddFriendResponse, "Empty"),
-			"remove-friend":       routeFallible(csil.DecodeSocialRemoveFriendRequest, svcs.Social.RemoveFriend, csil.EncodeSocialRemoveFriendResponse, "Empty"),
-			"resolve-user":        routeFallible(csil.DecodeSocialResolveUserRequest, svcs.Social.ResolveUser, csil.EncodeSocialResolveUserResponse, "UserProfile"),
+			"list-friend-groups":  routeInfallible(csil.DecodeEmpty, svcs.Social.ListFriendGroups, csil.EncodeFriendGroupList, "FriendGroupList"),
+			"create-friend-group": routeFallible(csil.DecodeCreateFriendGroupRequest, svcs.Social.CreateFriendGroup, csil.EncodeFriendGroup, "FriendGroup"),
+			"delete-friend-group": routeFallible(csil.DecodeSocialDeleteFriendGroupRequest, svcs.Social.DeleteFriendGroup, csil.EncodeEmpty, "Empty"),
+			"add-friend":          routeFallible(csil.DecodeAddFriendRequest, svcs.Social.AddFriend, csil.EncodeEmpty, "Empty"),
+			"remove-friend":       routeFallible(csil.DecodeRemoveFriendRequest, svcs.Social.RemoveFriend, csil.EncodeEmpty, "Empty"),
+			"resolve-user":        routeFallible(csil.DecodeSocialResolveUserRequest, svcs.Social.ResolveUser, csil.EncodeUserProfile, "UserProfile"),
 		},
 		"subscription": {
-			"subscribe":          routeFallible(csil.DecodeSubscriptionSubscribeRequest, svcs.Subscription.Subscribe, csil.EncodeSubscriptionSubscribeResponse, "Subscription"),
-			"unsubscribe":        routeFallible(csil.DecodeSubscriptionUnsubscribeRequest, svcs.Subscription.Unsubscribe, csil.EncodeSubscriptionUnsubscribeResponse, "Empty"),
-			"set-muted":          routeFallible(csil.DecodeSubscriptionSetMutedRequest, svcs.Subscription.SetMuted, csil.EncodeSubscriptionSetMutedResponse, "Subscription"),
-			"list-subscriptions": routeInfallible(csil.DecodeSubscriptionListSubscriptionsRequest, svcs.Subscription.ListSubscriptions, csil.EncodeSubscriptionListSubscriptionsResponse, "SubscriptionList"),
+			"subscribe":          routeFallible(csil.DecodeTargetRef, svcs.Subscription.Subscribe, csil.EncodeSubscription, "Subscription"),
+			"unsubscribe":        routeFallible(csil.DecodeTargetRef, svcs.Subscription.Unsubscribe, csil.EncodeEmpty, "Empty"),
+			"set-muted":          routeFallible(csil.DecodeSetMutedRequest, svcs.Subscription.SetMuted, csil.EncodeSubscription, "Subscription"),
+			"list-subscriptions": routeInfallible(csil.DecodeEmpty, svcs.Subscription.ListSubscriptions, csil.EncodeSubscriptionList, "SubscriptionList"),
 		},
 		"read": {
-			"mark-read":      routeInfallible(csil.DecodeReadMarkReadRequest, svcs.Read.MarkRead, csil.EncodeReadMarkReadResponse, "Empty"),
-			"mark-unread":    routeInfallible(csil.DecodeReadMarkUnreadRequest, svcs.Read.MarkUnread, csil.EncodeReadMarkUnreadResponse, "Empty"),
-			"unread-summary": routeInfallible(csil.DecodeReadUnreadSummaryRequest, svcs.Read.UnreadSummary, csil.EncodeReadUnreadSummaryResponse, "UnreadSummary"),
+			"mark-read":      routeInfallible(csil.DecodeTargetRef, svcs.Read.MarkRead, csil.EncodeEmpty, "Empty"),
+			"mark-unread":    routeInfallible(csil.DecodeTargetRef, svcs.Read.MarkUnread, csil.EncodeEmpty, "Empty"),
+			"unread-summary": routeInfallible(csil.DecodeEmpty, svcs.Read.UnreadSummary, csil.EncodeUnreadSummary, "UnreadSummary"),
 		},
 		"notification": {
-			"list-notifications":     routeInfallible(csil.DecodeNotificationListNotificationsRequest, svcs.Notification.ListNotifications, csil.EncodeNotificationListNotificationsResponse, "NotificationPage"),
-			"mark-notification-read": routeInfallible(csil.DecodeNotificationMarkNotificationReadRequest, svcs.Notification.MarkNotificationRead, csil.EncodeNotificationMarkNotificationReadResponse, "Empty"),
-			"mark-all-read":          routeInfallible(csil.DecodeNotificationMarkAllReadRequest, svcs.Notification.MarkAllRead, csil.EncodeNotificationMarkAllReadResponse, "Empty"),
+			"list-notifications":     routeInfallible(csil.DecodeListNotificationsRequest, svcs.Notification.ListNotifications, csil.EncodeNotificationPage, "NotificationPage"),
+			"mark-notification-read": routeInfallible(csil.DecodeNotificationMarkNotificationReadRequest, svcs.Notification.MarkNotificationRead, csil.EncodeEmpty, "Empty"),
+			"mark-all-read":          routeInfallible(csil.DecodeEmpty, svcs.Notification.MarkAllRead, csil.EncodeEmpty, "Empty"),
 		},
 		"integration": {
-			"create-github-mapping": routeFallible(csil.DecodeIntegrationCreateGithubMappingRequest, svcs.Integration.CreateGithubMapping, csil.EncodeIntegrationCreateGithubMappingResponse, "GithubMapping"),
-			"list-github-mappings":  routeInfallible(csil.DecodeIntegrationListGithubMappingsRequest, svcs.Integration.ListGithubMappings, csil.EncodeIntegrationListGithubMappingsResponse, "MappingList"),
-			"delete-github-mapping": routeFallible(csil.DecodeIntegrationDeleteGithubMappingRequest, svcs.Integration.DeleteGithubMapping, csil.EncodeIntegrationDeleteGithubMappingResponse, "Empty"),
-			"add-trusted-domain":    routeFallible(csil.DecodeIntegrationAddTrustedDomainRequest, svcs.Integration.AddTrustedDomain, csil.EncodeIntegrationAddTrustedDomainResponse, "Empty"),
-			"remove-trusted-domain": routeFallible(csil.DecodeIntegrationRemoveTrustedDomainRequest, svcs.Integration.RemoveTrustedDomain, csil.EncodeIntegrationRemoveTrustedDomainResponse, "Empty"),
-			"list-trusted-domains":  routeInfallible(csil.DecodeIntegrationListTrustedDomainsRequest, svcs.Integration.ListTrustedDomains, csil.EncodeIntegrationListTrustedDomainsResponse, "DomainList"),
+			"create-github-mapping": routeFallible(csil.DecodeCreateMappingRequest, svcs.Integration.CreateGithubMapping, csil.EncodeGithubMapping, "GithubMapping"),
+			"list-github-mappings":  routeInfallible(csil.DecodeEmpty, svcs.Integration.ListGithubMappings, csil.EncodeMappingList, "MappingList"),
+			"delete-github-mapping": routeFallible(csil.DecodeIntegrationDeleteGithubMappingRequest, svcs.Integration.DeleteGithubMapping, csil.EncodeEmpty, "Empty"),
+			"add-trusted-domain":    routeFallible(csil.DecodeIntegrationAddTrustedDomainRequest, svcs.Integration.AddTrustedDomain, csil.EncodeEmpty, "Empty"),
+			"remove-trusted-domain": routeFallible(csil.DecodeIntegrationRemoveTrustedDomainRequest, svcs.Integration.RemoveTrustedDomain, csil.EncodeEmpty, "Empty"),
+			"list-trusted-domains":  routeInfallible(csil.DecodeEmpty, svcs.Integration.ListTrustedDomains, csil.EncodeDomainList, "DomainList"),
 		},
 	}
 }
@@ -201,7 +210,8 @@ func buildRoutes(svcs Services) map[string]map[string]typedHandler {
 // dispatch resolves req against routes, returning a transport-level
 // "unknown service/op" outcome if there's no match.
 func dispatch(ctx context.Context, routes map[string]map[string]typedHandler, req *transport.RpcRequest) transport.HandlerOutcome {
-	ops, ok := routes[req.Service]
+	service := strings.ToLower(strings.TrimSuffix(req.Service, "Service"))
+	ops, ok := routes[service]
 	if !ok {
 		return transport.Transport(transport.StatusUnknownServiceOrOp, "unknown service: "+req.Service)
 	}

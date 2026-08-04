@@ -88,6 +88,11 @@ func (v *CreateBoardRequest) Validate() error {
 			return fmt.Errorf("field 'Description' must have at most 2000 elements")
 		}
 	}
+	if v.CategoryLimit != nil {
+		if (*v.CategoryLimit) > 100 {
+			return fmt.Errorf("field 'CategoryLimit' must be <= 100")
+		}
+	}
 	return nil
 }
 
@@ -111,6 +116,11 @@ func (v *UpdateBoardRequest) Validate() error {
 	if v.Description != nil {
 		if len((*v.Description)) > 2000 {
 			return fmt.Errorf("field 'Description' must have at most 2000 elements")
+		}
+	}
+	if v.CategoryLimit != nil {
+		if (*v.CategoryLimit) > 100 {
+			return fmt.Errorf("field 'CategoryLimit' must be <= 100")
 		}
 	}
 	return nil
@@ -285,6 +295,93 @@ func (v *DomainEntry) Validate() error {
 	}
 	if len(v.Domain) > 253 {
 		return fmt.Errorf("field 'Domain' must have at most 253 elements")
+	}
+	return nil
+}
+
+// ValidateCategory validates the Category struct
+func (v *Category) Validate() error {
+	if len(v.Slug) < 1 {
+		return fmt.Errorf("field 'Slug' must have at least 1 elements")
+	}
+	if len(v.Slug) > 64 {
+		return fmt.Errorf("field 'Slug' must have at most 64 elements")
+	}
+	matched, _ := regexp.MatchString(`^[a-z0-9]+(-[a-z0-9]+)*$`, v.Slug)
+	if !matched {
+		return fmt.Errorf("field 'Slug' must match pattern '^[a-z0-9]+(-[a-z0-9]+)*$'")
+	}
+	if len(v.Name) < 1 {
+		return fmt.Errorf("field 'Name' must have at least 1 elements")
+	}
+	if len(v.Name) > 80 {
+		return fmt.Errorf("field 'Name' must have at most 80 elements")
+	}
+	if v.Description != nil {
+		if len((*v.Description)) < 0 {
+			return fmt.Errorf("field 'Description' must have at least 0 elements")
+		}
+	}
+	if v.Description != nil {
+		if len((*v.Description)) > 500 {
+			return fmt.Errorf("field 'Description' must have at most 500 elements")
+		}
+	}
+	return nil
+}
+
+// ValidateCreateCategoryRequest validates the CreateCategoryRequest struct
+func (v *CreateCategoryRequest) Validate() error {
+	if len(v.Slug) < 1 {
+		return fmt.Errorf("field 'Slug' must have at least 1 elements")
+	}
+	if len(v.Slug) > 64 {
+		return fmt.Errorf("field 'Slug' must have at most 64 elements")
+	}
+	matched, _ := regexp.MatchString(`^[a-z0-9]+(-[a-z0-9]+)*$`, v.Slug)
+	if !matched {
+		return fmt.Errorf("field 'Slug' must match pattern '^[a-z0-9]+(-[a-z0-9]+)*$'")
+	}
+	if len(v.Name) < 1 {
+		return fmt.Errorf("field 'Name' must have at least 1 elements")
+	}
+	if len(v.Name) > 80 {
+		return fmt.Errorf("field 'Name' must have at most 80 elements")
+	}
+	if v.Description != nil {
+		if len((*v.Description)) < 0 {
+			return fmt.Errorf("field 'Description' must have at least 0 elements")
+		}
+	}
+	if v.Description != nil {
+		if len((*v.Description)) > 500 {
+			return fmt.Errorf("field 'Description' must have at most 500 elements")
+		}
+	}
+	return nil
+}
+
+// ValidateUpdateCategoryRequest validates the UpdateCategoryRequest struct
+func (v *UpdateCategoryRequest) Validate() error {
+	if v.Name != nil {
+		if len((*v.Name)) < 1 {
+			return fmt.Errorf("field 'Name' must have at least 1 elements")
+		}
+	}
+	if v.Name != nil {
+		if len((*v.Name)) > 80 {
+			return fmt.Errorf("field 'Name' must have at most 80 elements")
+		}
+	}
+	if v.Description != nil {
+		if len((*v.Description)) < 0 {
+			return fmt.Errorf("field 'Description' must have at least 0 elements")
+		}
+	}
+	if v.Description != nil {
+		if len((*v.Description)) > 500 {
+			return fmt.Errorf("field 'Description' must have at most 500 elements")
+		}
 	}
 	return nil
 }

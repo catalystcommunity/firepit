@@ -5,8 +5,8 @@
 // real ThreadService will too), so an anonymous visitor gets a login prompt
 // instead of the form. Used by `~/pages/BoardPage`.
 import { A, useNavigate } from "@solidjs/router";
-import { createSignal, Show, type Component } from "solid-js";
-import type { Post } from "~/gen/types.gen";
+import { createSignal, For, Show, type Component } from "solid-js";
+import type { Category, Post } from "~/gen/types.gen";
 import { api } from "~/lib/api";
 import { FirepitServiceError } from "~/lib/errors";
 import { renderMarkdown } from "~/lib/markdown";
@@ -18,6 +18,8 @@ export interface PostComposerProps {
   boardSlug: string;
   /** Called with the created post right before navigating to its thread — lets the board page optimistically prepend it to its list. */
   onCreated?: (post: Post) => void;
+  categories?: readonly Category[];
+  categoryLimit?: number;
 }
 
 type Tab = "write" | "preview";
@@ -39,6 +41,11 @@ const PostComposer: Component<PostComposerProps> = (props) => {
   const [bodyMd, setBodyMd] = createSignal("");
   const [submitting, setSubmitting] = createSignal(false);
   const [fieldError, setFieldError] = createSignal<FieldError | null>(null);
+  const [categoryIds, setCategoryIds] = createSignal<string[]>([]);
+
+  const toggleCategory = (id: string): void => {
+    setCategoryIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
 
   const validate = (): FieldError | null => {
     const trimmedTitle = title().trim();
@@ -50,6 +57,9 @@ const PostComposer: Component<PostComposerProps> = (props) => {
     if (trimmedBody.length === 0) return { field: "bodyMd", message: "Body is required." };
     if (trimmedBody.length > BODY_MAX) {
       return { field: "bodyMd", message: `Body must be ${BODY_MAX} characters or fewer.` };
+    }
+    if ((props.categoryLimit ?? 0) > 0 && categoryIds().length > (props.categoryLimit ?? 0)) {
+      return { field: "categoryIds", message: `Select no more than ${props.categoryLimit} categories.` };
     }
     return null;
   };
@@ -66,6 +76,7 @@ const PostComposer: Component<PostComposerProps> = (props) => {
     try {
       const post = await api.thread.createPost({
         boardId: props.boardId,
+        categoryIds: categoryIds(),
         title: title().trim(),
         bodyMd: bodyMd().trim(),
       });
@@ -107,6 +118,29 @@ const PostComposer: Component<PostComposerProps> = (props) => {
             <span class="form-error">{fieldError()?.message}</span>
           </Show>
         </label>
+
+        <Show when={(props.categories?.length ?? 0) > 0}>
+          <fieldset class="category-picker">
+            <legend>Categories</legend>
+            <p>No selection means Uncategorized.</p>
+            <For each={props.categories ?? []}>
+              {(category) => (
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={categoryIds().includes(category.id)}
+                    onChange={() => toggleCategory(category.id)}
+                  />
+                  {category.name}
+                  <Show when={category.crossBoardPosting}> <small>Shared</small></Show>
+                </label>
+              )}
+            </For>
+            <Show when={fieldError()?.field === "categoryIds"}>
+              <span class="form-error">{fieldError()?.message}</span>
+            </Show>
+          </fieldset>
+        </Show>
 
         <div class="composer-tabs" role="tablist">
           <button

@@ -23,7 +23,7 @@ vi.mock("~/lib/api", () => ({
 
 const { default: SubscriptionsSection } = await import("./SubscriptionsSection");
 
-const BOARD: Board = { id: "board-1", slug: "firepit", title: "Firepit Meta", kind: "discussion", createdBy: "x", createdAt: new Date() };
+const BOARD: Board = { id: "board-1", slug: "firepit", title: "Firepit Meta", kind: "discussion", categoryLimit: 0, createdBy: "x", createdAt: new Date() };
 
 const BOARD_SUB: Subscription = { id: "sub-board", targetType: "board", targetId: "board-1", muted: false, createdAt: new Date("2026-01-01T00:00:00Z") };
 const POST_SUB: Subscription = { id: "sub-post", targetType: "post", targetId: "post-1", muted: false, createdAt: new Date("2026-01-01T00:00:00Z") };
@@ -32,6 +32,7 @@ const THREAD: Thread = {
   post: {
     id: "post-1",
     boardId: "board-1",
+    categoryIds: [],
     authorId: "someone",
     title: "v0.1.0 released",
     bodyMd: "body",

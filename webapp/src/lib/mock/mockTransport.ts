@@ -21,11 +21,13 @@ import {
   fromAddFriendRequestCbor,
   fromBeginLoginRequestCbor,
   fromCreateBoardRequestCbor,
+  fromCreateCategoryRequestCbor,
   fromCreateCommentRequestCbor,
   fromCreateFriendGroupRequestCbor,
   fromCreatePostRequestCbor,
   fromEditCommentRequestCbor,
   fromEditPostRequestCbor,
+  fromDeleteCategoryRequestCbor,
   fromEndorseRequestCbor,
   fromGetThreadRequestCbor,
   fromListNotificationsRequestCbor,
@@ -34,10 +36,13 @@ import {
   fromSetMutedRequestCbor,
   fromTargetRefCbor,
   fromUpdateBoardRequestCbor,
+  fromUpdateCategoryRequestCbor,
   fromUpdateSettingsRequestCbor,
   toBeginLoginResponseCbor,
   toBoardCbor,
   toBoardPageCbor,
+  toCategoryCbor,
+  toCategoryListCbor,
   toCommentCbor,
   toEmptyCbor,
   toEndorsementCbor,
@@ -57,7 +62,7 @@ import {
   toUserSettingsCbor,
 } from "~/gen/codec.gen";
 import { FirepitTransportError } from "~/lib/errors";
-import { methodToOp } from "~/lib/opNaming";
+import { methodToOp, serviceToWire } from "~/lib/opNaming";
 import { FixtureStore } from "./store";
 
 type Handler = (payload: Uint8Array) => Uint8Array;
@@ -87,6 +92,13 @@ function buildRoutes(store: FixtureStore): Record<string, Record<string, Handler
       "set-board-member": () => toEmptyCbor({}),
       "remove-board-member": () => toEmptyCbor({}),
     },
+    category: {
+      "list-board-categories": (p) => toCategoryListCbor(store.listBoardCategories(bareString(p))),
+      "create-category": (p) => toCategoryCbor(store.createCategory(fromCreateCategoryRequestCbor(p))),
+      "update-category": (p) => toCategoryCbor(store.updateCategory(fromUpdateCategoryRequestCbor(p))),
+      "delete-category": (p) => toEmptyCbor(store.deleteCategory(fromDeleteCategoryRequestCbor(p))),
+      "list-categories": () => toCategoryListCbor(store.listCategories()),
+    },
     thread: {
       "list-posts": (p) => toPostPageCbor(store.listPosts(fromListPostsRequestCbor(p))),
       "get-thread": (p) => toThreadCbor(store.getThread(fromGetThreadRequestCbor(p).postId)),
@@ -94,7 +106,7 @@ function buildRoutes(store: FixtureStore): Record<string, Record<string, Handler
       "create-comment": (p) => toCommentCbor(store.createComment(fromCreateCommentRequestCbor(p))),
       "edit-post": (p) => {
         const req = fromEditPostRequestCbor(p);
-        return toPostCbor(store.editPost(req.id, req.title, req.bodyMd));
+        return toPostCbor(store.editPost(req.id, req.title, req.bodyMd, req.categoryIds));
       },
       "edit-comment": (p) => {
         const req = fromEditCommentRequestCbor(p);
@@ -174,7 +186,7 @@ export function createMockTransport(store: FixtureStore = new FixtureStore(undef
     // makes the return type `Promise<Uint8Array>` as required.
     async call(service: string, op: string, payload: Uint8Array): Promise<Uint8Array> {
       const kebabOp = methodToOp(op);
-      const handler = routes[service]?.[kebabOp];
+      const handler = routes[serviceToWire(service)]?.[kebabOp];
       if (!handler) {
         throw new FirepitTransportError(`unknown (service, op): ${service}/${kebabOp}`);
       }

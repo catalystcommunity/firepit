@@ -1,27 +1,12 @@
 name: firepit-release-smoke
-description: "PR smoke test for release/deploy scripts and Helm rendering"
-triggers:
-  events:
-    - pull_request_opened
-    - pull_request_updated
-  branches:
-    - main
-paths:
-  include:
-    - ".reactorcide/jobs/**"
-    - "api/Dockerfile"
-    - "webapp/Dockerfile"
-    - "helm_chart/**"
-    - "deploy/**"
-    - "version/**"
+description: "Validate the Reactorcide configuration and render the Helm chart."
 job:
-  image: containers.catalystsquad.com/public/reactorcide/runnerbase:dev
-  command: |
-    sh "${REACTORCIDE_CODE_DIR:-${REACTORCIDE_JOB_DIR:-/job/src}}/.reactorcide/jobs/scripts/release-smoke.sh"
-  timeout: 600
+  image: containers.catalystsquad.com/public/reactorcide/runnerbase:latest
+  command: "runnerlib run --job-command true"
+  timeout: 900
   priority: 10
   working_dir: /job
-  run_as:
-    user: runner
+environment:
+  REACTORCIDE_FIREPIT_JOB: release-smoke
 run_local:
   user: host

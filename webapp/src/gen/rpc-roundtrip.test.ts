@@ -65,6 +65,7 @@ describe("CSIL-RPC round-trip with generated codec", () => {
           slug: "firepit",
           title: "Firepit",
           kind: "discussion",
+          categoryLimit: 0,
           createdBy: "01H000000000000000000USER",
           createdAt: new Date("2026-07-03T00:00:00Z"),
         },

@@ -1,0 +1,41 @@
+name: Firepit Release
+description: "Verify, build, deploy, and publish one authorized Firepit release."
+on:
+  events:
+    - tag_created
+  branches:
+    - "v*"
+jobs:
+  prepare:
+    job_file: release-control.yaml
+    environment:
+      REACTORCIDE_FIREPIT_JOB: prepare
+
+  api-image:
+    job_file: image.yaml
+    depends_on:
+      - prepare
+    environment:
+      REACTORCIDE_FIREPIT_JOB: image
+      FIREPIT_IMAGE: api
+
+  web-image:
+    job_file: image.yaml
+    depends_on:
+      - prepare
+    environment:
+      REACTORCIDE_FIREPIT_JOB: image
+      FIREPIT_IMAGE: web
+
+  deploy-production:
+    job_file: deploy.yaml
+    depends_on:
+      - api-image
+      - web-image
+
+  publish:
+    job_file: release-control.yaml
+    depends_on:
+      - deploy-production
+    environment:
+      REACTORCIDE_FIREPIT_JOB: publish

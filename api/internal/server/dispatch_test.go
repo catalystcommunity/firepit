@@ -26,6 +26,7 @@ func stubServices() Services {
 	return Services{
 		Auth:         csilservices.NewAuthService(st, config.Config{}),
 		Board:        csilservices.NewBoardService(st),
+		Category:     csilservices.NewCategoryService(st),
 		Thread:       csilservices.NewThreadService(st, notify.Noop{}),
 		Endorsement:  csilservices.NewEndorsementService(st, notify.Noop{}),
 		Settings:     csilservices.NewSettingsService(st),
@@ -50,7 +51,7 @@ func TestDispatchFallibleOpReturnsServiceError(t *testing.T) {
 	req := &transport.RpcRequest{
 		Service: "auth",
 		Op:      "begin-login",
-		Payload: csil.EncodeAuthBeginLoginRequest(csil.BeginLoginRequest{Domain: "example.com"}),
+		Payload: csil.EncodeBeginLoginRequest(csil.BeginLoginRequest{Domain: "example.com"}),
 	}
 
 	outcome := dispatch(context.Background(), routes, req)
@@ -97,7 +98,7 @@ func TestDispatchInfallibleOpReturnsTransportError(t *testing.T) {
 	req := &transport.RpcRequest{
 		Service: "notification",
 		Op:      "mark-all-read",
-		Payload: csil.EncodeNotificationMarkAllReadRequest(csil.Empty{}),
+		Payload: csil.EncodeEmpty(csil.Empty{}),
 	}
 
 	outcome := dispatch(context.Background(), routes, req)

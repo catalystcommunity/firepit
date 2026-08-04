@@ -43,6 +43,31 @@ describe("mock transport", () => {
     await expect(api.board.getBoard("does-not-exist")).rejects.toMatchObject({ resourceType: "board" });
   });
 
+  it("creates, updates, and deletes category configuration", async () => {
+    await api.auth.beginLogin({ domain: "example.com" });
+    const boards = await api.board.listBoards({});
+    const created = await api.category.createCategory({
+      slug: "security",
+      name: "Security",
+      crossBoardPosting: false,
+      boardIds: [boards.boards[0].id],
+    });
+    const updated = await api.category.updateCategory({
+      id: created.id,
+      name: "Security updates",
+      crossBoardPosting: true,
+      boardIds: boards.boards.slice(0, 2).map((board) => board.id),
+    });
+    expect(updated.crossBoardPosting).toBe(true);
+    expect((await api.category.listBoardCategories(boards.boards[1].id)).categories).toContainEqual(updated);
+
+    await expect(api.category.deleteCategory({ id: created.id, removeFromPosts: false })).rejects.toMatchObject({
+      field: "removeFromPosts",
+    });
+    await api.category.deleteCategory({ id: created.id, removeFromPosts: true });
+    expect((await api.category.listBoardCategories(boards.boards[0].id)).categories.some((item) => item.id === created.id)).toBe(false);
+  });
+
   it("fetches a thread with its full (deep) comment tree and can reply to it", async () => {
     const boards = await api.board.listBoards({});
     const firepitBoard = boards.boards.find((b) => b.slug === "firepit");

@@ -2,8 +2,8 @@
 // Source: <csil spec>
 // Target: typescript-client
 
-import type { AddFriendRequest, BeginLoginRequest, BeginLoginResponse, Board, BoardID, BoardPage, BoardSlug, Comment, CommentID, CreateBoardRequest, CreateCommentRequest, CreateFriendGroupRequest, CreateMappingRequest, CreatePostRequest, Domain, DomainList, EditCommentRequest, EditPostRequest, Empty, EndorseRequest, Endorsement, EndorsementList, FriendGroup, FriendGroupList, GetThreadRequest, GithubMapping, GroupID, Handle, ListBoardsRequest, ListNotificationsRequest, ListPostsRequest, MappingID, MappingList, MentionGrantList, NotificationIDs, NotificationPage, Post, PostID, PostPage, RemoveBoardMemberRequest, RemoveFriendRequest, RevisionList, SetBoardMemberRequest, SetMutedRequest, Subscription, SubscriptionList, TargetRef, Thread, UnreadSummary, UpdateBoardRequest, UpdateSettingsRequest, UserID, UserProfile, UserSettings } from "./types.gen";
-import { encodeValue, fromBeginLoginResponseCbor, fromBoardCbor, fromBoardPageCbor, fromCommentCbor, fromDomainListCbor, fromEmptyCbor, fromEndorsementCbor, fromEndorsementListCbor, fromFriendGroupCbor, fromFriendGroupListCbor, fromGithubMappingCbor, fromMappingListCbor, fromMentionGrantListCbor, fromNotificationPageCbor, fromPostCbor, fromPostPageCbor, fromRevisionListCbor, fromSubscriptionCbor, fromSubscriptionListCbor, fromThreadCbor, fromUnreadSummaryCbor, fromUserProfileCbor, fromUserSettingsCbor, toAddFriendRequestCbor, toBeginLoginRequestCbor, toCreateBoardRequestCbor, toCreateCommentRequestCbor, toCreateFriendGroupRequestCbor, toCreateMappingRequestCbor, toCreatePostRequestCbor, toEditCommentRequestCbor, toEditPostRequestCbor, toEmptyCbor, toEndorseRequestCbor, toGetThreadRequestCbor, toListBoardsRequestCbor, toListNotificationsRequestCbor, toListPostsRequestCbor, toRemoveBoardMemberRequestCbor, toRemoveFriendRequestCbor, toSetBoardMemberRequestCbor, toSetMutedRequestCbor, toTargetRefCbor, toUpdateBoardRequestCbor, toUpdateSettingsRequestCbor } from "./codec.gen";
+import type { AddFriendRequest, BeginLoginRequest, BeginLoginResponse, Board, BoardID, BoardPage, BoardSlug, Category, CategoryList, Comment, CommentID, CreateBoardRequest, CreateCategoryRequest, CreateCommentRequest, CreateFriendGroupRequest, CreateMappingRequest, CreatePostRequest, DeleteCategoryRequest, Domain, DomainList, EditCommentRequest, EditPostRequest, Empty, EndorseRequest, Endorsement, EndorsementList, FriendGroup, FriendGroupList, GetThreadRequest, GithubMapping, GroupID, Handle, ListBoardsRequest, ListNotificationsRequest, ListPostsRequest, MappingID, MappingList, MentionGrantList, NotificationIDs, NotificationPage, Post, PostID, PostPage, RemoveBoardMemberRequest, RemoveFriendRequest, RevisionList, SetBoardMemberRequest, SetMutedRequest, Subscription, SubscriptionList, TargetRef, Thread, UnreadSummary, UpdateBoardRequest, UpdateCategoryRequest, UpdateSettingsRequest, UserID, UserProfile, UserSettings } from "./types.gen.ts";
+import { encodeValue, fromBeginLoginResponseCbor, fromBoardCbor, fromBoardPageCbor, fromCategoryCbor, fromCategoryListCbor, fromCommentCbor, fromDomainListCbor, fromEmptyCbor, fromEndorsementCbor, fromEndorsementListCbor, fromFriendGroupCbor, fromFriendGroupListCbor, fromGithubMappingCbor, fromMappingListCbor, fromMentionGrantListCbor, fromNotificationPageCbor, fromPostCbor, fromPostPageCbor, fromRevisionListCbor, fromSubscriptionCbor, fromSubscriptionListCbor, fromThreadCbor, fromUnreadSummaryCbor, fromUserProfileCbor, fromUserSettingsCbor, toAddFriendRequestCbor, toBeginLoginRequestCbor, toCreateBoardRequestCbor, toCreateCategoryRequestCbor, toCreateCommentRequestCbor, toCreateFriendGroupRequestCbor, toCreateMappingRequestCbor, toCreatePostRequestCbor, toDeleteCategoryRequestCbor, toEditCommentRequestCbor, toEditPostRequestCbor, toEmptyCbor, toEndorseRequestCbor, toGetThreadRequestCbor, toListBoardsRequestCbor, toListNotificationsRequestCbor, toListPostsRequestCbor, toRemoveBoardMemberRequestCbor, toRemoveFriendRequestCbor, toSetBoardMemberRequestCbor, toSetMutedRequestCbor, toTargetRefCbor, toUpdateBoardRequestCbor, toUpdateCategoryRequestCbor, toUpdateSettingsRequestCbor } from "./codec.gen.ts";
 
 export interface ServiceTransport {
   call(service: string, op: string, req: Uint8Array): Uint8Array;
@@ -20,7 +20,7 @@ export class AuthClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   beginLogin(req: BeginLoginRequest): BeginLoginResponse {
-    const csilResp = this.t.call("auth", "BeginLogin", toBeginLoginRequestCbor(req));
+    const csilResp = this.t.call("AuthService", "begin-login", toBeginLoginRequestCbor(req));
     return fromBeginLoginResponseCbor(csilResp);
   }
 
@@ -31,7 +31,7 @@ export class AuthClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   logout(req: Empty): Empty {
-    const csilResp = this.t.call("auth", "Logout", toEmptyCbor(req));
+    const csilResp = this.t.call("AuthService", "logout", toEmptyCbor(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -41,7 +41,7 @@ export class AuthClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   whoami(req: Empty): UserProfile {
-    const csilResp = this.t.call("auth", "Whoami", toEmptyCbor(req));
+    const csilResp = this.t.call("AuthService", "whoami", toEmptyCbor(req));
     return fromUserProfileCbor(csilResp);
   }
 }
@@ -55,7 +55,7 @@ export class BoardClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   listBoards(req: ListBoardsRequest): BoardPage {
-    const csilResp = this.t.call("board", "ListBoards", toListBoardsRequestCbor(req));
+    const csilResp = this.t.call("BoardService", "list-boards", toListBoardsRequestCbor(req));
     return fromBoardPageCbor(csilResp);
   }
 
@@ -65,7 +65,7 @@ export class BoardClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   getBoard(req: BoardSlug): Board {
-    const csilResp = this.t.call("board", "GetBoard", encodeValue(req));
+    const csilResp = this.t.call("BoardService", "get-board", encodeValue(req));
     return fromBoardCbor(csilResp);
   }
 
@@ -75,7 +75,7 @@ export class BoardClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   createBoard(req: CreateBoardRequest): Board {
-    const csilResp = this.t.call("board", "CreateBoard", toCreateBoardRequestCbor(req));
+    const csilResp = this.t.call("BoardService", "create-board", toCreateBoardRequestCbor(req));
     return fromBoardCbor(csilResp);
   }
 
@@ -85,7 +85,7 @@ export class BoardClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   updateBoard(req: UpdateBoardRequest): Board {
-    const csilResp = this.t.call("board", "UpdateBoard", toUpdateBoardRequestCbor(req));
+    const csilResp = this.t.call("BoardService", "update-board", toUpdateBoardRequestCbor(req));
     return fromBoardCbor(csilResp);
   }
 
@@ -95,7 +95,7 @@ export class BoardClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   archiveBoard(req: BoardID): Empty {
-    const csilResp = this.t.call("board", "ArchiveBoard", encodeValue(req));
+    const csilResp = this.t.call("BoardService", "archive-board", encodeValue(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -106,7 +106,7 @@ export class BoardClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   setBoardMember(req: SetBoardMemberRequest): Empty {
-    const csilResp = this.t.call("board", "SetBoardMember", toSetBoardMemberRequestCbor(req));
+    const csilResp = this.t.call("BoardService", "set-board-member", toSetBoardMemberRequestCbor(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -116,8 +116,64 @@ export class BoardClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   removeBoardMember(req: RemoveBoardMemberRequest): Empty {
-    const csilResp = this.t.call("board", "RemoveBoardMember", toRemoveBoardMemberRequestCbor(req));
+    const csilResp = this.t.call("BoardService", "remove-board-member", toRemoveBoardMemberRequestCbor(req));
     return fromEmptyCbor(csilResp);
+  }
+}
+
+export class CategoryClient {
+  constructor(private readonly t: ServiceTransport) {}
+
+  /**
+   * List the categories that are available in one board.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  listBoardCategories(req: BoardID): CategoryList {
+    const csilResp = this.t.call("CategoryService", "list-board-categories", encodeValue(req));
+    return fromCategoryListCbor(csilResp);
+  }
+
+  /**
+   * Admin-only: create a category and attach it to one or more boards.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  createCategory(req: CreateCategoryRequest): Category {
+    const csilResp = this.t.call("CategoryService", "create-category", toCreateCategoryRequestCbor(req));
+    return fromCategoryCbor(csilResp);
+  }
+
+  /**
+   * Admin-only: change category details, board assignments, or routing.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  updateCategory(req: UpdateCategoryRequest): Category {
+    const csilResp = this.t.call("CategoryService", "update-category", toUpdateCategoryRequestCbor(req));
+    return fromCategoryCbor(csilResp);
+  }
+
+  /**
+   * Admin-only: remove a category. The caller must confirm removal from
+   * all posts. Affected posts then use the virtual Uncategorized state.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  deleteCategory(req: DeleteCategoryRequest): Empty {
+    const csilResp = this.t.call("CategoryService", "delete-category", toDeleteCategoryRequestCbor(req));
+    return fromEmptyCbor(csilResp);
+  }
+
+  /**
+   * List all categories. The admin view uses this for categories that
+   * are assigned only to archived boards.
+   * @throws {ServiceError} when the API returns an error response
+   * @throws transport errors (network, timeout) raised by the transport
+   */
+  listCategories(req: Empty): CategoryList {
+    const csilResp = this.t.call("CategoryService", "list-categories", toEmptyCbor(req));
+    return fromCategoryListCbor(csilResp);
   }
 }
 
@@ -131,7 +187,7 @@ export class EndorsementClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   endorse(req: EndorseRequest): Endorsement {
-    const csilResp = this.t.call("endorsement", "Endorse", toEndorseRequestCbor(req));
+    const csilResp = this.t.call("EndorsementService", "endorse", toEndorseRequestCbor(req));
     return fromEndorsementCbor(csilResp);
   }
 
@@ -141,7 +197,7 @@ export class EndorsementClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   retract(req: EndorseRequest): Empty {
-    const csilResp = this.t.call("endorsement", "Retract", toEndorseRequestCbor(req));
+    const csilResp = this.t.call("EndorsementService", "retract", toEndorseRequestCbor(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -152,7 +208,7 @@ export class EndorsementClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   listEndorsements(req: TargetRef): EndorsementList {
-    const csilResp = this.t.call("endorsement", "ListEndorsements", toTargetRefCbor(req));
+    const csilResp = this.t.call("EndorsementService", "list-endorsements", toTargetRefCbor(req));
     return fromEndorsementListCbor(csilResp);
   }
 }
@@ -166,7 +222,7 @@ export class IntegrationClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   createGithubMapping(req: CreateMappingRequest): GithubMapping {
-    const csilResp = this.t.call("integration", "CreateGithubMapping", toCreateMappingRequestCbor(req));
+    const csilResp = this.t.call("IntegrationService", "create-github-mapping", toCreateMappingRequestCbor(req));
     return fromGithubMappingCbor(csilResp);
   }
 
@@ -176,7 +232,7 @@ export class IntegrationClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   listGithubMappings(req: Empty): MappingList {
-    const csilResp = this.t.call("integration", "ListGithubMappings", toEmptyCbor(req));
+    const csilResp = this.t.call("IntegrationService", "list-github-mappings", toEmptyCbor(req));
     return fromMappingListCbor(csilResp);
   }
 
@@ -187,7 +243,7 @@ export class IntegrationClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   deleteGithubMapping(req: MappingID): Empty {
-    const csilResp = this.t.call("integration", "DeleteGithubMapping", encodeValue(req));
+    const csilResp = this.t.call("IntegrationService", "delete-github-mapping", encodeValue(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -197,7 +253,7 @@ export class IntegrationClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   addTrustedDomain(req: Domain): Empty {
-    const csilResp = this.t.call("integration", "AddTrustedDomain", encodeValue(req));
+    const csilResp = this.t.call("IntegrationService", "add-trusted-domain", encodeValue(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -207,7 +263,7 @@ export class IntegrationClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   removeTrustedDomain(req: Domain): Empty {
-    const csilResp = this.t.call("integration", "RemoveTrustedDomain", encodeValue(req));
+    const csilResp = this.t.call("IntegrationService", "remove-trusted-domain", encodeValue(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -217,7 +273,7 @@ export class IntegrationClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   listTrustedDomains(req: Empty): DomainList {
-    const csilResp = this.t.call("integration", "ListTrustedDomains", toEmptyCbor(req));
+    const csilResp = this.t.call("IntegrationService", "list-trusted-domains", toEmptyCbor(req));
     return fromDomainListCbor(csilResp);
   }
 }
@@ -231,7 +287,7 @@ export class NotificationClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   listNotifications(req: ListNotificationsRequest): NotificationPage {
-    const csilResp = this.t.call("notification", "ListNotifications", toListNotificationsRequestCbor(req));
+    const csilResp = this.t.call("NotificationService", "list-notifications", toListNotificationsRequestCbor(req));
     return fromNotificationPageCbor(csilResp);
   }
 
@@ -241,7 +297,7 @@ export class NotificationClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   markNotificationRead(req: NotificationIDs): Empty {
-    const csilResp = this.t.call("notification", "MarkNotificationRead", encodeValue(req));
+    const csilResp = this.t.call("NotificationService", "mark-notification-read", encodeValue(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -251,7 +307,7 @@ export class NotificationClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   markAllRead(req: Empty): Empty {
-    const csilResp = this.t.call("notification", "MarkAllRead", toEmptyCbor(req));
+    const csilResp = this.t.call("NotificationService", "mark-all-read", toEmptyCbor(req));
     return fromEmptyCbor(csilResp);
   }
 }
@@ -266,7 +322,7 @@ export class ReadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   markRead(req: TargetRef): Empty {
-    const csilResp = this.t.call("read", "MarkRead", toTargetRefCbor(req));
+    const csilResp = this.t.call("ReadService", "mark-read", toTargetRefCbor(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -277,7 +333,7 @@ export class ReadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   markUnread(req: TargetRef): Empty {
-    const csilResp = this.t.call("read", "MarkUnread", toTargetRefCbor(req));
+    const csilResp = this.t.call("ReadService", "mark-unread", toTargetRefCbor(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -288,7 +344,7 @@ export class ReadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   unreadSummary(req: Empty): UnreadSummary {
-    const csilResp = this.t.call("read", "UnreadSummary", toEmptyCbor(req));
+    const csilResp = this.t.call("ReadService", "unread-summary", toEmptyCbor(req));
     return fromUnreadSummaryCbor(csilResp);
   }
 }
@@ -302,7 +358,7 @@ export class SettingsClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   getSettings(req: Empty): UserSettings {
-    const csilResp = this.t.call("settings", "GetSettings", toEmptyCbor(req));
+    const csilResp = this.t.call("SettingsService", "get-settings", toEmptyCbor(req));
     return fromUserSettingsCbor(csilResp);
   }
 
@@ -312,7 +368,7 @@ export class SettingsClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   updateSettings(req: UpdateSettingsRequest): UserSettings {
-    const csilResp = this.t.call("settings", "UpdateSettings", toUpdateSettingsRequestCbor(req));
+    const csilResp = this.t.call("SettingsService", "update-settings", toUpdateSettingsRequestCbor(req));
     return fromUserSettingsCbor(csilResp);
   }
 
@@ -322,7 +378,7 @@ export class SettingsClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   listMentionGrants(req: Empty): MentionGrantList {
-    const csilResp = this.t.call("settings", "ListMentionGrants", toEmptyCbor(req));
+    const csilResp = this.t.call("SettingsService", "list-mention-grants", toEmptyCbor(req));
     return fromMentionGrantListCbor(csilResp);
   }
 
@@ -333,7 +389,7 @@ export class SettingsClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   grantMention(req: UserID): Empty {
-    const csilResp = this.t.call("settings", "GrantMention", encodeValue(req));
+    const csilResp = this.t.call("SettingsService", "grant-mention", encodeValue(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -343,7 +399,7 @@ export class SettingsClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   revokeMention(req: UserID): Empty {
-    const csilResp = this.t.call("settings", "RevokeMention", encodeValue(req));
+    const csilResp = this.t.call("SettingsService", "revoke-mention", encodeValue(req));
     return fromEmptyCbor(csilResp);
   }
 }
@@ -357,7 +413,7 @@ export class SocialClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   listFriendGroups(req: Empty): FriendGroupList {
-    const csilResp = this.t.call("social", "ListFriendGroups", toEmptyCbor(req));
+    const csilResp = this.t.call("SocialService", "list-friend-groups", toEmptyCbor(req));
     return fromFriendGroupListCbor(csilResp);
   }
 
@@ -367,7 +423,7 @@ export class SocialClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   createFriendGroup(req: CreateFriendGroupRequest): FriendGroup {
-    const csilResp = this.t.call("social", "CreateFriendGroup", toCreateFriendGroupRequestCbor(req));
+    const csilResp = this.t.call("SocialService", "create-friend-group", toCreateFriendGroupRequestCbor(req));
     return fromFriendGroupCbor(csilResp);
   }
 
@@ -377,7 +433,7 @@ export class SocialClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   deleteFriendGroup(req: GroupID): Empty {
-    const csilResp = this.t.call("social", "DeleteFriendGroup", encodeValue(req));
+    const csilResp = this.t.call("SocialService", "delete-friend-group", encodeValue(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -387,7 +443,7 @@ export class SocialClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   addFriend(req: AddFriendRequest): Empty {
-    const csilResp = this.t.call("social", "AddFriend", toAddFriendRequestCbor(req));
+    const csilResp = this.t.call("SocialService", "add-friend", toAddFriendRequestCbor(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -397,7 +453,7 @@ export class SocialClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   removeFriend(req: RemoveFriendRequest): Empty {
-    const csilResp = this.t.call("social", "RemoveFriend", toRemoveFriendRequestCbor(req));
+    const csilResp = this.t.call("SocialService", "remove-friend", toRemoveFriendRequestCbor(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -411,7 +467,7 @@ export class SocialClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   resolveUser(req: Handle): UserProfile {
-    const csilResp = this.t.call("social", "ResolveUser", encodeValue(req));
+    const csilResp = this.t.call("SocialService", "resolve-user", encodeValue(req));
     return fromUserProfileCbor(csilResp);
   }
 }
@@ -425,7 +481,7 @@ export class SubscriptionClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   subscribe(req: TargetRef): Subscription {
-    const csilResp = this.t.call("subscription", "Subscribe", toTargetRefCbor(req));
+    const csilResp = this.t.call("SubscriptionService", "subscribe", toTargetRefCbor(req));
     return fromSubscriptionCbor(csilResp);
   }
 
@@ -435,7 +491,7 @@ export class SubscriptionClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   unsubscribe(req: TargetRef): Empty {
-    const csilResp = this.t.call("subscription", "Unsubscribe", toTargetRefCbor(req));
+    const csilResp = this.t.call("SubscriptionService", "unsubscribe", toTargetRefCbor(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -445,7 +501,7 @@ export class SubscriptionClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   setMuted(req: SetMutedRequest): Subscription {
-    const csilResp = this.t.call("subscription", "SetMuted", toSetMutedRequestCbor(req));
+    const csilResp = this.t.call("SubscriptionService", "set-muted", toSetMutedRequestCbor(req));
     return fromSubscriptionCbor(csilResp);
   }
 
@@ -455,7 +511,7 @@ export class SubscriptionClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   listSubscriptions(req: Empty): SubscriptionList {
-    const csilResp = this.t.call("subscription", "ListSubscriptions", toEmptyCbor(req));
+    const csilResp = this.t.call("SubscriptionService", "list-subscriptions", toEmptyCbor(req));
     return fromSubscriptionListCbor(csilResp);
   }
 }
@@ -469,7 +525,7 @@ export class ThreadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   listPosts(req: ListPostsRequest): PostPage {
-    const csilResp = this.t.call("thread", "ListPosts", toListPostsRequestCbor(req));
+    const csilResp = this.t.call("ThreadService", "list-posts", toListPostsRequestCbor(req));
     return fromPostPageCbor(csilResp);
   }
 
@@ -479,7 +535,7 @@ export class ThreadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   getThread(req: GetThreadRequest): Thread {
-    const csilResp = this.t.call("thread", "GetThread", toGetThreadRequestCbor(req));
+    const csilResp = this.t.call("ThreadService", "get-thread", toGetThreadRequestCbor(req));
     return fromThreadCbor(csilResp);
   }
 
@@ -489,7 +545,7 @@ export class ThreadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   createPost(req: CreatePostRequest): Post {
-    const csilResp = this.t.call("thread", "CreatePost", toCreatePostRequestCbor(req));
+    const csilResp = this.t.call("ThreadService", "create-post", toCreatePostRequestCbor(req));
     return fromPostCbor(csilResp);
   }
 
@@ -499,7 +555,7 @@ export class ThreadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   createComment(req: CreateCommentRequest): Comment {
-    const csilResp = this.t.call("thread", "CreateComment", toCreateCommentRequestCbor(req));
+    const csilResp = this.t.call("ThreadService", "create-comment", toCreateCommentRequestCbor(req));
     return fromCommentCbor(csilResp);
   }
 
@@ -510,7 +566,7 @@ export class ThreadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   editPost(req: EditPostRequest): Post {
-    const csilResp = this.t.call("thread", "EditPost", toEditPostRequestCbor(req));
+    const csilResp = this.t.call("ThreadService", "edit-post", toEditPostRequestCbor(req));
     return fromPostCbor(csilResp);
   }
 
@@ -520,7 +576,7 @@ export class ThreadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   editComment(req: EditCommentRequest): Comment {
-    const csilResp = this.t.call("thread", "EditComment", toEditCommentRequestCbor(req));
+    const csilResp = this.t.call("ThreadService", "edit-comment", toEditCommentRequestCbor(req));
     return fromCommentCbor(csilResp);
   }
 
@@ -530,7 +586,7 @@ export class ThreadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   listRevisions(req: TargetRef): RevisionList {
-    const csilResp = this.t.call("thread", "ListRevisions", toTargetRefCbor(req));
+    const csilResp = this.t.call("ThreadService", "list-revisions", toTargetRefCbor(req));
     return fromRevisionListCbor(csilResp);
   }
 
@@ -541,7 +597,7 @@ export class ThreadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   deletePost(req: PostID): Empty {
-    const csilResp = this.t.call("thread", "DeletePost", encodeValue(req));
+    const csilResp = this.t.call("ThreadService", "delete-post", encodeValue(req));
     return fromEmptyCbor(csilResp);
   }
 
@@ -552,7 +608,7 @@ export class ThreadClient {
    * @throws transport errors (network, timeout) raised by the transport
    */
   deleteComment(req: CommentID): Empty {
-    const csilResp = this.t.call("thread", "DeleteComment", encodeValue(req));
+    const csilResp = this.t.call("ThreadService", "delete-comment", encodeValue(req));
     return fromEmptyCbor(csilResp);
   }
 }
@@ -560,6 +616,7 @@ export class ThreadClient {
 export class ApiClient {
   readonly auth: AuthClient;
   readonly board: BoardClient;
+  readonly category: CategoryClient;
   readonly endorsement: EndorsementClient;
   readonly integration: IntegrationClient;
   readonly notification: NotificationClient;
@@ -571,6 +628,7 @@ export class ApiClient {
   constructor(t: ServiceTransport) {
     this.auth = new AuthClient(t);
     this.board = new BoardClient(t);
+    this.category = new CategoryClient(t);
     this.endorsement = new EndorsementClient(t);
     this.integration = new IntegrationClient(t);
     this.notification = new NotificationClient(t);

@@ -67,7 +67,7 @@ firepit/
 │   └── src/{gen,lib,components,pages}
 ├── clients/                 # generated: go/, typescript/ (more languages later)
 ├── helm_chart/              # api + linkkeys-rp sidecar + HTTPRoute (D1)
-└── .reactorcide/jobs/       # test-go.yaml test-web.yaml release.yaml deploy.yaml
+└── .reactorcide/            # trusted plugins, workflow DAGs, jobs, tests, grants
 ```
 
 Three independent Go/npm modules (`api`, `coredb`, `webapp`) plus

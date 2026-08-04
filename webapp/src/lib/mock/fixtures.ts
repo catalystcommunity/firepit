@@ -11,6 +11,7 @@
 // downstream parses it.
 import type {
   Board,
+  Category,
   Comment,
   Endorsement,
   FriendGroup,
@@ -60,7 +61,7 @@ export const MOCK_USER: UserProfile = {
   handle: "alice",
   displayName: "Alice Anders",
   kind: "human",
-  roles: [],
+  roles: ["admin"],
   createdAt: ago(400),
 };
 
@@ -110,6 +111,7 @@ export const boards: readonly Board[] = [
     title: "Firepit Meta",
     description: "General discussion about firepit itself — the forum eating its own dog food.",
     kind: "discussion",
+    categoryLimit: 3,
     createdBy: CAROL_ID,
     createdAt: ago(120),
   },
@@ -119,6 +121,7 @@ export const boards: readonly Board[] = [
     title: "Announcements",
     description: "Release notes and project news. Anyone can reply; only maintainers post roots.",
     kind: "announce",
+    categoryLimit: 2,
     createdBy: CAROL_ID,
     createdAt: ago(120),
   },
@@ -128,8 +131,41 @@ export const boards: readonly Board[] = [
     title: "csilgen",
     description: "Schema/codegen discussion for the CSIL IDL and its generated clients.",
     kind: "discussion",
+    categoryLimit: 0,
     createdBy: DAVE_ID,
     createdAt: ago(90),
+  },
+];
+
+export const CATEGORY_RELEASE = "01FPMOCKCATEGORYRELEASE0";
+export const CATEGORY_DESIGN = "01FPMOCKCATEGORYDESIGN00";
+export const CATEGORY_BUG = "01FPMOCKCATEGORYBUG000000";
+
+export const categories: readonly Category[] = [
+  {
+    id: CATEGORY_RELEASE,
+    slug: "releases",
+    name: "Releases",
+    description: "Release planning and announcements.",
+    crossBoardPosting: true,
+    boardIds: [BOARD_FIREPIT, BOARD_ANNOUNCE],
+    createdAt: ago(100),
+  },
+  {
+    id: CATEGORY_DESIGN,
+    slug: "design",
+    name: "Design",
+    crossBoardPosting: false,
+    boardIds: [BOARD_FIREPIT, BOARD_CSILGEN],
+    createdAt: ago(80),
+  },
+  {
+    id: CATEGORY_BUG,
+    slug: "bugs",
+    name: "Bugs",
+    crossBoardPosting: false,
+    boardIds: [BOARD_FIREPIT],
+    createdAt: ago(70),
   },
 ];
 
@@ -149,6 +185,7 @@ export const posts: readonly Post[] = [
   {
     id: POST_WELCOME,
     boardId: BOARD_FIREPIT,
+    categoryIds: [CATEGORY_DESIGN],
     authorId: CAROL_ID,
     authorHandle: CAROL.handle,
     title: "Welcome to Firepit",
@@ -163,6 +200,7 @@ export const posts: readonly Post[] = [
   {
     id: POST_RELEASE,
     boardId: BOARD_ANNOUNCE,
+    categoryIds: [CATEGORY_RELEASE],
     authorId: CAROL_ID,
     authorHandle: CAROL.handle,
     title: "v0.1.0 released",
@@ -176,6 +214,7 @@ export const posts: readonly Post[] = [
   {
     id: POST_CSIL_QUESTION,
     boardId: BOARD_CSILGEN,
+    categoryIds: [CATEGORY_DESIGN],
     authorId: DAVE_ID,
     authorHandle: DAVE.handle,
     title: "Why kebab-case ops on the wire?",
@@ -194,6 +233,7 @@ export const posts: readonly Post[] = [
   {
     id: POST_GH_ISSUE,
     boardId: BOARD_FIREPIT,
+    categoryIds: [CATEGORY_BUG],
     authorId: DAVE_ID,
     authorHandle: DAVE.handle,
     title: "flaky ltree GIST index test on CI",
@@ -207,6 +247,7 @@ export const posts: readonly Post[] = [
   {
     id: POST_SECOND,
     boardId: BOARD_FIREPIT,
+    categoryIds: [],
     authorId: BOB_ID,
     authorHandle: BOB.handle,
     title: "Style guide for board descriptions?",
@@ -534,6 +575,7 @@ export function createSeed() {
   return {
     user: structuredClone(MOCK_USER),
     boards: structuredClone(boards) as Board[],
+    categories: structuredClone(categories) as Category[],
     posts: structuredClone(posts) as Post[],
     comments: structuredClone(comments) as Comment[],
     endorsements: structuredClone(endorsements) as Endorsement[],

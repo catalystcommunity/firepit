@@ -220,6 +220,11 @@ export interface Board {
   title: string;
   description?: string;
   kind: BoardKind;
+  /**
+   * Maximum categories on a post created in this board. Zero means that
+   * there is no maximum. Uncategorized posts do not use this limit.
+   */
+  categoryLimit: number;
   createdBy: UserID;
   /**
    * Set when an admin has archived the board (read-only afterward, still
@@ -254,6 +259,7 @@ export interface CreateBoardRequest {
   title: string;
   description?: string;
   kind: BoardKind;
+  categoryLimit?: number;
 }
 
 /**
@@ -265,6 +271,7 @@ export interface UpdateBoardRequest {
   id: BoardID;
   title?: string;
   description?: string;
+  categoryLimit?: number;
 }
 
 /**
@@ -293,6 +300,11 @@ export interface RemoveBoardMemberRequest {
 export interface Post {
   id: PostID;
   boardId: BoardID;
+  /**
+   * Stored categories. An empty list means the virtual Uncategorized
+   * state. Category details come from CategoryService.
+   */
+  categoryIds: CategoryID[];
   authorId: UserID;
   /**
    * The author's handle, denormalized onto every post/comment response so
@@ -358,6 +370,12 @@ export interface Comment {
  */
 export interface ListPostsRequest {
   boardId: BoardID;
+  /**
+   * Match a post that has any selected category. When this list and
+   * include_uncategorized are absent, the server returns all posts.
+   */
+  categoryIds?: CategoryID[];
+  includeUncategorized?: boolean;
   cursor?: PageCursor;
   limit?: number;
 }
@@ -386,6 +404,7 @@ export interface Thread {
 
 export interface CreatePostRequest {
   boardId: BoardID;
+  categoryIds?: CategoryID[];
   title: string;
   bodyMd: string;
 }
@@ -402,6 +421,7 @@ export interface CreateCommentRequest {
  */
 export interface EditPostRequest {
   id: PostID;
+  categoryIds?: CategoryID[];
   title: string;
   bodyMd: string;
 }
@@ -760,6 +780,43 @@ export interface DomainList {
   domains: DomainEntry[];
 }
 
+export type CategoryID = string;
+
+export interface Category {
+  id: CategoryID;
+  slug: string;
+  name: string;
+  description?: string;
+  crossBoardPosting: boolean;
+  boardIds: BoardID[];
+  createdAt: Date;
+}
+
+export interface CategoryList {
+  categories: Category[];
+}
+
+export interface CreateCategoryRequest {
+  slug: string;
+  name: string;
+  description?: string;
+  crossBoardPosting: boolean;
+  boardIds: BoardID[];
+}
+
+export interface UpdateCategoryRequest {
+  id: CategoryID;
+  name?: string;
+  description?: string;
+  crossBoardPosting?: boolean;
+  boardIds?: BoardID[];
+}
+
+export interface DeleteCategoryRequest {
+  id: CategoryID;
+  removeFromPosts: boolean;
+}
+
 export function validateBeginLoginRequest(value: BeginLoginRequest): string[] {
   const errors: string[] = [];
   if (value.domain.length < 1 || value.domain.length > 253) errors.push("domain: length must be between 1 and 253");
@@ -795,6 +852,9 @@ export function validateCreateBoardRequest(value: CreateBoardRequest): string[] 
   if (value.description !== undefined) {
     if (value.description.length < 0 || value.description.length > 2000) errors.push("description: length must be between 0 and 2000");
   }
+  if (value.categoryLimit !== undefined) {
+    if (value.categoryLimit > 100) errors.push("categoryLimit: must be <= 100");
+  }
   return errors;
 }
 
@@ -805,6 +865,9 @@ export function validateUpdateBoardRequest(value: UpdateBoardRequest): string[] 
   }
   if (value.description !== undefined) {
     if (value.description.length < 0 || value.description.length > 2000) errors.push("description: length must be between 0 and 2000");
+  }
+  if (value.categoryLimit !== undefined) {
+    if (value.categoryLimit > 100) errors.push("categoryLimit: must be <= 100");
   }
   return errors;
 }
@@ -896,6 +959,41 @@ export function validateCreateMappingRequest(value: CreateMappingRequest): strin
 export function validateDomainEntry(value: DomainEntry): string[] {
   const errors: string[] = [];
   if (value.domain.length < 1 || value.domain.length > 253) errors.push("domain: length must be between 1 and 253");
+  return errors;
+}
+
+const categorySlugRe = new RegExp("^[a-z0-9]+(-[a-z0-9]+)*$");
+export function validateCategory(value: Category): string[] {
+  const errors: string[] = [];
+  if (value.slug.length < 1 || value.slug.length > 64) errors.push("slug: length must be between 1 and 64");
+  if (!categorySlugRe.test(value.slug)) errors.push("slug: must match the required pattern");
+  if (value.name.length < 1 || value.name.length > 80) errors.push("name: length must be between 1 and 80");
+  if (value.description !== undefined) {
+    if (value.description.length < 0 || value.description.length > 500) errors.push("description: length must be between 0 and 500");
+  }
+  return errors;
+}
+
+const createCategoryRequestSlugRe = new RegExp("^[a-z0-9]+(-[a-z0-9]+)*$");
+export function validateCreateCategoryRequest(value: CreateCategoryRequest): string[] {
+  const errors: string[] = [];
+  if (value.slug.length < 1 || value.slug.length > 64) errors.push("slug: length must be between 1 and 64");
+  if (!createCategoryRequestSlugRe.test(value.slug)) errors.push("slug: must match the required pattern");
+  if (value.name.length < 1 || value.name.length > 80) errors.push("name: length must be between 1 and 80");
+  if (value.description !== undefined) {
+    if (value.description.length < 0 || value.description.length > 500) errors.push("description: length must be between 0 and 500");
+  }
+  return errors;
+}
+
+export function validateUpdateCategoryRequest(value: UpdateCategoryRequest): string[] {
+  const errors: string[] = [];
+  if (value.name !== undefined) {
+    if (value.name.length < 1 || value.name.length > 80) errors.push("name: length must be between 1 and 80");
+  }
+  if (value.description !== undefined) {
+    if (value.description.length < 0 || value.description.length > 500) errors.push("description: length must be between 0 and 500");
+  }
   return errors;
 }
 

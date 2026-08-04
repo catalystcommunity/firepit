@@ -63,8 +63,24 @@ func (s *Store) GetPost(ctx context.Context, db *gorm.DB, id string) (*Post, err
 // Callers typically pass limit+1 to detect whether another page follows
 // without a second COUNT query; ListPostsByBoard itself just executes the
 // keyset predicate, it doesn't special-case that.
-func (s *Store) ListPostsByBoard(ctx context.Context, db *gorm.DB, boardID string, after *PostListCursor, limit int) ([]Post, error) {
-	q := db.WithContext(ctx).Where("board_id = ? AND deleted_at IS NULL", boardID)
+func (s *Store) ListPostsByBoard(ctx context.Context, db *gorm.DB, boardID string, categoryIDs []string, includeUncategorized bool, filterActive bool, after *PostListCursor, limit int) ([]Post, error) {
+	q := db.WithContext(ctx).Model(&Post{}).Where("posts.deleted_at IS NULL").Where(`
+		posts.board_id = ? OR EXISTS (
+			SELECT 1 FROM post_categories visible_pc
+			JOIN categories visible_c ON visible_c.id = visible_pc.category_id AND visible_c.cross_board_posting
+			JOIN board_categories visible_bc ON visible_bc.category_id = visible_c.id AND visible_bc.board_id = ?
+			WHERE visible_pc.post_id = posts.id
+		)`, boardID, boardID)
+	if filterActive {
+		if len(categoryIDs) > 0 && includeUncategorized {
+			q = q.Where(`EXISTS (SELECT 1 FROM post_categories filter_pc WHERE filter_pc.post_id = posts.id AND filter_pc.category_id IN ?)
+				OR NOT EXISTS (SELECT 1 FROM post_categories any_pc WHERE any_pc.post_id = posts.id)`, categoryIDs)
+		} else if len(categoryIDs) > 0 {
+			q = q.Where("EXISTS (SELECT 1 FROM post_categories filter_pc WHERE filter_pc.post_id = posts.id AND filter_pc.category_id IN ?)", categoryIDs)
+		} else if includeUncategorized {
+			q = q.Where("NOT EXISTS (SELECT 1 FROM post_categories any_pc WHERE any_pc.post_id = posts.id)")
+		}
+	}
 	if after != nil {
 		// Row-value comparison: strictly "before" the cursor in the same
 		// (last_activity_at DESC, id DESC) order used below, so a post
@@ -75,7 +91,7 @@ func (s *Store) ListPostsByBoard(ctx context.Context, db *gorm.DB, boardID strin
 		q = q.Where("(last_activity_at, id) < (?, ?)", after.LastActivityAt, after.ID)
 	}
 	var posts []Post
-	err := q.Order("last_activity_at DESC, id DESC").Limit(limit).Find(&posts).Error
+	err := q.Order("posts.last_activity_at DESC, posts.id DESC").Limit(limit).Find(&posts).Error
 	return posts, err
 }
 
