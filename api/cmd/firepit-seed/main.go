@@ -1,60 +1,6 @@
-// Command firepit-seed is the CLI backing `./tools.sh seed`: an idempotent
-// data seeder for a firepit deployment (task D3, PLANDOC.md §7 D3 / §8
-// milestone M3's "dogfood setup"). It is deliberately a separate binary
-// from firepit-api (cmd/firepit-api) rather than a boot-time hook, so
-// seeding is an explicit, re-runnable operator action — never something
-// that fires as a side effect of the api process starting up.
-//
-// # What it seeds, and when
-//
-// Every run (no flags required) seeds:
-//
-//   - The project boards this org's own repos get discussed in, plus a
-//     general-purpose "general" board and an announce-kind
-//     "announcements" board — see boards.go's projectBoards.
-//
-// `--admin domain:user_id` (repeatable) additionally bootstraps instance
-// admins: upserts a `users` row for that linkkeys identity (creating one if
-// this is its first appearance) and grants it the "admin" role
-// (csilservices.RoleAdmin) if it doesn't already have it. THIS IS THE
-// documented admin bootstrap path (see docs/OPERATING.md) — there is no
-// CSIL op that grants the first admin, since every admin-only op requires
-// an existing admin to call it.
-//
-// `--trusted-domain domain` (repeatable) additionally adds a linkkeys
-// identity domain to the instance trust list. An existing row is a no-op.
-// The seed-bot system user records who added rows created by this command.
-//
-// `--demo` additionally seeds a handful of demo users and a few threads
-// with nested comments, endorsements, and subscriptions, so a fresh dev
-// environment is immediately browsable. Skip this in any real deployment
-// (see demo.go's package doc comment for exactly what it creates).
-//
-// `--github-mappings` additionally creates GitHub webhook routing for a
-// few real catalystcommunity repos (github_mappings rows only — it does
-// NOT set the HMAC secret env vars themselves, and does not install
-// webhooks on GitHub's side; see docs/OPERATING.md's GitHub webhook setup
-// section and github.go's package doc comment). Off by default so a prod
-// run of `firepit-seed` doesn't silently opt an instance into ingesting
-// from repos its operator hasn't deliberately wired secrets for.
-//
-// # Idempotency
-//
-// Every step here is safe to run twice: boards upsert by slug, the admin
-// bootstrap upserts by (linkkeys_domain, linkkeys_user_id) and only grants
-// the admin role if missing, GitHub mappings upsert by repo, and the demo
-// dataset checks for its own canary post before creating anything (see
-// demo.go). Nothing here ever deletes or overwrites content a previous run
-// (or a real user) created.
-//
-// # Database connection
-//
-// Reads FIREPIT_DB_URI (matching firepit-api's own config.Config.DBURI env
-// var), falling back to DB_URI (matching coredb/cmd/migrate's env var, so
-// `./tools.sh migrate && ./tools.sh seed` need only one exported var if a
-// caller prefers that name), falling back to the same default the compose
-// stack's postgres service uses. It does NOT run migrations itself — run
-// `./tools.sh migrate` first against a fresh database.
+// Command firepit-seed adds initial data to a Firepit database. It is a
+// separate command so that seeding is an explicit operator action. Repeated
+// runs do not create duplicate seed data. See docs/OPERATING.md for details.
 package main
 
 import (
@@ -96,6 +42,16 @@ func (r *repeatedFlag) Set(v string) error {
 
 func main() {
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
+	flag.CommandLine.SetOutput(os.Stdout)
+	flag.Usage = func() {
+		fmt.Fprintln(flag.CommandLine.Output(), "Usage: firepit-seed [flags]")
+		fmt.Fprintln(flag.CommandLine.Output())
+		fmt.Fprintln(flag.CommandLine.Output(), "Seed project boards and optional deployment data.")
+		fmt.Fprintln(flag.CommandLine.Output(), "Run database migrations before this command.")
+		fmt.Fprintln(flag.CommandLine.Output())
+		fmt.Fprintln(flag.CommandLine.Output(), "Flags:")
+		flag.PrintDefaults()
+	}
 
 	var admins repeatedFlag
 	var trustedDomains repeatedFlag
@@ -104,6 +60,11 @@ func main() {
 	flag.Var(&admins, "admin", "domain:user_id of a linkkeys identity to grant instance-admin (repeatable)")
 	flag.Var(&trustedDomains, "trusted-domain", "linkkeys identity domain to add to the instance trust list (repeatable)")
 	flag.Parse()
+	if flag.NArg() != 0 {
+		fmt.Fprintf(os.Stderr, "firepit-seed: unexpected argument: %s\n", flag.Arg(0))
+		flag.Usage()
+		os.Exit(2)
+	}
 
 	if err := run(context.Background(), []string(admins), []string(trustedDomains), *demo, *githubMappings); err != nil {
 		log.WithError(err).Error("firepit-seed failed")
@@ -119,15 +80,8 @@ func run(ctx context.Context, adminSpecs, trustedDomainSpecs []string, demo, git
 	if err != nil {
 		return fmt.Errorf("opening database: %w", err)
 	}
-	// Every upsert helper in this program (upsertBoard, ensureSeedBotUser,
-	// bootstrapAdmins, upsertGithubMapping, ...) does a First()-then-maybe-
-	// Create() lookup, and "no row yet" is the expected, common case on a
-	// fresh database — not a fault. gorm's default logger writes every
-	// ErrRecordNotFound to stderr as an error-level line regardless, which
-	// would otherwise bury this program's own structured logrus output
-	// under noise on every single run. IgnoreRecordNotFoundError silences
-	// exactly that one case while leaving every other gorm-level warning/
-	// error (a real constraint violation, a connection failure) visible.
+	// Missing rows are expected because each seed operation uses an upsert.
+	// Suppress only those messages so that real database warnings stay visible.
 	gdb.Logger = logger.New(
 		stdlog.New(os.Stderr, "", stdlog.LstdFlags),
 		logger.Config{
@@ -178,11 +132,7 @@ func run(ctx context.Context, adminSpecs, trustedDomainSpecs []string, demo, git
 	return nil
 }
 
-// resolveDBURI mirrors coredb/cmd/migrate's DB_URI convention but prefers
-// FIREPIT_DB_URI first (firepit-api's own config.Config env var name) so
-// operators who only ever export the api's own var still get the right
-// default for seeding too. Both env vars, and the hardcoded fallback, name
-// the exact same local dev database.
+// resolveDBURI accepts both the API and migration environment variable names.
 func resolveDBURI() string {
 	if v := os.Getenv("FIREPIT_DB_URI"); v != "" {
 		return v

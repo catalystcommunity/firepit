@@ -1,7 +1,5 @@
-// Wires `FixtureStore` (store.ts) up as an `AsyncServiceTransport` — the
-// mock half of task C1's "Mock-server mode so C2-C4 develop without B"
-// (PLANDOC.md §7). Structurally this mirrors firepit-api's own dispatch
-// table (api/internal/server/dispatch.go): a `Record<service, Record<op,
+// Wires FixtureStore to the generated client transport. It mirrors the API
+// dispatch table: a `Record<service, Record<op,
 // handler>>` keyed on the same kebab-case op names the real wire uses,
 // each handler decoding a request payload with the generated codec, calling
 // one `FixtureStore` method, and re-encoding the result — so every op here
@@ -147,9 +145,6 @@ function buildRoutes(store: FixtureStore): Record<string, Record<string, Handler
       "grant-mention": (p) => toEmptyCbor(store.grantMention(bareString(p))),
       "revoke-mention": (p) => toEmptyCbor(store.revokeMention(bareString(p))),
     },
-    // Wired for task C4 (Settings' friend-groups management) — C1 had left
-    // this unrouted (see mockTransport.test.ts's now-updated "unknown
-    // service" test) since nothing needed it yet.
     social: {
       "list-friend-groups": () => toFriendGroupListCbor(store.listFriendGroups()),
       "create-friend-group": (p) => toFriendGroupCbor(store.createFriendGroup(fromCreateFriendGroupRequestCbor(p))),

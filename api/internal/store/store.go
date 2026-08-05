@@ -5,10 +5,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Store wraps a *gorm.DB configured for firepit's schema. It carries no
-// query methods of its own yet — services (B3-B9) add repository methods
-// on top of this as they land. Its only job today is being the one place
-// that knows how to open a *gorm.DB against coredb's schema.
+// Store wraps a *gorm.DB configured for the Firepit schema.
 type Store struct {
 	DB *gorm.DB
 }

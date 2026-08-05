@@ -7,11 +7,9 @@ flows into the same threads humans use. Full product spec, data model, API
 surface, and task breakdown: **PLANDOC.md** (read that first for anything
 beyond "how do I build/run this").
 
-**Status: Wave B complete.** All eight Wave B services (auth, boards,
-threads, endorsements, settings/social, subscriptions/read, notifications,
-GitHub ingestion) are real implementations, wired into `firepit-api`, and
-covered by the unit + integration suites. See PLANDOC.md §7 for the task
-plan and what's still ahead (Wave C: `webapp`).
+**Status: built.** Waves A–D are complete. The backend, web application,
+deployment files, seed command, and test suites are implemented. Categories
+and shared threads are also implemented. `PLANDOC.md` is the design record.
 
 ## Architecture
 
@@ -57,12 +55,12 @@ plan and what's still ahead (Wave C: `webapp`).
 ```
 firepit/
 ├── PLANDOC.md  CLAUDE.md  AGENTS.md  LICENSE  .releaserc.json  tools.sh
-├── csil/                    # firepit.csil + types/*.csil — THE contract (A2)
+├── csil/                    # firepit.csil + types/*.csil — THE contract
 ├── api/                     # go module github.com/catalystcommunity/firepit/api
 │   ├── cmd/firepit-api/      # binary entrypoint
 │   └── internal/{config,transport,csil,csilservices,linkkeys,notify,github,store}
 ├── coredb/                  # go module …/firepit/coredb — goose embedded migrations
-│   └── migrations/           # 000001_baseline.sql … (A3)
+│   └── migrations/           # numbered goose migrations
 ├── webapp/                  # SolidJS + Vite + TS, npm, vitest
 │   └── src/{gen,lib,components,pages}
 ├── clients/                 # generated: go/, typescript/ (more languages later)
@@ -83,34 +81,36 @@ list. Verbs:
 
 | Verb | Does |
 |---|---|
-| `gen` | Regenerate CSIL-derived code (csilgen → `api/internal/csil`, `webapp/src/gen`, `clients/`). Real since task A2; run after any `csil/*.csil` change. |
+| `gen` | Regenerate CSIL-derived code in `api/internal/csil`, `webapp/src/gen`, and `clients/`. Run it after a `csil/*.csil` change. |
 | `test` | `go test ./...` for `api` and `coredb`, then `npm test` for `webapp`. Must stay green. |
+| `test-go` | Run the `api` and `coredb` Go tests. |
+| `test-web` | Run the web application tests. |
 | `test-integration` | testcontainers-backed Postgres integration suite: `go test -tags=integration ./...` across every `api` package (store, csilservices, github, server). Requires `docker`. |
-| `lint` | `go vet` for `api`/`coredb`, `eslint` for `webapp` once configured. |
-| `migrate` | `goose` migrations against `$DB_URI`. Real since task A3. |
-| `dev` | `docker compose up` — local dev stack (postgres + api; linkkeys-rp/webapp still commented placeholders). |
-| `build-images` | Build deployable container images. Stub until D1. |
+| `lint` | Run `go vet` for `api` and `coredb`, then ESLint for `webapp`. |
+| `lint-go` | Run `go vet` for `api` and `coredb`. |
+| `lint-web` | Run ESLint for `webapp`. |
+| `migrate` | Run `up`, `down`, or `status` against `$DB_URI`. The default verb is `up`. |
+| `seed` | Seed boards and optional demo, admin, trust-domain, and GitHub mapping data. |
+| `dev` | Start Postgres, the API, and the web application with Docker Compose. |
+| `build-images` | Build the API and web application container images. |
 
-Every verb either does its job or exits non-zero with a clear "not yet
-implemented" message pointing at the task that lands it — `./tools.sh test`
-is the one verb that must always exit 0.
+Run `./tools.sh help` for command flags and requirements.
 
 ## Local dev
 
 ```sh
-./tools.sh dev     # postgres (+ later: linkkeys-rp, api, webapp) via docker compose
+./tools.sh dev     # postgres + api + webapp via docker compose
 ./tools.sh test    # go test (api, coredb) + npm test (webapp)
 ./tools.sh lint    # go vet + eslint
 ```
 
-`docker-compose.yaml` at the repo root defines the stack; `postgres` and
-`api` (built from `api/Dockerfile`) both build/run today. `webapp`/
-`linkkeys-rp` entries are still commented placeholders until their images
-exist — see PLANDOC.md task D1.
+`docker-compose.yaml` defines the local stack. The `linkkeys-rp` service is
+disabled until you configure local linkkeys settings. Anonymous access does
+not require that service.
 
 ## Conventions
 
-- **CSIL-first.** `csil/` is the source of truth for the Go server stubs and
+- **CSIL-first.** `csil/` is the source of truth for the Go service interfaces and
   every `clients/<lang>` package, plus `webapp/src/gen`. Don't hand-edit
   generated files — change the schema and regen.
 - **PostgreSQL only.** goose for migrations (`coredb`), gorm-on-pgx for the

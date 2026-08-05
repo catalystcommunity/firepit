@@ -1,8 +1,5 @@
-// Inline named endorsement list + endorse/retract (task C3 scope item 3,
-// PLANDOC.md §1/§4/§9.3). Renders exactly the order `list-endorsements`
-// returns — SERVER order, never re-sorted here: the ordering is per-viewer
-// (friends first, then reputation) and is meaningless to re-derive
-// client-side. Optimistic endorse/retract with rollback on error.
+// Preserve server order because endorsement order depends on the viewer.
+// Roll back optimistic endorse and retract actions when a request fails.
 //
 // `GetThreadRequest`'s `Thread` has no embedded endorsement data (CSIL's
 // `Thread` type is just `{ post, comments }` — see types.gen.ts), so this

@@ -1,8 +1,5 @@
-// The browser HTTP carrier for CSIL-RPC (task C1, PLANDOC.md §3/§5): POSTs
-// one CBOR envelope per call to `/csil/v1/rpc` and decodes the response,
-// translating both transport-status failures and the `ServiceError`
-// application-error variant into the two typed errors in `~/lib/errors` —
-// this is the "one place" pages never have to parse an envelope themselves.
+// The browser transport sends one CBOR envelope per call to `/csil/v1/rpc`.
+// It converts transport failures and ServiceError responses to typed errors.
 //
 // Wire conventions this follows (api/internal/server/dispatch.go,
 // api/internal/server/server.go):

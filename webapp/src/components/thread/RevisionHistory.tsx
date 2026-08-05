@@ -1,7 +1,5 @@
-// Collapsible edit-history panel (task C3 scope item 4: "revision history
-// view (list-revisions) in a collapsible panel or modal"). Lazily fetches
-// on first expand — most items are never edited, so most CommentNode/
-// PostView instances should never issue this call at all.
+// Load revisions only when the user expands the panel because most content
+// has no revisions.
 import { createResource, createSignal, For, Show, type Component } from "solid-js";
 import { api } from "~/lib/api";
 import type { TargetType } from "~/gen/types.gen";

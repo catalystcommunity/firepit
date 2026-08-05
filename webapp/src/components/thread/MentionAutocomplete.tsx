@@ -1,5 +1,4 @@
-// A simple `@handle` picker fed by handles already present in the thread
-// (task C3 scope item 2). FUTURE WORK, stated plainly: CSIL has no
+// The picker uses handles already present in the thread. CSIL has no
 // user-search op in v1 (PLANDOC.md §5 lists no such op on any service) — a
 // real mention picker needs one (e.g. a paginated `UserService.search-users`
 // or similar) so it can suggest *any* linkkeys identity, not just people who

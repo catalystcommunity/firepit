@@ -1,7 +1,3 @@
-// Board index (task C2, PLANDOC.md §7): every board, grouped announce vs.
-// discussion (per `Board.kind`), each row showing title/description, a
-// subscribe toggle, and an understated unread dot from the shared poller
-// (`~/lib/unread`). Used by `~/pages/Home`.
 import { A } from "@solidjs/router";
 import { createResource, For, Show, type Component } from "solid-js";
 import type { Board, Subscription } from "~/gen/types.gen";

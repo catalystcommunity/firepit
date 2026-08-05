@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 #
-# Firepit task runner. One script, portable bash, run from anywhere in the
-# repo (or outside it — it always resolves paths off its own location).
+# Firepit task runner. You can run it from any directory.
 #
 #   ./tools.sh gen               # csilgen -> api/internal/csil, webapp/src/gen, clients/
 #   ./tools.sh test               # go test (api + coredb) + npm test (webapp)
 #   ./tools.sh test-go            # go test (api + coredb)
 #   ./tools.sh test-web           # npm test (webapp)
 #   ./tools.sh test-integration   # testcontainers-backed integration suite
-#   ./tools.sh lint                # go vet (api + coredb) + eslint (webapp, if configured)
+#   ./tools.sh lint                # go vet (api + coredb) + eslint (webapp)
 #   ./tools.sh lint-go            # go vet (api + coredb)
 #   ./tools.sh lint-web           # eslint (webapp, if configured)
 #   ./tools.sh migrate [up|down|status]   # goose migrate against DB_URI (default: docker-compose postgres)
@@ -39,6 +38,7 @@ err() {
 usage() {
     cat <<EOF
 Usage: ./tools.sh <command>
+       ./tools.sh help
 
 Commands:
   gen                Regenerate CSIL-derived code (server, TS client, clients/)
@@ -46,7 +46,7 @@ Commands:
   test-go            Run Go tests: api + coredb
   test-web           Run webapp tests
   test-integration   Run the testcontainers-backed integration suite
-  lint               go vet (api, coredb) + eslint (webapp, if configured)
+  lint               go vet (api, coredb) + eslint (webapp)
   lint-go            go vet (api, coredb)
   lint-web           eslint (webapp, if configured)
   migrate [verb]     Run goose against \$DB_URI (default: docker-compose postgres).
@@ -58,12 +58,8 @@ Commands:
                      Run migrate first.
   dev                Boot the local dev stack via docker compose
   build-images       Build deployable container images (api, webapp)
+  help               Show this help text
 EOF
-}
-
-not_implemented() {
-    err "not yet implemented: $1"
-    exit 1
 }
 
 cmd_gen() {
@@ -76,11 +72,7 @@ cmd_gen() {
     local VERSION
     VERSION="$(tr -d '[:space:]' < "$SCRIPT_DIR/version/VERSION.txt")"
 
-    # csilgen is installed via the org's csilgen install flow and normally lives
-    # at ~/.local/bin/csilgen (see ~/.csilgen/generators/ for the wasm
-    # generators it dispatches to). That directory isn't always on a
-    # non-interactive PATH, so add it here rather than forcing every caller to
-    # fix their environment — mirrors the longhouse regenerate.sh pattern.
+    # Non-interactive shells do not always include these user install paths.
     if [ -d "$HOME/.local/bin" ]; then
         export PATH="$HOME/.local/bin:$PATH"
     fi
@@ -96,11 +88,8 @@ cmd_gen() {
 
     log_status "gen: validate + lint"
     csilgen validate --input "$SPEC"
-    # Lint currently only ever emits stylistic warnings against this schema
-    # (PascalCase service names, kebab-case ops, \`;;;\` doc comments) — the
-    # exact conventions csilgen's own docs/examples and longhouse use. Gate on
-    # its exit code (non-zero = errors), not on warning count, so the build
-    # doesn't fail on lint disagreeing with idiomatic CSIL style.
+    # csilgen reports style warnings for the naming conventions in this
+    # schema. Its exit code still reports errors.
     csilgen lint "$SCRIPT_DIR/csil"
 
     # ---- Go server surface (api/internal/csil) ----
@@ -241,7 +230,7 @@ cmd_lint_web() {
         log_status "eslint (webapp)"
         ( cd "$SCRIPT_DIR/webapp" && npx eslint . )
     else
-        log_status "eslint (webapp) — skipped, no eslint config present yet"
+        log_status "eslint (webapp) — skipped, no eslint config present"
     fi
 }
 
@@ -264,11 +253,7 @@ cmd_migrate() {
 
 cmd_seed() {
     log_status "seed"
-    # api/cmd/firepit-seed reads FIREPIT_DB_URI (falling back to DB_URI, then
-    # the same docker-compose default cmd_migrate's `go run ./cmd/migrate`
-    # uses) itself — this verb just forwards every flag after "seed" to it,
-    # same as cmd_migrate forwards its own verb argument. Run `./tools.sh
-    # migrate` first; this does not run migrations.
+    # The seed command selects its database URI and does not run migrations.
     shift || true
     ( cd "$SCRIPT_DIR/api" && go run ./cmd/firepit-seed "$@" )
 }
@@ -288,11 +273,8 @@ cmd_build_images() {
     sha="$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo "nogit")"
     tag="${version}-${sha}"
 
-    # Dev-oriented: plain `docker build` from the repo root (both
-    # Dockerfiles expect that context — api/Dockerfile needs the sibling
-    # coredb/ module, webapp/Dockerfile needs clients/ and version/). CI's
-    # The Reactorcide image jobs use BuildKit against a builder-capability
-    # sidecar. This local verb does not push images to the registry.
+    # Both Dockerfiles require the repository root as their build context.
+    # This local command does not push images.
     log_status "build-images: firepit-api -> firepit/api:${tag}"
     docker build \
         -f "$SCRIPT_DIR/api/Dockerfile" \

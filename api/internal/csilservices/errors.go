@@ -9,7 +9,6 @@ import "github.com/catalystcommunity/firepit/api/internal/csil"
 // keep it in sync with docs/OPERATING.md's error code table once that
 // document exists. Deliberately not a CSIL enum, so new codes are additive.
 const (
-	CodeUnimplemented   uint64 = 1
 	CodeValidation      uint64 = 2
 	CodeUnauthenticated uint64 = 3
 	CodeForbidden       uint64 = 4
@@ -46,14 +45,6 @@ func (e *AppError) ServiceError() csil.ServiceError {
 		se.ResourceType = &resourceType
 	}
 	return se
-}
-
-// Unimplemented builds the AppError every stub in this package returns.
-// op should identify the failing operation as "<Service>.<op-name>" (e.g.
-// "AuthService.begin-login") so it's identifiable in logs and error
-// messages without extra context.
-func Unimplemented(op string) *AppError {
-	return &AppError{Code: CodeUnimplemented, Message: op + " is not implemented yet"}
 }
 
 // NotFound builds an AppError for a missing (or hidden-existence) resource.

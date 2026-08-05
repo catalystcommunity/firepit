@@ -1,11 +1,5 @@
-// Builds the parent -> children groupings a nested tree render needs from
-// `Thread.comments` (task C3, PLANDOC.md §4: "one indexed query, ordered
-// depth-first — renders both reddit-style trees and flat mailing-list
-// order"). The server delivers one flat, depth-first-ordered array; this
-// module never re-sorts it — grouping by `parentCommentId` while preserving
-// each comment's position relative to its siblings is enough to recover the
-// nested shape, and the flat "mailing-list" view (CommentTree.tsx) renders
-// the very same array untouched.
+// Group comments by parent without sorting them again. This preserves the
+// server's depth-first sibling order.
 import type { Comment } from "~/gen/types.gen";
 
 export interface CommentTreeModel {

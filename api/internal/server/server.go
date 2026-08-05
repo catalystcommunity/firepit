@@ -64,7 +64,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST "+rpcMountPath, s.handleRPC)
 	mux.HandleFunc("GET /healthz", s.handleHealthz)
 	s.registerGithubWebhookRoutes(mux)
-	// GET /auth/callback (task B2, PLANDOC.md §5): the one HTTP-native route
+	// The identity provider redirects to this HTTP-native route.
 	// the linkkeys login flow needs — see authcallback.go.
 	mux.HandleFunc("GET /auth/callback", s.handleAuthCallback)
 

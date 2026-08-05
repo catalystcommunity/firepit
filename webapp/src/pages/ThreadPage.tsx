@@ -1,8 +1,3 @@
-// /b/:slug/p/:postId — the thread view (task C3, PLANDOC.md §7). The core
-// screen: post header + body, the full comment tree (or flat mailing-list
-// order), reply-at-any-depth, endorsements, edit/delete-own-content with
-// revision history, tombstones, read marks, and comment permalinks. See
-// src/components/thread/ for the component breakdown.
 import { A, useParams } from "@solidjs/router";
 import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, type Component } from "solid-js";
 import { api } from "~/lib/api";

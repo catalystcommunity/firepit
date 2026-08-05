@@ -54,9 +54,8 @@ options {
 ;;; this schema.
 @wire-id(1)
 service AuthService {
-    ;;; Start a login: server calls the linkkeys RP sidecar's sign-request,
-    ;;; sets a nonce cookie, and returns the IDP URL to redirect the browser
-    ;;; to.
+    ;;; Start a login. The server signs a self-verifying nonce and returns
+    ;;; the identity-provider URL to open in the browser.
     @wire-id(0)
     begin-login: BeginLoginRequest -> BeginLoginResponse / ServiceError,
 

@@ -1,12 +1,11 @@
-// Client-side read-mark bookkeeping for the thread view (task C3,
-// PLANDOC.md §4 "Read model is hybrid"). ReadService's watermark
+// ReadService's watermark
 // (`read_marks.last_read_at`) is per-*post*, and CSIL has no op that hands
 // the raw timestamp back to the client (`unread-summary` only aggregates to
 // counts) — so there is no server-provided value to diff comment timestamps
 // against for "highlight what's new since I last looked". This module is a
 // deliberate client-only stand-in for that missing read: a per-post
 // "last viewed" timestamp cached in `localStorage`, used purely to decide
-// which comments to highlight as unread; it never substitutes for the real
+// which comments to highlight as unread. It never substitutes for the real
 // watermark write (`api.read.markRead`/`markUnread` are still the source of
 // truth the server acts on).
 //

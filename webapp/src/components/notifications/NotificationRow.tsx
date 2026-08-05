@@ -1,9 +1,5 @@
-// One notification row — shared between the AppShell bell's dropdown
-// preview (compact, no per-row mark-read) and the full /notifications inbox
-// (task C4, PLANDOC.md §7). Read rows render visibly quiet (dimmed, no
-// unread dot/weight) rather than as a competing "look at me" state — design
-// direction: notifications are a curated signal channel, not an engagement
-// surface.
+// The bell and inbox share this row so that notification links stay
+// consistent. Read rows use a quieter style.
 import { Show, type Component } from "solid-js";
 import type { Notification } from "~/gen/types.gen";
 import { NOTIFICATION_GLYPH, NOTIFICATION_LABEL, actorLabel, relativeTime, type PostSummary } from "~/lib/notifications";

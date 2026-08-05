@@ -20,9 +20,7 @@ const (
 	maxNotificationPageLimit     = 200
 )
 
-// notificationService is the NotificationService implementation (task B7).
-// See the package doc comment (doc.go) for the general
-// stub-to-real-implementation and error-handling contract.
+// notificationService is the NotificationService implementation.
 type notificationService struct {
 	store *store.Store
 }

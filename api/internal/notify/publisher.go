@@ -1,4 +1,4 @@
-// DBPublisher is the real fan-out implementation of Publisher (task B7). See
+// DBPublisher is the database-backed fan-out implementation. See
 // notify.go for the Event contract this file consumes and PLANDOC.md §4 for
 // the design this implements: subscriber resolution (board + post + ancestor
 // comments), mention resolution, and endorsement notification.

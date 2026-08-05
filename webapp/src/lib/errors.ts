@@ -1,19 +1,10 @@
-// Typed client-side errors for CSIL-RPC calls (task C1, PLANDOC.md §3/§5).
-//
-// Every transport this app can use — the real HTTP carrier
-// (src/lib/httpTransport.ts) and the in-memory mock carrier
-// (src/lib/mock/mockTransport.ts) — throws exclusively through these two
-// classes. Pages and stores (src/lib/session.ts, and everything C2-C4 add)
-// only ever need to `catch` and branch on `FirepitServiceError`/
-// `FirepitTransportError`; nothing outside this module parses an envelope
-// or inspects a `variant` string.
+// Typed errors shared by the HTTP and in-memory CSIL transports.
 import type { ServiceError } from "~/gen/types.gen";
 
 // Mirrors api/internal/csilservices/errors.go's fixed code enumeration —
 // keep the two in sync (that file is the source of truth; see its own
 // comment pointing at docs/OPERATING.md's error code table once it exists).
 export const ServiceErrorCode = {
-  Unimplemented: 1,
   Validation: 2,
   Unauthenticated: 3,
   Forbidden: 4,

@@ -1,9 +1,8 @@
 ;; Types for AuthService — linkkeys-backed login (PLANDOC.md §3, §5).
 ;;
 ;; Flow: SPA calls begin-login with the linkkeys domain the user is
-;; authenticating with; the server calls the linkkeys RP sidecar's
-;; sign-request, sets a nonce cookie, and returns the IDP URL for the SPA to
-;; navigate the browser to. The IDP redirects back to the HTTP-native
+;; authenticating with. The server signs a self-verifying nonce and returns
+;; the IDP URL for the SPA to open. The IDP redirects back to the HTTP-native
 ;; (non-CSIL) `GET /auth/callback` route, which decrypts/verifies the
 ;; assertion, upserts the `users` row, and mints firepit's own session
 ;; cookie — whoami then reflects that cookie's identity.
@@ -29,9 +28,8 @@ BeginLoginRequest = {
     domain: text .size (1..253)
 }
 
-;;; Where the SPA should navigate the browser next to continue the login
-;;; flow at the user's IDP. The server has already set the nonce cookie by
-;;; the time this is returned.
+;;; Where the SPA should navigate the browser to continue the login flow.
+;;; The signed request in this URL contains the self-verifying nonce.
 BeginLoginResponse = {
     ;;; Absolute URL of the identity provider's login page.
     redirect_url: text

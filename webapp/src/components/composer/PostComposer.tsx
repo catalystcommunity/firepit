@@ -1,9 +1,5 @@
-// New-post composer (task C2, PLANDOC.md §7): title + markdown body with a
-// write/preview tab, submit via ThreadService.create-post, optimistic
-// navigation to the new thread route on success. Auth-gated: create-post
-// requires a session (see FixtureStore.createPost's requireAuth(), and the
-// real ThreadService will too), so an anonymous visitor gets a login prompt
-// instead of the form. Used by `~/pages/BoardPage`.
+// Do not show the post form to anonymous users because create-post requires
+// a session.
 import { A, useNavigate } from "@solidjs/router";
 import { createSignal, For, Show, type Component } from "solid-js";
 import type { Category, Post } from "~/gen/types.gen";

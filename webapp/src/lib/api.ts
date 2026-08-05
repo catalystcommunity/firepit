@@ -1,13 +1,7 @@
-// The one place the app builds a CSIL-RPC client (task C1, PLANDOC.md §7).
-// Pages/components import the `api` singleton below; nothing outside this
-// module (and the transports it wires up) touches a `ServiceTransport`
-// directly.
-//
-// Mode selection: real HTTP transport by default, or the in-memory mock
-// (src/lib/mock) when `VITE_FIREPIT_MOCK` is "1"/"true" — the switch C2-C4
-// need so they can build against realistic data without waiting on the Go
-// API. `npm run dev` picks this up from a `.env`/shell var; `createApiClient`
-// also takes an explicit override so tests never depend on env state.
+// Build one CSIL-RPC client for the application. Use the in-memory transport
+// when `VITE_FIREPIT_MOCK` is "1" or "true".
+// createApiClient also accepts an explicit override so tests do not depend
+// on environment state.
 import { AsyncApiClient } from "~/gen/client.async.gen";
 import { createHttpTransport } from "./httpTransport";
 import { createMockTransport, type MockTransport } from "./mock/mockTransport";
@@ -30,7 +24,5 @@ export function createApiClient(opts: CreateApiClientOptions = {}): AsyncApiClie
   return new AsyncApiClient(transport);
 }
 
-// The module-singleton client every page/store shares for the app's
-// lifetime — one real transport (one `fetch` target), or one mock fixture
-// store, never several independent ones drifting out of sync.
+// Share one client so that mock state does not diverge between pages.
 export const api = createApiClient();

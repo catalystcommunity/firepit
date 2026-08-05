@@ -1,4 +1,3 @@
-// A short, mailing-list-quiet relative timestamp for post rows (task C2).
 // Tabular info like this stays secondary/quiet per the design direction —
 // plain text, no color, not the visual focus of a row.
 const MINUTE = 60_000;

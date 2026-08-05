@@ -1,10 +1,5 @@
-// The app shell's notification bell (task C4, PLANDOC.md §7 — replaces
-// AppShell.tsx's C1 placeholder `<A class="bell">`). Polls for unread
-// count (60s + on focus, via src/lib/notifications.ts's poller), and opens
-// a small dropdown of the latest few notifications with a "view all" link.
-// Understated on purpose: a quiet dot/count, not a screaming red badge —
-// see index.css's `.notif-dot` (a bordered pill in the app's neutral
-// palette, not `--danger`).
+// The notification bell polls while a user is signed in and refreshes when
+// the menu opens.
 import { A, useNavigate } from "@solidjs/router";
 import { createSignal, For, onCleanup, onMount, Show, type Component } from "solid-js";
 import type { Notification } from "~/gen/types.gen";

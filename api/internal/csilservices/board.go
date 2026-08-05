@@ -1,4 +1,4 @@
-// BoardService (task B3, PLANDOC.md §5 §7): per-project/topic discussion
+// BoardService manages per-project and per-topic discussion
 // boards, membership roles, and admin-only creation/archival.
 //
 // # Authz matrix
@@ -74,7 +74,7 @@ const (
 // validateSlug.
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
-// boardService is the BoardService implementation (task B3).
+// boardService is the BoardService implementation.
 type boardService struct {
 	store *store.Store
 }

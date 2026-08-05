@@ -1,12 +1,6 @@
-// Command firepit-api is the firepit backend service: a single Go binary
-// that serves CSIL-RPC (CBOR over POST /csil/v1/rpc), the linkkeys auth
-// callback (B2), the GitHub webhook receiver (B8), and /healthz — see
-// PLANDOC.md §3.
-//
-// Boot sequence (task B1): load config -> open the Postgres connection ->
-// optionally run coredb's goose migrations -> construct the (today: all
-// stub) service implementations -> serve HTTP until SIGINT/SIGTERM, then
-// drain in-flight requests before exiting.
+// Command firepit-api serves the CSIL-RPC API, the linkkeys callback, the
+// GitHub webhook receiver, and the health endpoint. It drains active requests
+// when it receives SIGINT or SIGTERM.
 package main
 
 import (
@@ -56,11 +50,8 @@ func run(ctx context.Context) error {
 	}
 	st := store.New(gdb)
 
-	// notify.NewDBPublisher (api/internal/notify/publisher.go, task B7) is
-	// the real fan-out Publisher: ThreadService and EndorsementService call
-	// Publish inside their own write transactions (notify.go's contract),
-	// so notification rows commit atomically with the content that caused
-	// them.
+	// Services publish notifications in their write transactions so that the
+	// content and its notifications commit together.
 	pub := notify.NewDBPublisher()
 	svcs := server.Services{
 		Auth:         csilservices.NewAuthService(st, cfg),

@@ -1,12 +1,5 @@
-// Mock CSIL business logic (task C1's "Mock-server mode" — PLANDOC.md §7).
-// A `FixtureStore` holds one in-memory snapshot (see fixtures.ts) plus the
-// bit of mutable state a mock login/read/notification/subscription flow
-// needs, and implements roughly the same operations
-// `api/internal/csilservices` does — just enough behavior (authz checks,
-// not-found/conflict errors, id generation) that C2-C4 exercise real
-// success/failure paths without a backend. `mockTransport.ts` is the thin
-// (service, op) <-> codec wiring on top of this; this file has no CBOR or
-// wire-format awareness at all.
+// FixtureStore provides realistic success and failure paths without a
+// backend. The transport owns all CBOR encoding and decoding.
 import type {
   AddFriendRequest,
   Board,
@@ -48,7 +41,7 @@ import type {
 import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
 import { createSeed, MOCK_USER_ID, OTHER_USER_IDS, OTHER_USERS, type Seed } from "./fixtures";
 
-// The mock's entire "does this user exist" universe (task C4): the caller
+// The mock's entire "does this user exist" universe: the caller
 // plus the three other named fixture users. Real GrantMention/AddFriend
 // (api/internal/csilservices/settings.go, social.go) reject an unknown
 // target with NotFound the same way — mirrored here so a settings UI

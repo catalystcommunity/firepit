@@ -16,13 +16,10 @@ board with no login at all. First deployment target:
 
 ## Status
 
-**Waves A–D implemented.** Every Wave B backend service (auth, boards,
-threads, endorsements, settings/social, subscriptions/read, notifications,
-GitHub ingestion) and the Wave C SolidJS webapp are real, tested
-implementations. The Helm chart, end-to-end integration suite, and this
-seed/docs/dogfood setup (Wave D) are in place. See
-[PLANDOC.md](PLANDOC.md) §7–§8 for the full task breakdown and milestone
-definitions if you want the blow-by-blow.
+Waves A–D are complete. The Go API, SolidJS web application, Helm chart,
+seed command, and test suites are implemented. Categories and shared threads
+are also implemented. See [PLANDOC.md](PLANDOC.md) for the product design and
+the completed task record.
 
 ## Quickstart
 
@@ -38,22 +35,22 @@ docker compose up -d postgres
 ./tools.sh seed --admin yourdomain.com:your-user-id
 
 # 3. Run everything
-./tools.sh dev     # docker compose: postgres + api (+ webapp/linkkeys-rp as their images land)
+./tools.sh dev     # docker compose: postgres + api + webapp
 ./tools.sh test    # go test (api, coredb) + npm test (webapp)
 ./tools.sh lint    # go vet (api, coredb) + eslint (webapp)
 ```
 
 Anonymous read works out of the box against a freshly seeded instance —
 boards render and threads open with no login required. Real linkkeys login
-needs a working RP sidecar wired up (not yet part of local
-`docker-compose.yaml` — see [docs/OPERATING.md](docs/OPERATING.md) §4),
+needs a working RP sidecar. The local `docker-compose.yaml` keeps this
+optional service disabled by default. See [docs/OPERATING.md](docs/OPERATING.md) §4.
 so for local development the webapp's mock-transport mode
 (`VITE_FIREPIT_MOCK=1`) is the fastest way to exercise anything
 login-gated; `npm run dev` without that flag talks to the real api over
 the same CBOR CSIL-RPC wire.
 
-Run `./tools.sh` with no arguments for the full verb list (`gen`, `test`,
-`test-integration`, `lint`, `migrate`, `seed`, `dev`, `build-images`).
+Run `./tools.sh help` for all commands. The list includes separate Go and web
+test and lint commands.
 
 ## Architecture, one page
 

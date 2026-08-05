@@ -26,9 +26,8 @@ services:
     networks:
       - firepit
 
-  # linkkeys sidecar in RP (relying-party) mode, per PLANDOC.md §2/§3. Wired
-  # up alongside AuthService in task B2 — the api needs FIREPIT_LINKKEYS_*
-  # config pointed at it before this is worth uncommenting.
+  # Enable this service after you configure the API's FIREPIT_LINKKEYS_*
+  # settings for a local relying party.
   # linkkeys-rp:
   #   image: containers.catalystsquad.com/public/linkkeys:latest
   #   container_name: firepit-linkkeys-rp-dev

@@ -1,7 +1,4 @@
-// Tree vs. flat "mailing-list order" toggle persistence (task C3 scope
-// item 1: "a flat 'mailing-list order' toggle (persisted in localStorage)").
-// One global preference (not per-thread) — a reader who prefers flat
-// mailing-list order almost always prefers it everywhere.
+// Store one view preference for all threads.
 export type ThreadViewMode = "tree" | "flat";
 
 const KEY = "firepit:thread-view-mode";

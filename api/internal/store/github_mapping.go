@@ -67,13 +67,7 @@ func (s *Store) DeleteGithubMapping(ctx context.Context, id string) error {
 	return s.DB.WithContext(ctx).Delete(&GithubMapping{}, "id = ?", id).Error
 }
 
-// --- trusted_domains ---
-//
-// store.TrustedDomain itself is declared in board.go (it was scaffolded
-// there alongside board_members in the A3 baseline); its store methods live
-// here instead, since github_mapping.go is the one store file task B8 owns
-// end to end (PLANDOC.md §7 B8's ownership note: "trusted-domain ops
-// wherever they fit in existing files you own").
+// Trusted-domain operations share this file with integration mappings.
 
 // CreateTrustedDomain inserts d. Callers that want "already trusted is a
 // no-op, not a conflict" semantics (IntegrationService.add-trusted-domain)

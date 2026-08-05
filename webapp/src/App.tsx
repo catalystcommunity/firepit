@@ -1,6 +1,4 @@
-// App shell + routing (task C1, PLANDOC.md §7). Routes: "/", "/login",
-// "/auth/callback" are real; "/b/:slug", "/b/:slug/p/:postId",
-// "/notifications", "/settings" are placeholders C2-C4 replace.
+// Application routes. Keep this list aligned with links in AppShell.
 import { Route, Router } from "@solidjs/router";
 import type { Component } from "solid-js";
 import AppShell from "~/components/AppShell";

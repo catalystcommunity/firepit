@@ -11,7 +11,7 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
-// socialService implements SocialService (task B9). Friend groups are
+// socialService implements SocialService. Friend groups are
 // PRIVATE to their owner (PLANDOC.md §4, §7 B9's acceptance criterion) —
 // every method below resolves "which user" from reqctx.User and
 // scopes every store call to that user's own ID; there is no path here
@@ -32,7 +32,7 @@ func NewSocialService(st *store.Store) csil.SocialService {
 }
 
 // maxFriendGroupNameLen enforces the 1-100 character range from PLANDOC.md
-// §7 task B9. csil/types' generated FriendGroup.Validate()/
+// csil/types' generated FriendGroup.Validate()/
 // CreateFriendGroupRequest.Validate() already cap Name at 128 (the CSIL
 // schema's own, looser bound); this is the stricter, product-specified
 // limit enforced in the service layer on top of that.

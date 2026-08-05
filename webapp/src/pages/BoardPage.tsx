@@ -1,6 +1,3 @@
-// /b/:slug (task C2, PLANDOC.md §7): board header (title/description,
-// subscribe/mute toggle), the new-post composer, and the activity-ordered
-// post list with cursor "load more".
 import { useParams } from "@solidjs/router";
 import { createMemo, createResource, Show, type Component } from "solid-js";
 import PostComposer from "~/components/composer/PostComposer";

@@ -1,15 +1,5 @@
-// /notifications (task C4, PLANDOC.md §7): the cursor-paginated inbox,
-// newest first. Clicking a row marks it read and navigates to the thread
-// (a permalink to the comment when the notification targets one); rows
-// also offer an explicit "Mark read" action, and there's a page-level
-// "Mark all read". Subscriptions management lives on /settings instead of
-// here — see SettingsPage.tsx's doc comment for why.
-//
-// There is no mark-*unread* op for notifications in CSIL (NotificationService
-// only has mark-notification-read/mark-all-read — ReadService's
-// mark-unread is a different thing, for posts/comments), so "mark
-// read/unread per row where the API allows" only ever offers the read
-// half here.
+// Notifications can only move to the read state. ReadService.mark-unread
+// applies to posts and comments, not notifications.
 import { useNavigate } from "@solidjs/router";
 import { createSignal, For, onMount, Show, type Component } from "solid-js";
 import NotificationRow from "~/components/notifications/NotificationRow";

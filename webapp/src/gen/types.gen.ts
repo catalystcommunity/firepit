@@ -155,9 +155,8 @@ export interface BeginLoginRequest {
 }
 
 /**
- * Where the SPA should navigate the browser next to continue the login
- * flow at the user's IDP. The server has already set the nonce cookie by
- * the time this is returned.
+ * Where the SPA should navigate the browser to continue the login flow.
+ * The signed request in this URL contains the self-verifying nonce.
  */
 export interface BeginLoginResponse {
   /**

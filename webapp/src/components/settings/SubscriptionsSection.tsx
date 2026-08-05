@@ -1,10 +1,3 @@
-// /settings' subscriptions-management section (task C4, PLANDOC.md §7 —
-// "subscriptions management page (incl. mutes)"). Landed as a section on
-// /settings rather than a tab on /notifications: settings is already where
-// "how I manage what I follow" lives (mention policy, grants, friend
-// groups), and it keeps /notifications focused purely on the inbox. See
-// SettingsPage.tsx's doc comment for the same note.
-//
 // Grouped by target_type (board/post/comment) with titles resolved via
 // src/lib/notifications.ts's post/board resolver. Comment-target
 // subscriptions are the one gap: CSIL has no "which post is this comment

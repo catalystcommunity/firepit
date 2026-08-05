@@ -21,7 +21,7 @@ import (
 // (PLANDOC.md §2's "port near-verbatim" instruction), relocated to this
 // package because firepit's begin-login (a CSIL-RPC op with no response-header
 // channel — see csilservices/auth.go's package doc) can't set the literal
-// "nonce cookie" PLANDOC.md §3 describes; a self-verifying nonce achieves the
+// nonce cookie used by some browser flows. A self-verifying nonce achieves the
 // same "prove this login round-trip is ours" property without one, and is
 // what B2's ownership scope (users/sessions tables only, no new nonce table)
 // implies anyway. It does NOT enforce single-use within the window; that
