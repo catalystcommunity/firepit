@@ -145,8 +145,27 @@ class ReleaseTests(unittest.TestCase):
             self.assertIn("version: 1.2.3", chart.read_text(encoding="utf-8"))
             self.assertEqual(version_file.read_text(encoding="utf-8"), "1.2.3\n")
 
+    def test_buildkit_output_quotes_multiple_image_names(self) -> None:
+        self.assertEqual(
+            PLUGIN._image_output("registry.example/firepit-api", "1.2.3"),
+            'type=image,"name=registry.example/firepit-api:1.2.3,'
+            'registry.example/firepit-api:latest",push=true',
+        )
+
 
 class ConfigurationTests(unittest.TestCase):
+    def test_catalystsquad_trusted_domains(self) -> None:
+        values = yaml.safe_load(
+            (ROOT / "deploy/values-catalystsquad.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertTrue(values["seed"]["enabled"])
+        self.assertEqual(
+            values["seed"]["trustedDomains"],
+            ["todandlorna.com", "catalystlinkkeys.com"],
+        )
+
     def test_release_workflow_orders_publish_after_deploy(self) -> None:
         workflow = yaml.safe_load(
             (ROOT / ".reactorcide/workflows/release.yaml").read_text(

@@ -154,6 +154,10 @@ Before enabling this, confirm:
    `deploy/values-catalystsquad.yaml`, and publishes the GitHub release. You can
    run the equivalent Helm command by hand for the first deployment.
 
+   The catalystsquad values also run an idempotent seed job after each install
+   or upgrade. The job adds `todandlorna.com` and `catalystlinkkeys.com` to the
+   Firepit trusted-domain list. It does not remove other trusted domains.
+
 4. **Gateway routes** are enabled in the values overlay
    (`gateway.enabled: true`); external-dns picks the HTTPRoute hostname up
    automatically, and Cloudflare terminates TLS for
@@ -177,5 +181,6 @@ expected for `helm template`/`--dry-run` and harmless for validation.
 See `values.yaml` — every field has an inline doc comment. Key groups:
 `image.*`, `database.*` (Zalando convention), `api.*`
 (`FIREPIT_*` env surface), `linkkeys.*` (client-side RP config),
-`linkkeysRp.*` (this chart's own RP Deployment), `webapp.*`, `gateway.*`
+`linkkeysRp.*` (this chart's own RP Deployment), `seed.*`, `webapp.*`,
+`gateway.*`
 (HTTPRoutes), `resources.*`.

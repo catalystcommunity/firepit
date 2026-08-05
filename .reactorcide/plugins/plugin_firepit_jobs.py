@@ -597,6 +597,11 @@ def _copy_source(root: Path, destination: Path) -> None:
             shutil.copy2(source, target)
 
 
+def _image_output(image: str, version: str) -> str:
+    """Return BuildKit output config for version and latest tags."""
+    return f'type=image,"name={image}:{version},{image}:latest",push=true'
+
+
 def _build_image(root: Path) -> None:
     tag = _release_tag()
     version = RELEASE_TAG.fullmatch(tag).group("version")  # type: ignore[union-attr]
@@ -656,7 +661,7 @@ def _build_image(root: Path) -> None:
                 "--opt",
                 f"filename={dockerfile}",
                 "--output",
-                f"type=image,name={image}:{version},{image}:latest,push=true",
+                _image_output(image, version),
             ),
             cwd=build_root,
             env={"DOCKER_CONFIG": str(docker_config)},

@@ -145,6 +145,30 @@ give them a rename op (there is none in v1) — cosmetic, but worth knowing
 before you bootstrap someone under a `user_id` that doesn't read well as a
 handle.
 
+### Trusted domains — `--trusted-domain domain` (repeatable)
+
+Use this flag to add Linkkeys identity domains to the instance trust list:
+
+```sh
+./tools.sh seed \
+  --trusted-domain todandlorna.com \
+  --trusted-domain catalystlinkkeys.com
+```
+
+The command converts each value to lowercase and removes outer spaces. It
+does not add a duplicate row if the domain is already trusted. The command
+does not remove domains that are absent from the flags. An administrator can
+still add or remove domains with the admin operations.
+
+The catalystsquad Helm values enable a post-install and post-upgrade seed
+job with these two domains. The job uses the API image and the existing
+database Secret. A failed job stays in the namespace so that an operator can
+read its logs. Helm removes a successful job.
+
+This setting changes Firepit reputation behavior only. It does not configure
+Linkkeys for a domain. Each domain must publish valid Linkkeys DNS records,
+and the configured identity provider must accept identities for that domain.
+
 ### `--demo`
 
 Additionally seeds four demo users (`alice`, `bob`, `carol`, `dave` under

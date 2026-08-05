@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
+
+	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
 // --- pure helpers: no database required ---
@@ -77,12 +81,51 @@ func TestStringSlicesEqual(t *testing.T) {
 func TestRedactDBURI(t *testing.T) {
 	cases := map[string]string{
 		"postgresql://firepit:devpass123@localhost:5432/firepit_db?sslmode=disable": "postgresql://***@localhost:5432/firepit_db?sslmode=disable",
-		"postgresql://localhost:5432/firepit_db": "postgresql://localhost:5432/firepit_db",
-		"not-a-uri":                              "not-a-uri",
+		"postgresql://localhost:5432/firepit_db":                                    "postgresql://localhost:5432/firepit_db",
+		"not-a-uri":                                                                 "not-a-uri",
 	}
 	for in, want := range cases {
 		require.Equal(t, want, redactDBURI(in), "redactDBURI(%q)", in)
 	}
+}
+
+func TestNormalizeTrustedDomain(t *testing.T) {
+	domain, err := normalizeTrustedDomain("  TODANDLORNA.COM ")
+	require.NoError(t, err)
+	require.Equal(t, "todandlorna.com", domain)
+
+	_, err = normalizeTrustedDomain("  ")
+	require.Error(t, err)
+}
+
+type fakeTrustedDomainStore struct {
+	domains map[string]store.TrustedDomain
+	creates int
+}
+
+func (s *fakeTrustedDomainStore) GetTrustedDomain(_ context.Context, domain string) (*store.TrustedDomain, error) {
+	row, ok := s.domains[domain]
+	if !ok {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return &row, nil
+}
+
+func (s *fakeTrustedDomainStore) CreateTrustedDomain(_ context.Context, domain *store.TrustedDomain) error {
+	s.domains[domain.Domain] = *domain
+	s.creates++
+	return nil
+}
+
+func TestSeedTrustedDomainsIsIdempotent(t *testing.T) {
+	st := &fakeTrustedDomainStore{domains: map[string]store.TrustedDomain{}}
+	specs := []string{" TODANDLORNA.COM ", "catalystlinkkeys.com"}
+
+	require.NoError(t, seedTrustedDomains(context.Background(), st, "seed-bot", specs))
+	require.NoError(t, seedTrustedDomains(context.Background(), st, "seed-bot", specs))
+	require.Equal(t, 2, st.creates)
+	require.Equal(t, "seed-bot", st.domains["todandlorna.com"].AddedBy)
+	require.Contains(t, st.domains, "catalystlinkkeys.com")
 }
 
 func TestResolveDBURI(t *testing.T) {

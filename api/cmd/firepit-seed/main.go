@@ -21,6 +21,10 @@
 // CSIL op that grants the first admin, since every admin-only op requires
 // an existing admin to call it.
 //
+// `--trusted-domain domain` (repeatable) additionally adds a linkkeys
+// identity domain to the instance trust list. An existing row is a no-op.
+// The seed-bot system user records who added rows created by this command.
+//
 // `--demo` additionally seeds a handful of demo users and a few threads
 // with nested comments, endorsements, and subscriptions, so a fresh dev
 // environment is immediately browsable. Skip this in any real deployment
@@ -94,18 +98,20 @@ func main() {
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 
 	var admins repeatedFlag
+	var trustedDomains repeatedFlag
 	demo := flag.Bool("demo", false, "seed demo users, threads, endorsements, and subscriptions (dev only; skip in prod)")
 	githubMappings := flag.Bool("github-mappings", false, "seed GitHub webhook mappings for firepit/csilgen/reactorcide (prod opt-in; see docs/OPERATING.md)")
 	flag.Var(&admins, "admin", "domain:user_id of a linkkeys identity to grant instance-admin (repeatable)")
+	flag.Var(&trustedDomains, "trusted-domain", "linkkeys identity domain to add to the instance trust list (repeatable)")
 	flag.Parse()
 
-	if err := run(context.Background(), []string(admins), *demo, *githubMappings); err != nil {
+	if err := run(context.Background(), []string(admins), []string(trustedDomains), *demo, *githubMappings); err != nil {
 		log.WithError(err).Error("firepit-seed failed")
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, adminSpecs []string, demo, githubMappingsFlag bool) error {
+func run(ctx context.Context, adminSpecs, trustedDomainSpecs []string, demo, githubMappingsFlag bool) error {
 	dbURI := resolveDBURI()
 	log.WithField("db", redactDBURI(dbURI)).Info("firepit-seed: connecting")
 
@@ -147,6 +153,12 @@ func run(ctx context.Context, adminSpecs []string, demo, githubMappingsFlag bool
 	if len(adminSpecs) > 0 {
 		if err := bootstrapAdmins(ctx, st, adminSpecs); err != nil {
 			return fmt.Errorf("bootstrapping admins: %w", err)
+		}
+	}
+
+	if len(trustedDomainSpecs) > 0 {
+		if err := seedTrustedDomains(ctx, st, bot.ID, trustedDomainSpecs); err != nil {
+			return fmt.Errorf("seeding trusted domains: %w", err)
 		}
 	}
 
