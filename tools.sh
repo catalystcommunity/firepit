@@ -12,7 +12,8 @@
 #   ./tools.sh lint-go            # go vet (api + coredb)
 #   ./tools.sh lint-web           # eslint (webapp, if configured)
 #   ./tools.sh migrate [up|down|status]   # goose migrate against DB_URI (default: docker-compose postgres)
-#   ./tools.sh seed [--demo] [--admin domain:user_id ...] [--github-mappings]
+#   ./tools.sh seed [--demo] [--admin domain:user_id ...]
+#                   [--trusted-domain domain ...] [--github-mappings]
 #                                    # idempotent data seeder (api/cmd/firepit-seed) against
 #                                    # FIREPIT_DB_URI/DB_URI (default: docker-compose postgres)
 #   ./tools.sh dev                  # docker compose up (postgres [+ linkkeys-rp] + api + webapp)
@@ -53,7 +54,8 @@ Commands:
   seed [flags...]    Run the idempotent seeder (api/cmd/firepit-seed) against
                      \$FIREPIT_DB_URI / \$DB_URI (default: docker-compose postgres).
                      Flags: --demo, --admin domain:user_id (repeatable),
-                     --github-mappings. Run migrate first.
+                     --trusted-domain domain (repeatable), --github-mappings.
+                     Run migrate first.
   dev                Boot the local dev stack via docker compose
   build-images       Build deployable container images (api, webapp)
 EOF

@@ -1,0 +1,65 @@
+{{- if .Values.seed.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "firepit.fullname" . }}-seed
+  labels:
+    {{- include "firepit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: seed
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "firepit.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: seed
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "firepit.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: seed
+          image: "{{ .Values.image.api.repository }}:{{ .Values.image.api.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.api.pullPolicy }}
+          command:
+            - /firepit-seed
+          args:
+            {{- range .Values.seed.trustedDomains }}
+            - --trusted-domain
+            - {{ . | quote }}
+            {{- end }}
+          env:
+            - name: FIREPIT_DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.existingSecretName }}
+                  key: {{ .Values.database.existingSecretKey }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+            runAsUser: 65532
+            runAsGroup: 65532
+          resources:
+            {{- toYaml .Values.resources.api | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

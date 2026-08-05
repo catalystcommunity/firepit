@@ -69,6 +69,14 @@ database:
   existingSecretKey: "DB_URI"
 
 # -----------------------------------------------------------------------
+# Deployment seed job. The job runs after each install or upgrade. It is
+# idempotent. It also makes sure that the standard boards exist.
+# -----------------------------------------------------------------------
+seed:
+  enabled: false
+  trustedDomains: []
+
+# -----------------------------------------------------------------------
 # firepit-api
 # -----------------------------------------------------------------------
 api:

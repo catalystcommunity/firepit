@@ -1,10 +1,10 @@
 # Prod values overlay for firepit.catalystsquad.com (PLANDOC.md §1's first
 # deployment target). Layered on top of helm_chart/values.yaml by
-# .reactorcide/jobs/deploy.yaml -> scripts/deploy.sh
+# the trusted Reactorcide deploy job
 # (`helm upgrade --install -f deploy/values-catalystsquad.yaml -f <runtime-overrides>`).
 #
 # image.*.tag, linkkeys.pki.apiKey, and linkkeysRp.domainKeyPassphrase are
-# deliberately NOT set here — deploy.sh injects those at deploy time (the
+# deliberately NOT set here. The deploy job injects those at deploy time (the
 # image tag from the release that triggered this deploy; the two secrets
 # from reactorcide's `${secret:catalystsquad/firepit:...}` vault) so
 # nothing sensitive or commit-specific lives in this file. See
@@ -20,6 +20,12 @@ database:
   # get assembled into this single-key Secret.
   existingSecretName: "firepit-db-uri"
   existingSecretKey: "DB_URI"
+
+seed:
+  enabled: true
+  trustedDomains:
+    - todandlorna.com
+    - catalystlinkkeys.com
 
 api:
   corsOrigins: "https://firepit.catalystsquad.com"
