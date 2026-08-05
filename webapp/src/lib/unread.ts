@@ -1,18 +1,5 @@
-// Shared unread-summary poller (task C2, PLANDOC.md §7: "small shared poller
-// util... expose a signal C4's bell could also read"). Polls
-// `ReadService.unread-summary` every 60s while the caller is authenticated,
-// plus once on every `window` focus event and immediately on any
-// login/logout transition, and exposes the latest `UnreadSummary` as a
-// Solid signal.
-//
-// Interface is intentionally tiny: `startUnreadPoller` + the `UnreadPoller`
-// it returns (`summary`/`refresh`/`stop`), plus two pure read-helpers
-// (`boardUnreadCount`, `postIsUnread`) for turning a summary into a per-item
-// boolean/count without every caller re-deriving the same `.find()`. C2 uses
-// this from `Home.tsx` (board index dots), `BoardPage.tsx` (post-row dots),
-// and `AppShell.tsx`'s board rail; C4's notification bell is expected to
-// call `startUnreadPoller` again for its own badge rather than reach into
-// one of C2's instances — see the "safe to call more than once" note below.
+// Poll only for signed-in users. Refresh on focus so that a returning browser
+// does not wait for the next interval.
 import { createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js";
 import type { PostID, UnreadSummary } from "~/gen/types.gen";
 import { api } from "./api";

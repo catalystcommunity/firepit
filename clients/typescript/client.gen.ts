@@ -13,9 +13,8 @@ export class AuthClient {
   constructor(private readonly t: ServiceTransport) {}
 
   /**
-   * Start a login: server calls the linkkeys RP sidecar's sign-request,
-   * sets a nonce cookie, and returns the IDP URL to redirect the browser
-   * to.
+   * Start a login. The server signs a self-verifying nonce and returns
+   * the identity-provider URL to open in the browser.
    * @throws {ServiceError} when the API returns an error response
    * @throws transport errors (network, timeout) raised by the transport
    */

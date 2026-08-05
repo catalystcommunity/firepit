@@ -9,7 +9,7 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
-// settingsService implements SettingsService (task B9). See doc.go for the
+// settingsService implements SettingsService. See doc.go for the
 // error-handling contract and reqctx.User's doc comment (in
 // api/internal/store/context.go) for why "who's calling" is read via the
 // store package rather than api/internal/server.

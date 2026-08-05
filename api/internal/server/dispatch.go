@@ -1,16 +1,10 @@
-// Package server wires firepit-api's HTTP surface: the CSIL-RPC dispatcher
-// at POST /csil/v1/rpc, session middleware, /healthz, CORS, and request
-// logging (task B1, PLANDOC.md §3, §7). This file owns the (service, op)
-// routing table; server.go owns the http.Server/middleware chain; session.go
-// owns the session-cookie-to-user middleware.
+// Package server provides the Firepit HTTP server. This file maps CSIL
+// service and operation names to the generated service interfaces.
 //
 // # Wire naming for (service, op)
 //
-// There is no generated Route<Service>Channel/dispatch function in
-// api/internal/csil — csilgen's bare `go` target (see tools.sh's `cmd_gen`)
-// only emits types, per-op codec functions, and service interfaces, not a
-// router. This file is that missing piece, hand-written once here rather
-// than regenerated per service.
+// csilgen does not generate a router for its Go server target, so this table
+// is maintained by hand.
 //
 // The (service, op) strings a real request carries are NOT the PascalCase
 // interface/method names or the CSIL schema's `AuthService`-with-suffix
@@ -28,10 +22,6 @@
 //     kebab-case it before it hits the wire (longhouse's methodToOp); the
 //     routing table below is keyed directly on the already-kebab-case op
 //     names from the schema, so no runtime conversion is needed server-side.
-//
-// This is the exact pairing exercised end-to-end by longhouse's own tests
-// (webapp/src/transport/csilrpc.test.ts there), so it's the precedent this
-// server follows rather than inventing a third convention.
 package server
 
 import (
@@ -46,10 +36,7 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/transport"
 )
 
-// Services bundles one implementation per generated csil service interface.
-// main.go constructs this once at boot (today, every field is a
-// csilservices.NewXService stub; B2-B9 replace individual fields with real
-// implementations — the type doesn't change).
+// Services bundles one implementation per generated CSIL service interface.
 type Services struct {
 	Auth         csil.AuthService
 	Board        csil.BoardService

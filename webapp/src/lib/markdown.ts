@@ -1,10 +1,4 @@
-// Shared markdown render+sanitize utility (task C3, PLANDOC.md §7: "markdown
-// body (marked + dompurify, mirror longhouse's sanitization config)").
-// `Post.bodyMd`/`Comment.bodyMd` are raw markdown stored/transmitted as-is
-// (types.gen.ts: "rendering (and sanitizing) happens client-side") — this is
-// the one place that happens, so every rendered body and every composer
-// preview goes through `renderMarkdown` and nothing else calls `marked` or
-// `DOMPurify` directly.
+// Render all stored markdown and composer previews through one sanitizer.
 //
 // Security model (ported from longhouse's webapp/src/components/
 // MarkdownEditor.tsx — same intent, adapted to firepit's needs):

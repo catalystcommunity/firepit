@@ -1,8 +1,4 @@
-// /settings' mention-policy + notify-on-endorse section (task C4,
-// PLANDOC.md §7, §9 decision 4). Every mutation is optimistic (the radio/
-// toggle flips immediately) with rollback to the prior value and an inline
-// ServiceError message on failure — no full-page reload, no silent
-// swallow.
+// Roll back optimistic changes when the service rejects a setting.
 import { createSignal, For, onMount, Show, type Component } from "solid-js";
 import type { MentionPolicy, UserSettings } from "~/gen/types.gen";
 import { api } from "~/lib/api";

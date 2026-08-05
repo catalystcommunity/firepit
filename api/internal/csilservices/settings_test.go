@@ -13,8 +13,7 @@ import (
 
 // These are pure validation/authz-gate unit tests: every case here returns
 // before the settingsService touches s.store, so a nil *store.Store is
-// safe (same pattern api/internal/server/dispatch_test.go's stubServices
-// uses for the stub constructors). DB-backed behavior (lazy defaults,
+// safe (the dispatcher tests use the same pattern). DB-backed behavior (lazy defaults,
 // policy round-trip, grant idempotency) is covered by the testcontainers
 // integration suite in api/internal/store/settings_integration_test.go.
 

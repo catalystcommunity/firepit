@@ -9,7 +9,7 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
-// integrationService is the IntegrationService implementation (task B8):
+// integrationService is the IntegrationService implementation:
 // admin-managed GitHub repo->board mappings and the instance's trusted
 // linkkeys domains (PLANDOC.md §5, §7 B8). Every mutating op here is
 // instance-admin only (users.roles contains "admin") — see requireAdmin.

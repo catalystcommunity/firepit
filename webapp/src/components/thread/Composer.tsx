@@ -1,9 +1,5 @@
-// Shared markdown composer (task C3 scope items 2 + 4): reply-at-any-depth,
-// edit-in-place, and (via `showTitle`) post editing all go through this one
-// component so the preview/mention/error behavior is identical everywhere
-// it appears. The caller owns the actual RPC (`onSubmit`) and auth gating
-// (nothing here calls `useSession` — `CommentNode`/`ThreadPage` only mount
-// a `Composer` once the viewer is allowed to use it).
+// Replies and edits share this component so that preview, mention, and error
+// behavior stays consistent. The caller owns authorization and submission.
 import { createMemo, createSignal, Show, type Component } from "solid-js";
 import MarkdownBody from "./MarkdownBody";
 import MentionAutocomplete from "./MentionAutocomplete";

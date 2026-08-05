@@ -1,28 +1,26 @@
-## Usage
+# Firepit web application
 
-```bash
-$ npm install # or pnpm install or yarn install
+This module contains the SolidJS single-page application. It uses the
+generated TypeScript CSIL client in `src/gen`.
+
+Run commands from the repository root when possible:
+
+```sh
+./tools.sh test-web
+./tools.sh lint-web
+./tools.sh dev
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+For direct web development, run:
 
-## Available Scripts
+```sh
+cd webapp
+npm install
+npm run dev
+```
 
-In the project directory, you can run:
+Set `VITE_FIREPIT_MOCK=1` to use the in-memory transport. Without this value,
+the application sends CSIL-RPC requests to the API.
 
-### `npm run dev`
-
-Runs the app in the development mode.<br>
-Open [http://localhost:5173](http://localhost:5173) to view it in the browser.
-
-### `npm run build`
-
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
-
-## Deployment
-
-Learn more about deploying your application with the [documentations](https://vite.dev/guide/static-deploy.html)
+Do not edit files in `src/gen`. Change the CSIL schema and run
+`./tools.sh gen`.

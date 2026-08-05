@@ -1,7 +1,5 @@
-// Package github implements task B8: the GitHub webhook receiver
-// (POST /webhooks/github, wired in by api/internal/server/webhooks.go) and
-// its event -> firepit content rules (PLANDOC.md §4 github_mappings design
-// notes, §5 IntegrationService, §7 B8, §9 decision 6).
+// Package github implements the GitHub webhook receiver and converts selected
+// events to Firepit content.
 //
 // # Request flow (see Handler.ServeHTTP)
 //
@@ -106,27 +104,17 @@
 // # contentWriter — unified with ThreadService via api/internal/content
 //
 // contentWriter (contentwriter.go) creates posts and TOP-LEVEL comments
-// through api/internal/content's CreatePost/CreateComment — the exact same
-// shared logic ThreadService.CreatePost/CreateComment (task B4) calls for
+// through api/internal/content's CreatePost/CreateComment. The thread service uses the same
 // human-authored content. That package owns ltree path computation,
 // comment_count/last_activity_at maintenance, and the notify.Publisher
 // call, so a GitHub-originated post or comment fans out board/post/comment
 // subscriber notifications identically to a human-authored one (PLANDOC.md
 // §4: "GitHub content is first-class").
 //
-// This wasn't always the case: contentWriter originally wrote posts/comments
-// straight into the store with its own duplicated ltree-path and
-// comment_count/last_activity_at logic, because ThreadService (task B4) was
-// being implemented concurrently in a sibling worktree and couldn't be
-// depended on yet — and, since it never called notify.Publisher, board
-// subscribers were never told about GitHub-originated activity. Both gaps
-// are closed by routing through api/internal/content instead of ThreadService
-// directly: see that package's doc comment for exactly which product-facing
-// validations (title/body length and blankness, board-archived checks) a
-// human CSIL-RPC caller gets that a GitHub webhook delivery deliberately
-// does not, and why. contentWriter only ever creates TOP-LEVEL comments
-// (ParentCommentID/ParentPath left zero), so it never exercises the nested
-// reply path ThreadService.CreateComment uses.
+// contentWriter uses the shared content package so that GitHub events update
+// thread counters and publish notifications. It creates only top-level
+// comments. The content package documents the validation differences between
+// webhook and user input.
 //
 // # System user per mapping
 //

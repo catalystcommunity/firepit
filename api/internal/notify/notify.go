@@ -5,9 +5,8 @@
 // content write, so notification rows commit atomically with the content that
 // caused them (PLANDOC §4). The tx parameter is that open transaction.
 //
-// The fan-out implementation lives in this package (task B7). Until it lands,
-// wire Noop. Service constructors accept the Publisher interface, never a
-// concrete type.
+// Service constructors accept Publisher so that tests can disable or capture
+// notification delivery.
 package notify
 
 import (
@@ -50,7 +49,7 @@ type Publisher interface {
 	Publish(ctx context.Context, tx *gorm.DB, e Event) error
 }
 
-// Noop discards events; the wiring default until the fan-out lands.
+// Noop discards events.
 type Noop struct{}
 
 func (Noop) Publish(context.Context, *gorm.DB, Event) error { return nil }

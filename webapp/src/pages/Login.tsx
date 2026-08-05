@@ -1,7 +1,3 @@
-// /login (task C1, PLANDOC.md §3/§5): linkkeys domain entry -> begin-login
-// -> redirect to the URL the server returns. All the actual auth logic
-// lives in `useSession().login` (src/lib/session.tsx); this page is just
-// the form + its own request state (submitting/error).
 import { createSignal, type Component } from "solid-js";
 import { useSession } from "~/lib/session";
 

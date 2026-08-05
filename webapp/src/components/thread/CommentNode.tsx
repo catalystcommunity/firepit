@@ -1,8 +1,3 @@
-// One comment in tree mode: the card, a collapse toggle on the rail, and
-// (recursively) its replies — task C3 scope item 1: "thread depth shown by
-// thin indent rails ... collapse affordances on the rail". Indentation is
-// just nested `<ul class="comment-children">`s in index.css; no depth math
-// needed here beyond what the recursion itself already expresses.
 import { createMemo, For, Show, type Component } from "solid-js";
 import type { Comment, UserProfile } from "~/gen/types.gen";
 import type { CommentTreeModel } from "./treeModel";

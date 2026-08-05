@@ -1,15 +1,4 @@
-// Author/endorser identity display (task C3). `Post.authorId`,
-// `Comment.authorId`, and `Endorsement.userId` now come with a denormalized
-// `author_handle` (a CSIL schema follow-up: ThreadService/EndorsementService
-// populate it server-side via a single batched lookup — see
-// api/internal/csilservices/thread.go's ListPosts/GetThread and
-// endorsement.go's ListEndorsements) — this module prefers that real handle
-// whenever the caller has it.
-//
-// A handle can still legitimately be absent (a deleted/tombstoned author is
-// blanked, or — defensively — a users row that's somehow gone), so
-// `shortUserRef`'s hashed stand-in remains as the fallback rather than
-// rendering a raw/blank id.
+// Use a stable synthetic label when deleted content has no author handle.
 import type { OriginKind, UserProfile } from "~/gen/types.gen";
 
 export interface AuthorLabel {

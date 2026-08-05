@@ -1,7 +1,4 @@
-// Router smoke test (task C1 accept criterion: "typed client calls compile
-// from generated code" + the app actually renders). Runs against the mock
-// transport (see .env.test) so it's a real render of the shell with real
-// (fixture) data, not a mocked-out shallow render.
+// Router smoke test against the in-memory transport configured in .env.test.
 import { render, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it } from "vitest";
 import App from "./App";
@@ -26,7 +23,4 @@ describe("App", () => {
     await waitFor(() => expect(within(rail).getByText("Firepit Meta")).toBeInTheDocument());
     expect(within(rail).getByText("Announcements")).toBeInTheDocument();
   });
-
-  // The "renders a 'not built yet' stub" test is gone: every route is a real
-  // screen as of tasks C2-C4, so there is no placeholder left to assert on.
 });

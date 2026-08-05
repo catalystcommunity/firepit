@@ -1,7 +1,3 @@
-// Shared author/timestamp/edited/origin header line for both PostView and
-// CommentNode (task C3 scope item 1: "post header (title, author,
-// timestamps, edited marker)"; scope item 1's "GitHub-origin content gets a
-// distinct quiet treatment (origin glyph + backlink)").
 import { Show, type Component } from "solid-js";
 import type { OriginKind, UserProfile } from "~/gen/types.gen";
 import { describeAuthor, parseOriginBacklink } from "./identity";

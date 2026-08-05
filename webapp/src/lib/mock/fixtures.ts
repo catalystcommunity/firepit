@@ -1,8 +1,5 @@
-// Deterministic seed data for the mock CSIL transport (task C1, PLANDOC.md
-// §7 "Mock-server mode so C2-C4 develop without B"). `createSeed()` returns
-// a brand-new, independent snapshot every call — component tests import it
-// directly to get isolated state per test; `src/lib/mock/store.ts` wraps one
-// snapshot in the mutation logic the mock transport dispatches onto.
+// createSeed returns an independent snapshot so that component tests do not
+// share mutable state.
 //
 // Every id below is a fixed, human-readable fake ULID (real ULIDs are
 // base32, 26 chars — these are shaped the same but spell out what they name
@@ -40,11 +37,7 @@ const ago = (days: number, hours = 0): Date => new Date(NOW.getTime() - days * D
 // hash a bare id into a fake label.
 
 export const MOCK_USER_ID = "01FPMOCKUSERALICE0000000";
-// Exported (task C4, PLANDOC.md §7): the SettingsService/SocialService mock
-// (src/lib/mock/store.ts) needs *some* notion of "a user id that actually
-// exists" to validate grant-mention/add-friend/resolve-user the way the real
-// backend's GetUser/GetUserByHandle checks do — these three are the only
-// other users the fixture store knows about.
+// These are the non-caller users that mock identity lookups can resolve.
 export const BOB_ID = "01FPMOCKUSERBOB00000000";
 export const CAROL_ID = "01FPMOCKUSERCAROL0000000";
 export const DAVE_ID = "01FPMOCKUSERDAVE00000000";
@@ -95,7 +88,7 @@ export const DAVE: UserProfile = {
   createdAt: ago(150),
 };
 
-/** Every non-caller profile resolve-user can look up by handle (task C4/schema follow-up). */
+/** Every non-caller profile that resolve-user can look up by handle. */
 export const OTHER_USERS: readonly UserProfile[] = [BOB, CAROL, DAVE];
 
 // --- boards ------------------------------------------------------------------

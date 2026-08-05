@@ -8,7 +8,7 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
-// readService implements ReadService (task B6): the hybrid watermark +
+// readService implements ReadService: the hybrid watermark and
 // override read model (PLANDOC.md §4). None of these three ops has a
 // declared ServiceError arm (csil/firepit.csil), so every method here
 // treats "nothing to do" (no session, unknown target, nothing pinned) as a

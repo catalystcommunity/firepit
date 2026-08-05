@@ -1,10 +1,5 @@
-// /settings' friend-groups section (task C4, PLANDOC.md §4/§7): private
-// groupings the caller owns, used to order endorser names (friends first,
-// see PLANDOC.md §4's endorser-ordering design) — create/delete groups,
-// add/remove members. Membership is still by UserID under the hood
-// (AddFriendRequest/RemoveFriendRequest), but adding a member now resolves a
-// typed handle via SocialService.resolve-user first, same as
-// MentionGrantsSection.tsx.
+// Friend groups are private and move known people to the start of endorsement
+// lists. The form resolves a handle to the user ID required by the API.
 import { createSignal, For, onMount, Show, type Component } from "solid-js";
 import type { FriendGroup } from "~/gen/types.gen";
 import { api } from "~/lib/api";

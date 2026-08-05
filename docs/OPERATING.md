@@ -29,7 +29,6 @@ the ones marked **required**.
 | `FIREPIT_CORS_ORIGINS` | `*` | Comma-separated allow-list. Narrow this to the webapp's real origin(s) in any real deployment — `*` is a dev convenience. |
 | `FIREPIT_MIGRATE_ON_BOOT` | `true` | See §2 below. |
 | `FIREPIT_LINKKEYS_DOMAIN` | `""` | firepit's own relying-party identity. Falls back to `FIREPIT_LINKKEYS_IDP_DOMAIN` if unset (`config.Config.LinkkeysRPDomain()`). |
-| `FIREPIT_LINKKEYS_URL` | `""` | Reserved for future use alongside the transport-specific vars below. |
 | `FIREPIT_LINKKEYS_TRANSPORT` | `http` | `http` (legacy JSON PKI sidecar) or `tcp` (canonical CSIL-RPC over TCP, additionally gets richer `userinfo-fetch`). |
 | `FIREPIT_LINKKEYS_PKI_URL` | `""` | **Required** for the `http` transport — the RP sidecar's base URL. |
 | `FIREPIT_LINKKEYS_PKI_API_KEY` | `""` | **Required** — see §4 below for how this is minted. |
@@ -242,15 +241,11 @@ linkkeys RP process), the equivalent manual steps are the same three
 `FIREPIT_LINKKEYS_PKI_URL` (or the `tcp` transport's
 `FIREPIT_LINKKEYS_TCP_ADDR`) points at.
 
-**Local dev note**: `docker-compose.yaml`'s `linkkeys-rp` service is still
-a commented placeholder (see that file and CLAUDE.md — it gets wired up
-once task D1's image exists), so **real linkkeys login does not work
-against a plain `./tools.sh dev` today.** What *does* work without an RP:
-every anonymous-read path (browsing boards, reading threads, reading
-endorsement lists) — that's exactly what this task's own verification
-exercised (see the repo README's quickstart). Building/testing/browsing a
-seeded forum has never required a working login; only writing content,
-subscribing, or hitting any admin op does.
+**Local development note**: The `linkkeys-rp` service in
+`docker-compose.yaml` is disabled. A default `./tools.sh dev` session does
+not support linkkeys login. Anonymous users can browse boards, threads, and
+endorsements. Enable and configure the RP service to test authenticated
+operations.
 
 ---
 
@@ -383,7 +378,6 @@ own transport-level status, which never carries application semantics.
 
 | Code | Name | Meaning |
 |---|---|---|
-| 1 | `Unimplemented` | The op has no real implementation yet (should not appear in a released build). |
 | 2 | `Validation` | Caller input failed a product-level check (`Field` names which one). |
 | 3 | `Unauthenticated` | No active session, and the op requires one. |
 | 4 | `Forbidden` | A session exists but lacks the required role/ownership. |

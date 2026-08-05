@@ -8,7 +8,7 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
-// subscriptionService implements SubscriptionService (task B6): subscribe,
+// subscriptionService implements SubscriptionService: subscribe,
 // unsubscribe, and mute are all target-validated and idempotent (see the
 // doc comments on the store methods this delegates to — Store.Subscribe,
 // Store.SetSubscriptionMuted, Store.Unsubscribe).

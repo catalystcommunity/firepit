@@ -27,20 +27,12 @@ import (
 	"github.com/catalystcommunity/firepit/coredb"
 )
 
-// TestServerEndToEnd boots the real firepit-api HTTP handler (task B1:
-// config -> migrations -> store -> stub services -> server.New, exactly what
-// api/cmd/firepit-api/main.go wires) against a testcontainers Postgres, then
-// drives it purely over HTTP in CBOR:
+// TestServerEndToEnd runs the Firepit HTTP handler against a testcontainers
+// Postgres database and sends CBOR requests over HTTP.
 //
 //   - GET /healthz reports 200 once the database is reachable.
-//   - POST /csil/v1/rpc for an op returning an AppError (anonymous create-board) round-trips
-//     the declared ServiceError arm with the Unimplemented code, proving the
-//     dispatcher, the session middleware, and the stub wiring all work
-//     end-to-end over the wire — not just via direct Go calls. (Task B2 gave
-//     AuthService a real begin-login; board/create-board is still B3's stub,
-//     so it's what this generic dispatch-plumbing check now exercises. B2's
-//     own login-flow coverage lives in api/internal/csilservices and this
-//     package's auth_integration_test.go.)
+//   - POST /csil/v1/rpc for anonymous create-board returns a typed
+//     Unauthenticated ServiceError.
 //
 // This uses api/internal/csil's codec + api/internal/transport's envelope
 // helpers directly (one of the two options task B1 allows) rather than the
@@ -109,10 +101,8 @@ func TestServerEndToEnd(t *testing.T) {
 	})
 
 	t.Run("AppError round-trips ServiceError over HTTP", func(t *testing.T) {
-		// An anonymous create-board is always Unauthenticated (admin-only op),
-		// so this assertion is stable no matter how many services get real
-		// implementations — what's under test is the typed-error round-trip,
-		// not any particular service's stub.
+		// This is a stable typed-error case because create-board requires an
+		// administrator session.
 		payload := csil.EncodeBoardCreateBoardRequest(csil.CreateBoardRequest{Slug: "general", Title: "General", Kind: "discussion"})
 		envelope, err := transport.NewRpcRequest("board", "create-board", payload).Encode()
 		require.NoError(t, err)

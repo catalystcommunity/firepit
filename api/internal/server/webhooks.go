@@ -1,12 +1,5 @@
-// Package server (this file): route registration for POST /webhooks/github
-// (task B8). All of the actual behavior — per-mapping HMAC verification,
-// event filtering, idempotent redelivery handling, and event -> content
-// application — lives in api/internal/github; see that package's doc
-// comment for the full contract. This file is deliberately just wiring, kept
-// in its own function (called with one additive line from server.go's
-// Handler()) rather than inlined there, to minimize collision with sibling
-// Wave B tasks that also register HTTP-native routes on the shared mux
-// (e.g. B2's GET /auth/callback).
+// This file registers the GitHub webhook route. The github package verifies
+// and processes each event.
 package server
 
 import (

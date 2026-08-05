@@ -1,6 +1,4 @@
-// Renders a post/comment body (or a composer preview) through the shared
-// sanitizer (task C3 scope item 1). One tiny wrapper so nothing under
-// components/thread ever touches `innerHTML` directly.
+// Keep direct innerHTML use behind the shared markdown sanitizer.
 import { createMemo, type Component } from "solid-js";
 import { renderMarkdown } from "~/lib/markdown";
 

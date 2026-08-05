@@ -1,7 +1,3 @@
-// Board post list (task C2, PLANDOC.md §7): activity-ordered, cursor-paged
-// rows — title, author, comment count, last-activity relative time, unread
-// indicator, and a small glyph for GitHub-origin posts. Used by
-// `~/pages/BoardPage`.
 import { A } from "@solidjs/router";
 import { createEffect, createSignal, For, on, Show, type Accessor, type Component } from "solid-js";
 import type { Category, Post, UnreadSummary } from "~/gen/types.gen";

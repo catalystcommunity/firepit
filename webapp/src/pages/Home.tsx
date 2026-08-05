@@ -1,5 +1,3 @@
-// The "/" route (task C2, PLANDOC.md §7): the board index — every board,
-// grouped announce vs. discussion, with subscribe toggles and unread dots.
 import { Suspense, type Component } from "solid-js";
 import BoardIndexList from "~/components/board-list/BoardIndexList";
 import { useSession } from "~/lib/session";

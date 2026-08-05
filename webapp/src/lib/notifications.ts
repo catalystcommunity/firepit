@@ -1,6 +1,4 @@
-// Shared utilities for the notification bell (src/components/notifications/
-// NotificationBell.tsx) and the /notifications inbox (src/pages/
-// NotificationsPage.tsx) — task C4, PLANDOC.md §7.
+// Shared utilities keep the notification bell and inbox behavior consistent.
 //
 // Two unrelated things live here rather than in either component:
 //

@@ -1,14 +1,6 @@
-// Package config loads firepit-api's runtime configuration from FIREPIT_*
-// environment variables (PLANDOC.md §7, task B1). It is deliberately plain
-// stdlib (os.Getenv + strconv), not app-utils-go/config: the sibling repo
-// this project follows most closely, longhouse
-// (api/internal/config/config.go), doesn't use that package either — it's a
-// flat set of getenv-with-default helpers. This package keeps that same
-// getenv-with-default approach but groups the results into a Config struct
-// (rather than longhouse's package-level vars) so the server can be
-// constructed with an explicit, testable dependency instead of reaching for
-// globals — the one deliberate deviation from the longhouse pattern, noted
-// here since B2-B9 don't need to touch this file at all.
+// Package config loads firepit-api settings from FIREPIT_* environment
+// variables. Config is a value so that callers can provide explicit settings
+// in tests.
 package config
 
 import (
@@ -38,18 +30,8 @@ type Config struct {
 	// set FIREPIT_MIGRATE_ON_BOOT=false.
 	MigrateOnBoot bool
 
-	// --- linkkeys RP config (PLANDOC.md §2, §3) ---
-	//
-	// Struct fields only — task B2 (AuthService + linkkeys RP client) owns
-	// reading, validating, and acting on these. Names mirror longhouse's
-	// LONGHOUSE_LINKKEYS_* env vars 1:1 (api/internal/config/config.go
-	// there), just under the FIREPIT_ prefix, so porting
-	// longhouse/api/internal/linkkeys needs zero renaming.
-
 	// LinkkeysDomain is firepit's own relying-party DNS identity.
 	LinkkeysDomain string
-	// LinkkeysURL is the linkkeys RP sidecar's base URL (HTTP transport).
-	LinkkeysURL string
 	// LinkkeysPKIURL/LinkkeysPKIAPIKey/LinkkeysPKIAllowInvalidCerts
 	// configure the RP sidecar's PKI verification endpoint.
 	LinkkeysPKIURL               string
@@ -67,15 +49,6 @@ type Config struct {
 	// linkkeys.todandlorna.com per PLANDOC.md §1).
 	LinkkeysIDPDomain string
 	LinkkeysIDPURL    string
-
-	// --- B2 additions: fields longhouse names OUTSIDE its LINKKEYS_* group
-	// (LONGHOUSE_APP_CALLBACK_URL, LONGHOUSE_JWT_SECRET — see
-	// api/internal/config/config.go there) that firepit still needs one of
-	// each of, plus one with no longhouse precedent at all (the post-login
-	// redirect target; longhouse has no cookie session to redirect *to*
-	// anywhere but the SPA's own bearer-handling code). Not part of the
-	// pre-declared FIREPIT_LINKKEYS_* placeholder set B1 left for B2 (see the
-	// doc comment above), because none of these three names that set.
 
 	// AppCallbackURL is the absolute URL the IDP redirects back to after
 	// authentication — GET /auth/callback (PLANDOC.md §3, §5), NOT a SPA
@@ -96,13 +69,8 @@ type Config struct {
 	// restart-heavy deployment MUST set FIREPIT_SESSION_NONCE_SECRET
 	// explicitly or logins will intermittently fail nonce verification.
 	SessionNonceSecret string
-	// PostLoginRedirectURL is where GET /auth/callback 302s the browser
-	// after minting a session cookie. No longhouse precedent (longhouse has
-	// no cookie/browser-redirect step at all — its callback is a SPA route
-	// that POSTs to a CSIL op, see PLANDOC.md §3's contrast). Defaults to
-	// "/" — the webapp isn't built yet (task C1), so this is deliberately
-	// the simplest thing that could work; C1 can override it once the SPA
-	// has a real post-login landing route.
+	// PostLoginRedirectURL is where GET /auth/callback sends the browser
+	// after it creates a session cookie.
 	PostLoginRedirectURL string
 }
 
@@ -116,7 +84,6 @@ func Load() Config {
 		MigrateOnBoot: getEnvAsBoolOrDefault("FIREPIT_MIGRATE_ON_BOOT", true),
 
 		LinkkeysDomain:               getEnvOrDefault("FIREPIT_LINKKEYS_DOMAIN", ""),
-		LinkkeysURL:                  getEnvOrDefault("FIREPIT_LINKKEYS_URL", ""),
 		LinkkeysPKIURL:               getEnvOrDefault("FIREPIT_LINKKEYS_PKI_URL", ""),
 		LinkkeysPKIAPIKey:            getEnvOrDefault("FIREPIT_LINKKEYS_PKI_API_KEY", ""),
 		LinkkeysPKIAllowInvalidCerts: getEnvAsBoolOrDefault("FIREPIT_LINKKEYS_PKI_ALLOW_INVALID_CERTS", false),

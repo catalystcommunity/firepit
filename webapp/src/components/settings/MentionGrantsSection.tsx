@@ -1,6 +1,5 @@
-// /settings' mention-grants section (task C4, PLANDOC.md §7): the people
-// who may always @mention-notify the caller, independent of subscriptions
-// (extends "subscribed", powers "authorized" — PLANDOC.md §4/§9 decision 4).
+// Mention grants allow selected users to send mention notifications outside
+// the caller's subscriptions.
 //
 // SettingsService.grant-mention/revoke-mention still take a UserID (a ULID),
 // but the form itself now accepts a handle: SocialService.resolve-user (a

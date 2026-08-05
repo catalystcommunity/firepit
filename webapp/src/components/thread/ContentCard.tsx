@@ -1,7 +1,4 @@
-// Renders one post or comment: header (author/timestamps/edited/origin),
-// markdown body, endorsements, edit/delete-own-content, revision history,
-// and (for comments) a reply toggle — task C3 scope items 1, 3, 4. Shared
-// between PostView and CommentNode so both stay in sync as this evolves.
+// Posts and comments use the same card so that their actions stay consistent.
 import { createSignal, Show, type Component } from "solid-js";
 import type { OriginKind, TargetType, UserProfile } from "~/gen/types.gen";
 import Composer from "./Composer";

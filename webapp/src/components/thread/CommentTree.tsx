@@ -1,8 +1,5 @@
-// Renders a post's comments either as a nested, collapsible tree or as a
-// flat "mailing-list order" list (task C3 scope item 1). Both modes render
-// the exact same `comments` array from `Thread` — tree mode groups it by
-// `parentCommentId` (see treeModel.ts), flat mode renders it untouched, in
-// server order, depth-first — never re-sorted by either mode.
+// Preserve server order in both views. Tree mode only groups comments by
+// parent ID; it does not sort them again.
 import { createMemo, createSignal, For, type Component } from "solid-js";
 import type { Comment, UserProfile } from "~/gen/types.gen";
 import { buildCommentTree } from "./treeModel";

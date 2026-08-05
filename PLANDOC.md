@@ -103,7 +103,7 @@ conventional commits + semantic-release, `tools.sh` task runner (not Make), `CLA
 - **The CSIL schema is the contract** — it's what makes the parallel task breakdown below
   safe, and what makes "multiple frontends" cheap later.
 - Auth flow (longhouse pattern): SPA → `AuthService.begin-login` → backend `sign-request`
-  via RP sidecar, sets nonce cookie → 302 to user's IDP → IDP → `GET /auth/callback` →
+  with a self-verifying nonce → redirect to the user's IDP → `GET /auth/callback` →
   `decrypt-token` → `verify-assertion` → `userinfo-fetch` → upsert `users` row → mint our
   own session cookie. Sessions are firepit's; linkkeys only verifies identity.
 
@@ -235,6 +235,13 @@ service BoardService {
     set-board-member:   SetBoardMemberRequest -> Empty / ServiceError,    ;; admin: assign
     remove-board-member: RemoveBoardMemberRequest -> Empty / ServiceError,;; maintainer/mod
 }
+service CategoryService {
+    list-board-categories: BoardID -> CategoryList,
+    create-category:      CreateCategoryRequest -> Category / ServiceError, ;; admin
+    update-category:      UpdateCategoryRequest -> Category / ServiceError, ;; admin
+    delete-category:      DeleteCategoryRequest -> Empty / ServiceError,    ;; admin
+    list-categories:      Empty -> CategoryList,
+}
 service ThreadService {
     list-posts:         ListPostsRequest -> PostPage,          ;; board + cursor, by activity
     get-thread:         GetThreadRequest -> Thread,            ;; post + full comment tree
@@ -303,7 +310,7 @@ firepit/
 ├── PLANDOC.md  CLAUDE.md  AGENTS.md  LICENSE (Apache-2.0)  .releaserc.json  tools.sh
 ├── csil/                    # firepit.csil + types/*.csil — THE contract
 ├── api/                     # go module github.com/catalystcommunity/firepit/api
-│   ├── cmd/firepit-api/
+│   ├── cmd/{firepit-api,firepit-seed}/
 │   └── internal/{config,transport,csil,csilservices,linkkeys,notify,github,store}
 ├── coredb/                  # go module …/firepit/coredb — goose embedded migrations
 │   └── migrations/000001_baseline.sql …
@@ -311,20 +318,22 @@ firepit/
 │   └── src/{gen,lib,components,pages}
 ├── clients/                 # generated: go/, typescript/ (more languages later)
 ├── helm_chart/              # api + linkkeys-rp sidecar + HTTPRoute
+├── deploy/                  # deployment-specific Helm values
 └── .reactorcide/            # trusted plugins, workflow DAGs, jobs, tests, grants
 ```
 
-`tools.sh` verbs: `gen` (csilgen → api/internal/csil, webapp/src/gen, clients/), `test`,
-`test-integration` (testcontainers Postgres), `lint`, `migrate`, `dev` (compose: postgres +
-linkkeys-rp + api + vite), `build-images`.
+`tools.sh` commands: `gen`, `test`, `test-go`, `test-web`, `test-integration`, `lint`,
+`lint-go`, `lint-web`, `migrate`, `seed`, `dev`, and `build-images`. The `dev` command
+starts Postgres, the API, and the web application. The optional linkkeys RP is disabled
+until an operator configures it.
 
 ---
 
-## 7. Task breakdown (Sonnet-ready)
+## 7. Completed task record
 
-Four waves. Within a wave, every task is independently assignable and parallel — the CSIL
-schema and the baseline migration are the shared contracts that make that true. Each task
-lands as one PR with tests; conventional commits.
+The project used four implementation waves. The CSIL schema and the baseline migration
+were the shared contracts. This section records the completed work and its acceptance
+criteria.
 
 ### Wave A — contracts and scaffolding (serialize A1 → A2/A3; A2 ∥ A3)
 

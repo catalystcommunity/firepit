@@ -1,8 +1,5 @@
-// Package store holds gorm model structs that mirror every table in
-// coredb's baseline migration (PLANDOC.md §4), plus a thin constructor
-// wrapping a *gorm.DB. There is no query/business logic here beyond what
-// the round-trip integration test needs — services in later tasks (B3-B9)
-// build repositories on top of these models.
+// Package store contains the GORM models and database operations for the
+// Firepit schema.
 package store
 
 import (
@@ -14,8 +11,7 @@ import (
 
 // Ltree scans/values a Postgres `ltree` column as its dotted-label text
 // representation (e.g. "01Habc.01Hdef"). gorm/pgx have no built-in ltree
-// support, so this is a minimal Scanner/Valuer — no path arithmetic here,
-// that lives in the ThreadService layer (task B4).
+// support, so this type provides the required Scanner and Valuer methods.
 type Ltree string
 
 // Scan implements sql.Scanner.

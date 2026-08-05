@@ -55,9 +55,8 @@ func (s *Store) GetUserByHandle(ctx context.Context, handle string) (*User, erro
 // comment for the full strategy).
 const maxHandleAttempts = 20
 
-// UpsertUser resolves a `users` row for a verified linkkeys identity
-// (task B2's GET /auth/callback: PLANDOC.md §3), inserting one on first
-// login and returning the existing row on every login after that.
+// UpsertUser resolves a users row for a verified linkkeys identity. It
+// inserts the row on first login and returns it unchanged on later logins.
 //
 // # Identity vs. handle
 //

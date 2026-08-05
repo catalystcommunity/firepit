@@ -1,11 +1,4 @@
-// Flat ESLint config (task C1, PLANDOC.md §7). tools.sh's `lint` verb only
-// runs `npx eslint .` once this file exists (see tools.sh's `cmd_lint`) —
-// this is that trigger.
-//
-// src/gen (csilgen output) and src/transport/csil (a vendored, byte-for-byte
-// copy of the upstream CSIL transport) are excluded outright: neither is
-// ours to restyle, and both are documented "DO NOT EDIT" / "do not
-// hand-edit, re-copy from upstream" respectively.
+// Do not lint generated code or the vendored CSIL transport.
 import js from "@eslint/js";
 import solid from "eslint-plugin-solid";
 import globals from "globals";

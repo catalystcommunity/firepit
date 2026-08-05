@@ -1,18 +1,6 @@
-// This file (social.go): friend groups are PRIVATE to their owner —
-// PLANDOC.md §4 ("friend_groups ... private to the owner") and §7 task B9's
-// explicit acceptance criterion ("groups are private to their owner"). Every
-// method below that touches a specific group takes an ownerID and scopes
-// its query to "id = ? AND owner_id = ?" (or goes through
-// GetOwnedFriendGroup, which does the same); a group ID that exists but
-// belongs to someone else is indistinguishable from a group ID that doesn't
-// exist at all — both resolve to gorm.ErrRecordNotFound here, and to a
-// NotFound AppError (never Forbidden) in SocialService
-// (api/internal/csilservices/social.go), per the "never leak existence"
-// contract in csilservices/errors.go's NotFound doc comment. There is no
-// method here that returns another user's group by ID alone, and there
-// must never be one added — that would reopen exactly the leak this
-// ownership scoping exists to close. list-friend-groups only ever lists the
-// caller's own groups, never anyone else's.
+// Friend-group queries always include the owner ID. A group that belongs to
+// another user returns the same not-found result as a missing group. This
+// prevents disclosure of private group data.
 
 package store
 
@@ -45,10 +33,7 @@ type FriendGroupMember struct {
 func (FriendGroupMember) TableName() string { return "friend_group_members" }
 
 // ErrFriendGroupNameTaken is returned by CreateFriendGroup when ownerID
-// already has a friend group with the given exact name. There's no DB-level
-// unique constraint enforcing this (coredb/migrations is out of scope for
-// this task), so CreateFriendGroup closes the race itself: see its doc
-// comment for how.
+// already has a friend group with the given exact name.
 var ErrFriendGroupNameTaken = errors.New("store: friend group name already used by this owner")
 
 // ErrSelfFriend is returned by AddFriendGroupMember when ownerID ==

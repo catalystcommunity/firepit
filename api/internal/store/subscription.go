@@ -34,14 +34,8 @@ type Subscription struct {
 
 func (Subscription) TableName() string { return "subscriptions" }
 
-// targetExists reports whether targetID names a live (non-deleted) row of
-// targetType ("board", "post", or "comment"), for validating subscription
-// and read/unread targets before writing anything referencing them. It's a
-// deliberately minimal ad hoc query (rather than a shared GetBoard/GetPost
-// GetComment repository method) so this file doesn't need to add methods to
-// board.go/post.go/comment.go, which other Wave B tasks (B3, B4) own and are
-// landing concurrently — see doc.go's package comment on cross-task file
-// ownership.
+// targetExists validates polymorphic subscription and read targets. It hides
+// deleted content in the same way as normal content reads.
 func targetExists(ctx context.Context, db *gorm.DB, targetType, targetID string) (bool, error) {
 	var table string
 	switch targetType {

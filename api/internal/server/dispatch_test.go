@@ -12,16 +12,9 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/transport"
 )
 
-// stubServices builds a Services value backed entirely by the
-// csilservices.NewXService stubs, exactly as main.go does today. The stub
-// constructors never touch *store.Store, so a nil store is safe here.
-// AuthService (B2) and EndorsementService (B5) are real rather than stubs,
-// but both are likewise safe to construct here: these tests exercise
-// dispatch mechanics only and never invoke a method that dereferences the
-// nil store — a zero-value config.Config leaves AuthService unable to
-// reach any RP (see TestDispatchFallibleOpReturnsServiceError), and
-// notify.Noop{} mirrors main.go's own wiring.
-func stubServices() Services {
+// testServices constructs real services with dependencies that are safe for
+// dispatcher tests. These tests do not execute database operations.
+func testServices() Services {
 	var st *store.Store
 	return Services{
 		Auth:         csilservices.NewAuthService(st, config.Config{}),
@@ -40,14 +33,11 @@ func stubServices() Services {
 
 // TestDispatchFallibleOpReturnsServiceError exercises the routeFallible path:
 // an op with a declared `/ ServiceError` arm whose implementation returns an
-// *AppError should come back as a typed ServiceError reply (transport
-// status ok), not a transport-level failure. auth/begin-login is real (task
-// B2), not a stub; stubServices()'s zero-value config.Config leaves it with
-// no configured linkkeys RP, so it still returns a (different) *AppError —
-// CodeInternal rather than CodeUnimplemented — which is exactly the
-// dispatch-mechanics behavior this test cares about.
+// *AppError should return a typed ServiceError reply, not a transport error.
+// A zero-value config leaves auth/begin-login without a configured RP, which
+// provides a stable CodeInternal result.
 func TestDispatchFallibleOpReturnsServiceError(t *testing.T) {
-	routes := buildRoutes(stubServices())
+	routes := buildRoutes(testServices())
 	req := &transport.RpcRequest{
 		Service: "auth",
 		Op:      "begin-login",
@@ -76,9 +66,7 @@ func TestDispatchFallibleOpReturnsServiceError(t *testing.T) {
 // failingNotificationService embeds the real NotificationService interface
 // but forces MarkAllRead (an op with no declared error arm) to return a
 // plain error, giving TestDispatchInfallibleOpReturnsTransportError a
-// stable subject now that every real service is implemented. Every earlier
-// incarnation of this test chased "whatever op is still a stub" and broke
-// each time a Wave B task landed.
+// stable test subject.
 type failingNotificationService struct {
 	csil.NotificationService
 }
@@ -92,7 +80,7 @@ func (failingNotificationService) MarkAllRead(context.Context, csil.Empty) (csil
 // implementation returns an error has no typed channel to carry it, so it
 // must surface as a transport-level internal failure.
 func TestDispatchInfallibleOpReturnsTransportError(t *testing.T) {
-	svcs := stubServices()
+	svcs := testServices()
 	svcs.Notification = failingNotificationService{svcs.Notification}
 	routes := buildRoutes(svcs)
 	req := &transport.RpcRequest{
@@ -112,7 +100,7 @@ func TestDispatchInfallibleOpReturnsTransportError(t *testing.T) {
 
 // TestDispatchUnknownServiceOrOp checks the two "no route" cases.
 func TestDispatchUnknownServiceOrOp(t *testing.T) {
-	routes := buildRoutes(stubServices())
+	routes := buildRoutes(testServices())
 
 	t.Run("unknown service", func(t *testing.T) {
 		outcome := dispatch(context.Background(), routes, &transport.RpcRequest{Service: "nope", Op: "whatever"})
@@ -132,7 +120,7 @@ func TestDispatchUnknownServiceOrOp(t *testing.T) {
 // TestDispatchMalformedPayload checks that a payload the decoder can't parse
 // produces StatusMalformedEnvelope rather than a panic or a typed reply.
 func TestDispatchMalformedPayload(t *testing.T) {
-	routes := buildRoutes(stubServices())
+	routes := buildRoutes(testServices())
 	req := &transport.RpcRequest{Service: "auth", Op: "begin-login", Payload: []byte{0xff, 0xff, 0xff}}
 
 	outcome := dispatch(context.Background(), routes, req)

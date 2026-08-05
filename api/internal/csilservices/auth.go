@@ -16,10 +16,8 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
-// AuthService implements the linkkeys-backed login flow (task B2,
-// PLANDOC.md §3, §5) across two entry points that must agree on how they
-// talk to the RP and mint/verify nonces without duplicating that
-// construction:
+// AuthService implements the linkkeys login flow. Its two entry points must
+// use the same RP settings and nonce settings:
 //
 //   - authService.BeginLogin below (the CSIL op: sign-request, mint the
 //     self-verifying login nonce, return the IDP redirect URL).
@@ -27,27 +25,14 @@ import (
 //     flow needs: server/authcallback.go's GET /auth/callback — the IDP can
 //     only redirect a plain browser GET, which can't be a CSIL-RPC POST).
 //
-// Both call BuildPKIClient(cfg) and NewLoginOptions(cfg) to build identical
-// dependencies from the same config.Config, so this file is the one place
-// that decides how firepit talks to the linkkeys RP sidecar.
+// Both use BuildPKIClient and NewLoginOptions.
 //
 // # Why no cookie carries the login nonce
 //
-// PLANDOC.md §3 describes begin-login as setting "a nonce cookie" before the
-// 302 to the IDP. In practice begin-login is a CSIL-RPC op
-// (api/internal/server/dispatch.go's routeFallible/typedHandler), and the
-// HTTP carrier for CSIL-RPC (server.go's handleRPC) has no channel for a
-// service method to set a response header — every op returns (Resp, error),
-// nothing else. Retrofitting one would mean widening HandlerOutcome/
-// typedHandler for every op across every Wave B service, a much bigger and
-// riskier change than this task's scope. A self-verifying nonce (HMAC +
-// embedded expiry, api/internal/linkkeys/nonce.go, ported from longhouse's
-// api/internal/auth/nonce.go) achieves the same "prove this login round-trip
-// is ours" property with NO server-side state at all — not a cookie, not a
-// database row (this task's store ownership is users/sessions only, no new
-// nonce table) — so it both sidesteps the transport limitation and fits the
-// ownership scope. It round-trips through the RP+IDP inside the assertion's
-// own `nonce` field, which GET /auth/callback re-verifies.
+// A CSIL service method cannot set an HTTP response cookie. The signed
+// request therefore carries an HMAC-protected nonce with an expiry. This
+// proves that the callback belongs to this login flow without server-side
+// nonce state.
 type authService struct {
 	store       *store.Store
 	pki         PKIClient
@@ -193,13 +178,8 @@ func (s *authService) BeginLogin(_ context.Context, req csil.BeginLoginRequest) 
 }
 
 // Logout deletes exactly the session the caller's cookie names (never every
-// session belonging to that user — logging out one device shouldn't touch
-// any other). Per the CSIL schema's declared contract (no ServiceError arm;
-// see the stub's original comment this replaces), logout never errors even
-// when already logged out or anonymous — a delete failure is logged and
-// swallowed rather than surfaced, since there is no typed channel to carry
-// it and the dispatcher would otherwise turn it into an opaque transport
-// failure for an op that's supposed to always succeed.
+// session belonging to that user. Logout has no ServiceError arm, so it logs
+// and suppresses a delete error.
 func (s *authService) Logout(ctx context.Context, _ csil.Empty) (csil.Empty, error) {
 	if sess, ok := reqctx.Session(ctx); ok {
 		if err := s.store.DeleteSession(ctx, sess.TokenHash); err != nil {

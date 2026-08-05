@@ -1,10 +1,4 @@
-// Session/auth (task C1, PLANDOC.md §3): whoami-on-boot, a `SessionProvider`
-// context (user/loading/error + login/logout), consumed by `/login`,
-// `/auth/callback`, and the top bar. Named `session.ts` in the task
-// breakdown; it's `.tsx` here purely because `SessionProvider` is a JSX
-// component and TypeScript only parses JSX in `.tsx` files — same module,
-// same import path convention (`~/lib/session`).
-//
+// Session state is shared by the login pages and the application shell.
 // The session itself is httpOnly-cookie-based (PLANDOC.md §3: "Sessions are
 // firepit's; linkkeys only verifies identity") — there is no token this
 // module can read, so `whoami` on boot is the *only* source of truth for

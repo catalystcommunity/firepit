@@ -1,14 +1,9 @@
-// Subscribe/mute toggle for a board (task C2, PLANDOC.md §7: board index
-// "subscribe toggle", board header "subscribe/mute toggle"). One component
-// covers both call sites — the board index list renders it without
+// One component covers both call sites. The board index list renders it without
 // `showMute`, `BoardPage`'s header renders it with `showMute` — since the
 // underlying op (SubscriptionService) is identical either way.
 //
-// Controlled: the parent owns the `Subscription | undefined` and re-renders
-// via `onChange` after a successful subscribe/unsubscribe/set-muted call,
-// same pattern `~/lib/session`'s `user`/`refresh` uses. This keeps a list of
-// many toggles (the board index) to one shared subscriptions fetch instead
-// of each row re-fetching its own.
+// The parent owns the subscription state so that a board list can use one
+// shared subscription request.
 import { A } from "@solidjs/router";
 import { createSignal, Show, type Component } from "solid-js";
 import type { Subscription, TargetType } from "~/gen/types.gen";

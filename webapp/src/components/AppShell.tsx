@@ -1,17 +1,5 @@
-// The app shell (task C1, PLANDOC.md §7): top bar (app name, auth state,
-// placeholder bell) + left board-list rail + the routed page content, with
-// the error boundary and suspense/loading conventions every page below it
-// inherits for free. Passed as `@solidjs/router`'s `Router` `root` prop
-// (see App.tsx) — `props.children` is whatever route matched.
-//
-// Mobile nav (docs/DESIGN.md "mobile patterns"): below ~760px the board
-// rail becomes an off-canvas drawer instead of a permanent column — a menu
-// button in the topbar (`.rail-toggle`, hidden above that breakpoint via
-// CSS) toggles it, a backdrop click / Escape / picking a board all close
-// it. Above ~760px `drawerOpen` is simply never turned on (no toggle button
-// visible to set it), so the rail renders exactly as it always has —
-// `.board-rail`'s own CSS is what actually switches between "static column"
-// and "fixed slide-in panel" per breakpoint.
+// The router uses AppShell as its shared page frame. On narrow screens, the
+// board rail becomes a drawer. Navigation and Escape close that drawer.
 import { A, useLocation } from "@solidjs/router";
 import {
   createEffect,
@@ -37,10 +25,7 @@ const AppShell: ParentComponent = (props) => {
   const session = useSession();
   const location = useLocation();
   const [boardPage] = createResource(() => api.board.listBoards({}));
-  // Task C2's shared unread poller (~/lib/unread) — its own instance here so
-  // the rail's dots update independently of any page-level instance (see
-  // that module's "safe to call more than once" doc comment); C4's bell is
-  // expected to do the same rather than reach into this one.
+  // Use a separate poller so that page-level polling cannot stop rail updates.
   const poller = startUnreadPoller(() => session.user() !== null);
 
   const [drawerOpen, setDrawerOpen] = createSignal(false);
@@ -48,9 +33,7 @@ const AppShell: ParentComponent = (props) => {
     setDrawerOpen(false);
   };
 
-  // Never leave the drawer open across a navigation (picking a board on
-  // mobile should close it behind you) or stuck open if the viewport grows
-  // past the mobile breakpoint mid-session.
+  // Do not keep the mobile drawer open after navigation.
   createEffect(() => {
     void location.pathname;
     closeDrawer();

@@ -118,7 +118,7 @@ type BoardUnread struct {
 //  5. unread_roots: a post's own root content counts as exactly one unread
 //     item, but only if the caller has never viewed it at all (no
 //     read_marks row) — the first view is what creates the watermark
-//     (ThreadService.get-thread, task B4) or an explicit mark-read
+//     (ThreadService.get-thread) or an explicit mark-read
 //     (ReadService.mark-read) does.
 //  6. override_posts / override_comments: unread_overrides pins inside
 //     scoped_posts count regardless of authorship or watermark — an

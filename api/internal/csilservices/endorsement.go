@@ -12,8 +12,8 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
-// endorsementService is the real EndorsementService implementation
-// (task B5). See the package doc comment (doc.go) for the *AppError
+// endorsementService is the EndorsementService implementation. See the
+// package doc comment for the *AppError
 // contract every method here follows, and PLANDOC.md §4's "Endorser
 // ordering" design note for the per-viewer ordering list-endorsements
 // implements (via store.ListEndorsementsForViewer).

@@ -16,7 +16,7 @@ import (
 	"github.com/catalystcommunity/firepit/api/internal/store"
 )
 
-// threadService is the ThreadService implementation (task B4): posts,
+// threadService is the ThreadService implementation: posts,
 // threaded comments, edits with revision snapshots, and soft-delete
 // tombstones. See the package doc comment (doc.go) for the error-handling
 // contract every method here follows, and thread_cursor.go for the
@@ -27,7 +27,7 @@ type threadService struct {
 }
 
 // NewThreadService constructs the ThreadService implementation. pub is the
-// notification fan-out seam (task B7) — write paths that create or edit
+// notification fan-out seam. Write paths that create or edit
 // content call pub.Publish inside the same transaction as the content
 // write itself, so a notification never commits without the content that
 // caused it (or vice versa). Wire notify.Noop{} until B7 lands.
