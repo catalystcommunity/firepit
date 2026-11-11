@@ -29,7 +29,7 @@ services:
   # Enable this service after you configure the API's FIREPIT_LINKKEYS_*
   # settings for a local relying party.
   # linkkeys-rp:
-  #   image: containers.catalystsquad.com/public/linkkeys:latest
+  #   image: containers.catalystsquad.com/public/catalystcommunity/linkkeys:0.16.7
   #   container_name: firepit-linkkeys-rp-dev
   #   environment:
   #     ENABLE_RP_ENDPOINTS: "true"

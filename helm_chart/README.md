@@ -139,6 +139,11 @@ Before enabling this, confirm:
    # the reactorcide vault (set-secrets.sh prompts for it)
    ```
 
+   LinkKeys 0.16.7+ shows the account display name (`"Firepit Forum"`) on
+   the consent screen. The account username (`firepit`) is the default
+   application ID for standing consent. It must be 1-128 of
+   `A-Z a-z 0-9 - _ .`. To use a different ID, set `linkkeys.applicationId`.
+
    `.reactorcide/jobs/deploy.yaml` supplies it to the trusted deploy plugin from
    `${secret:catalystsquad/firepit:linkkeys_api_key}` on every
    tag-triggered deploy.

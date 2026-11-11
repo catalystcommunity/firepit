@@ -55,8 +55,11 @@ type TCPConfig struct {
 	Addr         string   // optional host:port override (else DNS-discovered)
 	Fingerprints []string // optional pinned SPKI sha256 hex (else DNS-discovered)
 	Insecure     bool     // dev only: skip server-cert fingerprint pinning
-	DialTimeout  time.Duration
-	IOTimeout    time.Duration
+	// ApplicationID is the optional RpSignRequest.application_id. Empty:
+	// the RP uses the API-key account username as the application ID.
+	ApplicationID string
+	DialTimeout   time.Duration
+	IOTimeout     time.Duration
 }
 
 // TCPClient speaks CSIL-RPC to linkkeys' Rp service over TCP+TLS. It is safe
@@ -71,6 +74,7 @@ type TCPClient struct {
 	insecure     bool
 	apiBase      string
 	domain       string
+	appID        string
 	dialTimeout  time.Duration
 	ioTimeout    time.Duration
 }
@@ -164,20 +168,27 @@ func NewTCPClient(cfg TCPConfig) (*TCPClient, error) {
 		insecure:     cfg.Insecure,
 		apiBase:      cfg.APIBase,
 		domain:       cfg.Domain,
+		appID:        strings.TrimSpace(cfg.ApplicationID),
 		dialTimeout:  dialTimeout,
 		ioTimeout:    ioTimeout,
 	}, nil
 }
 
 // SignRequest asks the RP to sign an AuthRequest bound to callbackURL + nonce.
+// Since LinkKeys 0.16.7 the RP names the calling application in the signed
+// request (API-key account, RP domain, application_id). The IDP shows the
+// account display name on the consent screen and keys standing consent by
+// that application. application_id is omitted when not configured, so the RP
+// uses the account username.
 func (c *TCPClient) SignRequest(callbackURL, nonce string) (string, error) {
 	var out struct {
 		SignedRequest string `cbor:"signed_request"`
 	}
 	in := struct {
-		CallbackURL string `cbor:"callback_url"`
-		Nonce       string `cbor:"nonce"`
-	}{callbackURL, nonce}
+		CallbackURL   string `cbor:"callback_url"`
+		Nonce         string `cbor:"nonce"`
+		ApplicationID string `cbor:"application_id,omitempty"`
+	}{callbackURL, nonce, c.appID}
 	if err := c.call(opSignRequest, in, &out); err != nil {
 		return "", err
 	}

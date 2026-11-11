@@ -35,3 +35,6 @@ data:
   FIREPIT_LINKKEYS_TCP_FINGERPRINTS: {{ .Values.linkkeys.tcpFingerprints | quote }}
   {{- end }}
   FIREPIT_LINKKEYS_TCP_ALLOW_INSECURE: {{ .Values.linkkeys.tcpAllowInsecure | quote }}
+  {{- if .Values.linkkeys.applicationId }}
+  FIREPIT_LINKKEYS_APPLICATION_ID: {{ .Values.linkkeys.applicationId | quote }}
+  {{- end }}

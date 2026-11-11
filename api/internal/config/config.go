@@ -49,6 +49,12 @@ type Config struct {
 	// linkkeys.todandlorna.com per PLANDOC.md §1).
 	LinkkeysIDPDomain string
 	LinkkeysIDPURL    string
+	// LinkkeysApplicationID is sent as RpSignRequest.application_id
+	// (LinkKeys 0.16.7+). LinkKeys keys standing consent by (user, RP
+	// domain, application). Empty: the RP uses the API-key account
+	// username. Set it when that username is not 1-128 of
+	// A-Z a-z 0-9 - _ . , or to match an act-as ApplicationRef.
+	LinkkeysApplicationID string
 
 	// AppCallbackURL is the absolute URL the IDP redirects back to after
 	// authentication — GET /auth/callback (PLANDOC.md §3, §5), NOT a SPA
@@ -93,6 +99,7 @@ func Load() Config {
 		LinkkeysTCPAllowInsecure:     getEnvAsBoolOrDefault("FIREPIT_LINKKEYS_TCP_ALLOW_INSECURE", false),
 		LinkkeysIDPDomain:            getEnvOrDefault("FIREPIT_LINKKEYS_IDP_DOMAIN", ""),
 		LinkkeysIDPURL:               getEnvOrDefault("FIREPIT_LINKKEYS_IDP_URL", ""),
+		LinkkeysApplicationID:        getEnvOrDefault("FIREPIT_LINKKEYS_APPLICATION_ID", ""),
 
 		AppCallbackURL:       getEnvOrDefault("FIREPIT_APP_CALLBACK_URL", ""),
 		SessionNonceSecret:   getEnvOrGeneratedSecret("FIREPIT_SESSION_NONCE_SECRET"),
