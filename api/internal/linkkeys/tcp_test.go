@@ -90,6 +90,15 @@ func TestTCPClient_SignRequest_RoundTrip(t *testing.T) {
 		if err := cbor.Unmarshal(req.Payload, &in); err != nil {
 			return transport.Transport(transport.StatusInternal, err.Error())
 		}
+		// No ApplicationID configured: the field must be absent so the
+		// RP uses the API-key account username.
+		var raw map[string]any
+		if err := cbor.Unmarshal(req.Payload, &raw); err != nil {
+			return transport.Transport(transport.StatusInternal, err.Error())
+		}
+		if _, ok := raw["application_id"]; ok {
+			return transport.Transport(transport.StatusInternal, "application_id sent but not configured")
+		}
 		b, _ := cbor.Marshal(map[string]string{"signed_request": "signed:" + in.CallbackURL + ":" + in.Nonce})
 		return transport.Reply("RpSignResponse", b)
 	}
@@ -115,6 +124,36 @@ func TestTCPClient_SignRequest_RoundTrip(t *testing.T) {
 	req := <-recvd
 	if req.Service != "Rp" || req.Op != "sign-request" {
 		t.Fatalf("envelope routed to %s/%s, want Rp/sign-request", req.Service, req.Op)
+	}
+}
+
+func TestTCPClient_SignRequest_SendsApplicationID(t *testing.T) {
+	t.Parallel()
+	_, tlsCert, _ := newTestCert(t)
+	handler := func(req *transport.RpcRequest) transport.HandlerOutcome {
+		var in struct {
+			ApplicationID *string `cbor:"application_id"`
+		}
+		if err := cbor.Unmarshal(req.Payload, &in); err != nil {
+			return transport.Transport(transport.StatusInternal, err.Error())
+		}
+		if in.ApplicationID == nil {
+			return transport.Transport(transport.StatusInternal, "application_id missing")
+		}
+		b, _ := cbor.Marshal(map[string]string{"signed_request": "app:" + *in.ApplicationID})
+		return transport.Reply("RpSignResponse", b)
+	}
+	addr := startTestRPCServer(t, tlsCert, handler)
+	c, err := NewTCPClient(TCPConfig{Addr: addr, Insecure: true, APIKey: "k", ApplicationID: " firepit-web "})
+	if err != nil {
+		t.Fatalf("NewTCPClient: %v", err)
+	}
+	got, err := c.SignRequest("https://app/callback", "n")
+	if err != nil {
+		t.Fatalf("SignRequest: %v", err)
+	}
+	if want := "app:firepit-web"; got != want {
+		t.Fatalf("SignRequest = %q, want %q", got, want)
 	}
 }
 

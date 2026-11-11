@@ -38,6 +38,7 @@ the ones marked **required**.
 | `FIREPIT_LINKKEYS_TCP_ALLOW_INSECURE` | `false` | Dev-only escape hatch for the `tcp` transport. |
 | `FIREPIT_LINKKEYS_IDP_DOMAIN` | `""` | **Required** — the single linkkeys identity domain this instance's login flow accepts (v1 is single-IDP). First deployment: `linkkeys.todandlorna.com` (PLANDOC.md §1). |
 | `FIREPIT_LINKKEYS_IDP_URL` | `""` | **Required** — that IDP's browser-facing URL (`begin-login` redirects here). |
+| `FIREPIT_LINKKEYS_APPLICATION_ID` | `""` | `tcp` transport only. Sent as `application_id` in `Rp/sign-request` (LinkKeys 0.16.7+). Empty: the RP uses the API-key account username. Set it when the username is not 1-128 of `A-Z a-z 0-9 - _ .`. A change makes each user consent again. |
 | `FIREPIT_APP_CALLBACK_URL` | `""` | **Required** — the absolute URL the IDP redirects back to: `https://<your-host>/auth/callback`. NOT a SPA route. |
 | `FIREPIT_SESSION_NONCE_SECRET` | *(random per-process)* | HMACs the login nonce. **Set this explicitly** for any deployment with more than one replica or that restarts often — an unset value works for a single dev process but a value that changes between two replicas (or across a restart) makes in-flight logins fail nonce verification. Not a secret an attacker can use to forge sessions on its own (see `api/internal/config/config.go`'s doc comment), but treat it as sensitive anyway. |
 | `FIREPIT_POST_LOGIN_REDIRECT_URL` | `/` | Where `GET /auth/callback` 302s the browser after minting a session cookie. |
@@ -234,6 +235,18 @@ that runbook rather than duplicating it here; the short version is:
    there's no way to generate it ahead of time, which is why first deploy
    is a two-step dance (deploy without it, mint it, redeploy with it).
 3. Once minted, that key becomes `FIREPIT_LINKKEYS_PKI_API_KEY` (§1).
+
+LinkKeys 0.16.7 and later name the API-key account in each signed login
+request. The IDP consent screen shows the account display name (`"Firepit
+API"` above), so give the account a name that users recognize. The IDP keys
+standing consent by user, RP domain, and application. The application ID is
+the account username, or `FIREPIT_LINKKEYS_APPLICATION_ID` when it is set.
+The account username must be 1-128 of `A-Z a-z 0-9 - _ .`, or sign-request
+fails. Each user sees the consent screen one more time after the RP and IDP
+upgrade to 0.16.7, because older grants have no application.
+
+The `http` transport calls `/v1alpha/*.json` routes. LinkKeys does not serve
+these routes. Use the `tcp` transport.
 
 If you're running firepit outside the Helm chart (bare binary + your own
 linkkeys RP process), the equivalent manual steps are the same three

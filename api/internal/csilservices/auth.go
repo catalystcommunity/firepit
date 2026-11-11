@@ -112,12 +112,13 @@ func BuildPKIClient(cfg config.Config) PKIClient {
 			fps = strings.Split(cfg.LinkkeysTCPFingerprints, ",")
 		}
 		c, err := linkkeys.NewTCPClient(linkkeys.TCPConfig{
-			Domain:       cfg.LinkkeysIDPDomain,
-			APIBase:      cfg.LinkkeysIDPURL,
-			APIKey:       cfg.LinkkeysPKIAPIKey,
-			Addr:         cfg.LinkkeysTCPAddr,
-			Fingerprints: fps,
-			Insecure:     cfg.LinkkeysTCPAllowInsecure,
+			Domain:        cfg.LinkkeysIDPDomain,
+			APIBase:       cfg.LinkkeysIDPURL,
+			APIKey:        cfg.LinkkeysPKIAPIKey,
+			Addr:          cfg.LinkkeysTCPAddr,
+			Fingerprints:  fps,
+			Insecure:      cfg.LinkkeysTCPAllowInsecure,
+			ApplicationID: cfg.LinkkeysApplicationID,
 		})
 		if err != nil {
 			log.WithError(err).Error("linkkeys tcp transport init failed; login will fail")
