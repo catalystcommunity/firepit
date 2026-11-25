@@ -4,7 +4,7 @@ import { useNavigate } from "@solidjs/router";
 import { createSignal, For, onMount, Show, type Component } from "solid-js";
 import NotificationRow from "~/components/notifications/NotificationRow";
 import { api } from "~/lib/api";
-import { FirepitServiceError } from "~/lib/errors";
+import { ServiceErrorRefusal } from "~/lib/errors";
 import { createPostSummaryResolver, notificationHref, type PostSummary } from "~/lib/notifications";
 import { useSession } from "~/lib/session";
 import type { Notification } from "~/gen/types.gen";
@@ -26,7 +26,7 @@ const NotificationsPage: Component = () => {
   const [error, setError] = createSignal<string | null>(null);
 
   const describe = (err: unknown, fallback: string): string =>
-    err instanceof FirepitServiceError ? err.message : fallback;
+    err instanceof ServiceErrorRefusal ? err.value.message : fallback;
 
   const resolveSummaries = (notifications: readonly Notification[]): void => {
     for (const postId of new Set(notifications.map((n) => n.postId))) {

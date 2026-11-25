@@ -2,6 +2,11 @@
 // Source: <csil spec>
 // Target: typescript-typesonly
 
+export interface ServiceError {
+  code: number;
+  message: string;
+}
+
 /**
  * A user's id (ULID).
  */
@@ -64,6 +69,11 @@ export type MappingID = string;
  */
 export type PageCursor = string;
 
+export const TargetType = {
+  BOARD: "board",
+  POST: "post",
+  COMMENT: "comment",
+} as const;
 /**
  * What kind of thing a reference/subscription/mention target points at.
  * `board` is valid only for subscriptions (you can't endorse or mark a
@@ -84,6 +94,11 @@ export interface TargetRef {
   targetId: string;
 }
 
+export const OriginKind = {
+  USER: "user",
+  GITHUB: "github",
+  SYSTEM: "system",
+} as const;
 /**
  * Who or what authored a post/comment. `user` is a human-authored item;
  * `github` is ingested from a webhook (see IntegrationService);  `system`
@@ -112,7 +127,7 @@ export interface Empty {
  * private board reads as not-found to a non-member, never as forbidden —
  * firepit doesn't leak existence of content a caller can't see).
  */
-export interface ServiceError {
+export interface ServiceErrorType {
   /**
    * Application error code (see docs/OPERATING.md's error code table).
    */
@@ -136,6 +151,10 @@ export interface ServiceError {
   resourceType?: string;
 }
 
+export const UserKind = {
+  HUMAN: "human",
+  SYSTEM: "system",
+} as const;
 /**
  * Who/what a `users` row represents. `human` is a linkkeys-authenticated
  * person; `system` is a per-integration actor (e.g. one per GitHub mapping)
@@ -184,6 +203,10 @@ export interface UserProfile {
   createdAt: Date;
 }
 
+export const BoardKind = {
+  DISCUSSION: "discussion",
+  ANNOUNCE: "announce",
+} as const;
 /**
  * A board's discussion style. `discussion` is open two-way threading;
  * `announce` is intended for boards where only maintainers/mods post
@@ -192,6 +215,10 @@ export interface UserProfile {
  */
 export type BoardKind = "discussion" | "announce";
 
+export const BoardRole = {
+  MAINTAINER: "maintainer",
+  MODERATOR: "moderator",
+} as const;
 /**
  * A per-board role granted to a user via set-board-member.
  * `maintainer` represents the upstream project's owner; `moderator` is a
@@ -498,6 +525,12 @@ export interface EndorsementList {
   endorsements: Endorsement[];
 }
 
+export const MentionPolicy = {
+  SUBSCRIBED: "subscribed",
+  EVERYONE: "everyone",
+  AUTHORIZED: "authorized",
+  NOBODY: "nobody",
+} as const;
 /**
  * Who may @mention-notify the caller, beyond contexts they subscribe to.
  * `subscribed` (default): a mention notifies only inside a board/post/
@@ -637,6 +670,13 @@ export interface UnreadSummary {
   boards: BoardUnread[];
 }
 
+export const NotificationEvent = {
+  NEW_POST: "new_post",
+  NEW_COMMENT: "new_comment",
+  MENTION: "mention",
+  GITHUB_EVENT: "github_event",
+  ENDORSED: "endorsed",
+} as const;
 /**
  * What kind of event produced a notification. `endorsed` mirrors coredb's
  * notification_event enum value added in
@@ -704,6 +744,11 @@ export interface NotificationPage {
  */
 export type NotificationIDs = NotificationID[];
 
+export const ThreadMode = {
+  POST_PER_ISSUE: "post_per_issue",
+  POST_PER_RELEASE: "post_per_release",
+  POST_PER_PULL_REQUEST: "post_per_pull_request",
+} as const;
 /**
  * How an ingested GitHub event maps onto forum content for one mapping.
  * PLANDOC.md §4 documents the `github_mappings.thread_mode` column as

@@ -28,11 +28,18 @@ type rpcCase struct {
 }
 
 func TestRpcRoundTripPerService(t *testing.T) {
+	mustEncode := func(payload []byte, err error) []byte {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return payload
+	}
 	cases := []rpcCase{
 		{
 			service:    "AuthService",
 			op:         "begin-login",
-			reqPayload: EncodeBeginLoginRequest(BeginLoginRequest{Domain: "todandlorna.com"}),
+			reqPayload: mustEncode(EncodeBeginLoginRequest(BeginLoginRequest{Domain: "todandlorna.com"})),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeBeginLoginRequest(payload)
 				if err != nil {
@@ -44,7 +51,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "BeginLoginResponse",
-			respPayload: EncodeBeginLoginResponse(BeginLoginResponse{RedirectUrl: "https://linkkeys.todandlorna.com/login"}),
+			respPayload: mustEncode(EncodeBeginLoginResponse(BeginLoginResponse{RedirectUrl: "https://linkkeys.todandlorna.com/login"})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeBeginLoginResponse(payload)
 				if err != nil {
@@ -59,7 +66,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 		{
 			service:    "BoardService",
 			op:         "list-boards",
-			reqPayload: EncodeListBoardsRequest(ListBoardsRequest{}),
+			reqPayload: mustEncode(EncodeListBoardsRequest(ListBoardsRequest{})),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeListBoardsRequest(payload)
 				if err != nil {
@@ -70,7 +77,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "BoardPage",
-			respPayload: EncodeBoardPage(BoardPage{Boards: []Board{{Id: "01H000000000000000000BOARD", Slug: "firepit", Title: "Firepit", Kind: "discussion"}}}),
+			respPayload: mustEncode(EncodeBoardPage(BoardPage{Boards: []Board{{Id: "01H000000000000000000BOARD", Slug: "firepit", Title: "Firepit", Kind: "discussion"}}})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeBoardPage(payload)
 				if err != nil {
@@ -85,7 +92,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 		{
 			service:    "CategoryService",
 			op:         "list-board-categories",
-			reqPayload: EncodeCategoryListBoardCategoriesRequest("01H000000000000000000BOARD"),
+			reqPayload: mustEncode(EncodeCategoryListBoardCategoriesRequest("01H000000000000000000BOARD")),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeCategoryListBoardCategoriesRequest(payload)
 				if err != nil || got != "01H000000000000000000BOARD" {
@@ -93,7 +100,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "CategoryList",
-			respPayload: EncodeCategoryList(CategoryList{Categories: []Category{{Id: "01H000000000000000CATEGORY", Slug: "release", Name: "Release", BoardIds: []BoardID{"01H000000000000000000BOARD"}}}}),
+			respPayload: mustEncode(EncodeCategoryList(CategoryList{Categories: []Category{{Id: "01H000000000000000CATEGORY", Slug: "release", Name: "Release", BoardIds: []BoardID{"01H000000000000000000BOARD"}}}})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeCategoryList(payload)
 				if err != nil || len(got.Categories) != 1 || got.Categories[0].Slug != "release" {
@@ -104,7 +111,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 		{
 			service:    "ThreadService",
 			op:         "list-posts",
-			reqPayload: EncodeListPostsRequest(ListPostsRequest{BoardId: "01H000000000000000000BOARD"}),
+			reqPayload: mustEncode(EncodeListPostsRequest(ListPostsRequest{BoardId: "01H000000000000000000BOARD"})),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeListPostsRequest(payload)
 				if err != nil {
@@ -116,7 +123,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "PostPage",
-			respPayload: EncodePostPage(PostPage{Posts: []Post{{Id: "01H0000000000000000POST01", CategoryIds: []CategoryID{}, Title: "Hello firepit", Origin: "user"}}}),
+			respPayload: mustEncode(EncodePostPage(PostPage{Posts: []Post{{Id: "01H0000000000000000POST01", CategoryIds: []CategoryID{}, Title: "Hello firepit", Origin: "user"}}})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodePostPage(payload)
 				if err != nil {
@@ -131,7 +138,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 		{
 			service:    "EndorsementService",
 			op:         "list-endorsements",
-			reqPayload: EncodeTargetRef(TargetRef{TargetType: "post", TargetId: "01H0000000000000000POST01"}),
+			reqPayload: mustEncode(EncodeTargetRef(TargetRef{TargetType: "post", TargetId: "01H0000000000000000POST01"})),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeTargetRef(payload)
 				if err != nil {
@@ -143,7 +150,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "EndorsementList",
-			respPayload: EncodeEndorsementList(EndorsementList{Endorsements: []Endorsement{{Id: "01H00000000000000ENDORSE1", UserId: "01H000000000000000000USER", TargetType: "post"}}}),
+			respPayload: mustEncode(EncodeEndorsementList(EndorsementList{Endorsements: []Endorsement{{Id: "01H00000000000000ENDORSE1", UserId: "01H000000000000000000USER", TargetType: "post"}}})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeEndorsementList(payload)
 				if err != nil {
@@ -158,7 +165,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 		{
 			service:    "SettingsService",
 			op:         "get-settings",
-			reqPayload: EncodeEmpty(Empty{}),
+			reqPayload: mustEncode(EncodeEmpty(Empty{})),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeEmpty(payload)
 				if err != nil {
@@ -169,7 +176,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "UserSettings",
-			respPayload: EncodeUserSettings(UserSettings{MentionPolicy: "subscribed", NotifyOnEndorse: true}),
+			respPayload: mustEncode(EncodeUserSettings(UserSettings{MentionPolicy: "subscribed", NotifyOnEndorse: true})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeUserSettings(payload)
 				if err != nil {
@@ -184,7 +191,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 		{
 			service:    "SocialService",
 			op:         "list-friend-groups",
-			reqPayload: EncodeEmpty(Empty{}),
+			reqPayload: mustEncode(EncodeEmpty(Empty{})),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeEmpty(payload)
 				if err != nil {
@@ -195,7 +202,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "FriendGroupList",
-			respPayload: EncodeFriendGroupList(FriendGroupList{Groups: []FriendGroup{{Id: "01H0000000000000000GROUP1", Name: "close friends", Members: []UserID{}}}}),
+			respPayload: mustEncode(EncodeFriendGroupList(FriendGroupList{Groups: []FriendGroup{{Id: "01H0000000000000000GROUP1", Name: "close friends", Members: []UserID{}}}})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeFriendGroupList(payload)
 				if err != nil {
@@ -210,7 +217,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 		{
 			service:    "SubscriptionService",
 			op:         "list-subscriptions",
-			reqPayload: EncodeEmpty(Empty{}),
+			reqPayload: mustEncode(EncodeEmpty(Empty{})),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeEmpty(payload)
 				if err != nil {
@@ -221,7 +228,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "SubscriptionList",
-			respPayload: EncodeSubscriptionList(SubscriptionList{Subscriptions: []Subscription{{Id: "01H0000000000000000SUBSC1", TargetType: "board", TargetId: "01H000000000000000000BOARD"}}}),
+			respPayload: mustEncode(EncodeSubscriptionList(SubscriptionList{Subscriptions: []Subscription{{Id: "01H0000000000000000SUBSC1", TargetType: "board", TargetId: "01H000000000000000000BOARD"}}})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeSubscriptionList(payload)
 				if err != nil {
@@ -236,7 +243,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 		{
 			service:    "ReadService",
 			op:         "unread-summary",
-			reqPayload: EncodeEmpty(Empty{}),
+			reqPayload: mustEncode(EncodeEmpty(Empty{})),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeEmpty(payload)
 				if err != nil {
@@ -247,7 +254,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "UnreadSummary",
-			respPayload: EncodeUnreadSummary(UnreadSummary{Boards: []BoardUnread{{BoardId: "01H000000000000000000BOARD", UnreadCount: 3, UnreadPostIds: []PostID{}}}}),
+			respPayload: mustEncode(EncodeUnreadSummary(UnreadSummary{Boards: []BoardUnread{{BoardId: "01H000000000000000000BOARD", UnreadCount: 3, UnreadPostIds: []PostID{}}}})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeUnreadSummary(payload)
 				if err != nil {
@@ -262,7 +269,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 		{
 			service:    "NotificationService",
 			op:         "list-notifications",
-			reqPayload: EncodeListNotificationsRequest(ListNotificationsRequest{}),
+			reqPayload: mustEncode(EncodeListNotificationsRequest(ListNotificationsRequest{})),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeListNotificationsRequest(payload)
 				if err != nil {
@@ -273,7 +280,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "NotificationPage",
-			respPayload: EncodeNotificationPage(NotificationPage{Notifications: []Notification{{Id: "01H00000000NOTIFICATION01", Event: "mention", TargetType: "post"}}}),
+			respPayload: mustEncode(EncodeNotificationPage(NotificationPage{Notifications: []Notification{{Id: "01H00000000NOTIFICATION01", Event: "mention", TargetType: "post"}}})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeNotificationPage(payload)
 				if err != nil {
@@ -288,7 +295,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 		{
 			service:    "IntegrationService",
 			op:         "list-github-mappings",
-			reqPayload: EncodeEmpty(Empty{}),
+			reqPayload: mustEncode(EncodeEmpty(Empty{})),
 			reqDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeEmpty(payload)
 				if err != nil {
@@ -299,7 +306,7 @@ func TestRpcRoundTripPerService(t *testing.T) {
 				}
 			},
 			respVariant: "MappingList",
-			respPayload: EncodeMappingList(MappingList{Mappings: []GithubMapping{{Id: "01H00000000000000MAPPING1", Repo: "catalystcommunity/firepit", Events: []string{}, ThreadMode: "post_per_issue"}}}),
+			respPayload: mustEncode(EncodeMappingList(MappingList{Mappings: []GithubMapping{{Id: "01H00000000000000MAPPING1", Repo: "catalystcommunity/firepit", Events: []string{}, ThreadMode: "post_per_issue"}}})),
 			respDecodeEq: func(t *testing.T, payload []byte) {
 				got, err := DecodeMappingList(payload)
 				if err != nil {

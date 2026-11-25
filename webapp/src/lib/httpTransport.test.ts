@@ -1,12 +1,13 @@
 // Tests for the browser HTTP carrier (task C1): the request it sends, and
 // the three ways a call can conclude — a typed success payload, a
-// FirepitServiceError (the ServiceError variant), or a FirepitTransportError
+// ServiceErrorRefusal (the ServiceError variant), or a FirepitTransportError
 // (network failure / undecodable response / non-zero transport status).
 import { describe, expect, it, vi } from "vitest";
-import { toServiceErrorCbor } from "~/gen/codec.gen";
+import { AuthAsyncClient, BoardAsyncClient } from "~/gen/client.async.gen";
+import { fromBeginLoginRequestCbor, toBeginLoginResponseCbor, toServiceErrorTypeCbor } from "~/gen/codec.gen";
 import { Status } from "~/transport/csil/conventions";
 import { RpcRequest, RpcResponse } from "~/transport/csil/rpc";
-import { FirepitServiceError, FirepitTransportError } from "./errors";
+import { ServiceErrorRefusal, FirepitTransportError } from "./errors";
 import { createHttpTransport, RPC_ENDPOINT } from "./httpTransport";
 
 function fetchReturning(response: Response): typeof fetch {
@@ -22,13 +23,13 @@ function responseOf(bytes: Uint8Array, init?: ResponseInit): Response {
 
 describe("createHttpTransport", () => {
   it("POSTs a kebab-cased envelope to the CSIL-RPC mount with the right headers", async () => {
-    const payload = new Uint8Array([0xa0]); // empty CBOR map
-    const respPayload = new Uint8Array([0xa0]);
-    const okBytes = RpcResponse.ok("Empty", respPayload).encode();
+    const request = { domain: "example.org" };
+    const response = { redirectUrl: "https://example.org/login" };
+    const okBytes = RpcResponse.ok("BeginLoginResponse", toBeginLoginResponseCbor(response)).encode();
     const fetchImpl = fetchReturning(responseOf(okBytes, { status: 200 }));
     const transport = createHttpTransport({ fetchImpl });
 
-    const result = await transport.call("auth", "BeginLogin", payload);
+    const result = await new AuthAsyncClient(transport).beginLogin(request);
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     const [url, init] = (fetchImpl as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
@@ -38,24 +39,24 @@ describe("createHttpTransport", () => {
     expect((init.headers as Record<string, string>)["Content-Type"]).toBe("application/cbor");
 
     const sentEnvelope = RpcRequest.decode(init.body as Uint8Array);
-    expect(sentEnvelope.service).toBe("auth");
-    expect(sentEnvelope.op).toBe("begin-login"); // PascalCase "BeginLogin" -> kebab-case on the wire
-    expect(sentEnvelope.payload).toEqual(payload);
+    expect(sentEnvelope.service).toBe("AuthService");
+    expect(sentEnvelope.op).toBe("begin-login");
+    expect(fromBeginLoginRequestCbor(sentEnvelope.payload)).toEqual(request);
 
-    expect(result).toEqual(respPayload);
+    expect(result).toEqual(response);
   });
 
-  it("throws FirepitServiceError for the ServiceError variant, decoded via the generated codec", async () => {
-    const errPayload = toServiceErrorCbor({ code: 5, message: "no board with that slug", resourceType: "board" });
+  it("throws ServiceErrorRefusal for the ServiceError variant, decoded via the generated codec", async () => {
+    const errPayload = toServiceErrorTypeCbor({ code: 5, message: "no board with that slug", resourceType: "board" });
     const bytes = RpcResponse.ok("ServiceError", errPayload).encode();
     const transport = createHttpTransport({ fetchImpl: fetchReturning(responseOf(bytes, { status: 200 })) });
 
-    const err = await transport.call("board", "GetBoard", new Uint8Array()).catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(FirepitServiceError);
-    const serviceErr = err as FirepitServiceError;
-    expect(serviceErr.code).toBe(5);
-    expect(serviceErr.resourceType).toBe("board");
-    expect(serviceErr.message).toBe("no board with that slug");
+    const err = await new BoardAsyncClient(transport).getBoard("missing").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ServiceErrorRefusal);
+    const serviceErr = err as ServiceErrorRefusal;
+    expect(serviceErr.value.code).toBe(5);
+    expect(serviceErr.value.resourceType).toBe("board");
+    expect(serviceErr.value.message).toBe("no board with that slug");
   });
 
   it("throws FirepitTransportError for a non-zero transport status", async () => {

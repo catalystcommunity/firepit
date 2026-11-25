@@ -1,3 +1,4 @@
+import { errorMessage } from "~/lib/errors";
 import { A } from "@solidjs/router";
 import { createEffect, createSignal, For, on, Show, type Accessor, type Component } from "solid-js";
 import type { Category, Post, UnreadSummary } from "~/gen/types.gen";
@@ -47,7 +48,7 @@ const PostList: Component<PostListProps> = (props) => {
       setPosts((prev) => (reset ? page.posts : [...prev, ...page.posts]));
       setCursor(page.nextCursor);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
       setInitialLoaded(true);

@@ -1,27 +1,7 @@
 // Package server provides the Firepit HTTP server. This file maps CSIL
 // service and operation names to the generated service interfaces.
-//
-// # Wire naming for (service, op)
-//
-// csilgen does not generate a router for its Go server target, so this table
-// is maintained by hand.
-//
-// The (service, op) strings a real request carries are NOT the PascalCase
-// interface/method names or the CSIL schema's `AuthService`-with-suffix
-// service identifiers — they're what csilgen's *-client generators actually
-// derive and what the one real, test-verified precedent in this org
-// (longhouse's TypeScript transport, webapp/src/transport/csilrpc.ts there)
-// puts on the wire:
-//
-//   - service: the CSIL service name with a trailing "Service" stripped and
-//     lowercased ("AuthService" -> "auth"; see clients/go/client.gen.go,
-//     which already calls transport.Call(ctx, "auth", "BeginLogin", ...)).
-//   - op: the operation name exactly as declared in csil/firepit.csil,
-//     kebab-case ("begin-login") — csilgen's generated clients hand a
-//     PascalCase method name to the Transport seam and expect the carrier to
-//     kebab-case it before it hits the wire (longhouse's methodToOp); the
-//     routing table below is keyed directly on the already-kebab-case op
-//     names from the schema, so no runtime conversion is needed server-side.
+// Generated clients send the service and operation names from the schema.
+// Dispatch also accepts the short service names used by earlier clients.
 package server
 
 import (
@@ -56,57 +36,44 @@ type Services struct {
 // is the per-op unit the routing table below is built from.
 type typedHandler func(ctx context.Context, payload []byte) transport.HandlerOutcome
 
-// routeFallible wires an operation whose CSIL declaration carries a `/
-// ServiceError` arm. A *csilservices.AppError returned by fn is encoded as
-// the typed ServiceError success-arm; any other error (or an *AppError on an
-// op that has no such arm — see routeInfallible) is never assumed safe to
-// show a caller and becomes a transport-level internal failure instead. See
-// api/internal/csilservices's package doc comment for the full contract.
-func routeFallible[Req any, Resp any](
+// route decodes a request and encodes its service result as an RPC reply.
+func route[Req any, Resp any](
 	decode func([]byte) (Req, error),
 	fn func(context.Context, Req) (Resp, error),
-	encode func(Resp) []byte,
-	variant string,
+	encodeReply func(Resp, error) (string, []byte, error),
 ) typedHandler {
 	return func(ctx context.Context, payload []byte) transport.HandlerOutcome {
 		req, err := decode(payload)
 		if err != nil {
-			return transport.Transport(transport.StatusMalformedEnvelope, "decode "+variant+" request: "+err.Error())
+			return transport.Transport(transport.StatusMalformedEnvelope, "decode request: "+err.Error())
 		}
-		resp, err := fn(ctx, req)
+		variant, body, err := encodeReply(fn(ctx, req))
 		if err != nil {
-			var appErr *csilservices.AppError
-			if errors.As(err, &appErr) {
-				return transport.Reply("ServiceError", csil.EncodeServiceError(appErr.ServiceError()))
-			}
-			log.WithError(err).WithField("variant", variant).Error("unhandled error from service method")
+			log.WithError(err).Error("CSIL service failed to produce a reply")
 			return transport.Transport(transport.StatusInternal, "internal error")
 		}
-		return transport.Reply(variant, encode(resp))
+		return transport.Reply(variant, body)
 	}
 }
 
-// routeInfallible wires an operation whose CSIL declaration has NO `/
-// ServiceError` arm: there is no typed channel to carry a failure, so any
-// non-nil error from fn (whatever its type) becomes a transport-level
-// internal failure. See api/internal/csilservices's package doc comment.
-func routeInfallible[Req any, Resp any](
-	decode func([]byte) (Req, error),
-	fn func(context.Context, Req) (Resp, error),
-	encode func(Resp) []byte,
-	variant string,
-) typedHandler {
-	return func(ctx context.Context, payload []byte) transport.HandlerOutcome {
-		req, err := decode(payload)
-		if err != nil {
-			return transport.Transport(transport.StatusMalformedEnvelope, "decode "+variant+" request: "+err.Error())
+// fallible passes declared application errors to the generated reply encoder.
+func fallible[T any](encode func(T, error) (string, []byte, error)) func(T, error) (string, []byte, error) {
+	return func(value T, err error) (string, []byte, error) {
+		var appErr *csilservices.AppError
+		if errors.As(err, &appErr) {
+			err = &csil.RPCApplicationError[csil.ServiceError]{Value: appErr.ServiceError()}
 		}
-		resp, err := fn(ctx, req)
+		return encode(value, err)
+	}
+}
+
+func single[T any](variant string, encode func(T) ([]byte, error)) func(T, error) (string, []byte, error) {
+	return func(value T, err error) (string, []byte, error) {
 		if err != nil {
-			log.WithError(err).WithField("variant", variant).Error("unhandled error from service method (no declared error arm)")
-			return transport.Transport(transport.StatusInternal, "internal error")
+			return "", nil, err
 		}
-		return transport.Reply(variant, encode(resp))
+		payload, err := encode(value)
+		return variant, payload, err
 	}
 }
 
@@ -116,80 +83,80 @@ func routeInfallible[Req any, Resp any](
 func buildRoutes(svcs Services) map[string]map[string]typedHandler {
 	return map[string]map[string]typedHandler{
 		"auth": {
-			"begin-login": routeFallible(csil.DecodeBeginLoginRequest, svcs.Auth.BeginLogin, csil.EncodeBeginLoginResponse, "BeginLoginResponse"),
-			"logout":      routeInfallible(csil.DecodeEmpty, svcs.Auth.Logout, csil.EncodeEmpty, "Empty"),
-			"whoami":      routeFallible(csil.DecodeEmpty, svcs.Auth.Whoami, csil.EncodeUserProfile, "UserProfile"),
+			"begin-login": route(csil.DecodeBeginLoginRequest, svcs.Auth.BeginLogin, fallible(csil.EncodeAuthBeginLoginReply)),
+			"logout":      route(csil.DecodeEmpty, svcs.Auth.Logout, single("Empty", csil.EncodeEmpty)),
+			"whoami":      route(csil.DecodeEmpty, svcs.Auth.Whoami, fallible(csil.EncodeAuthWhoamiReply)),
 		},
 		"board": {
-			"list-boards":         routeInfallible(csil.DecodeListBoardsRequest, svcs.Board.ListBoards, csil.EncodeBoardPage, "BoardPage"),
-			"get-board":           routeFallible(csil.DecodeBoardGetBoardRequest, svcs.Board.GetBoard, csil.EncodeBoard, "Board"),
-			"create-board":        routeFallible(csil.DecodeCreateBoardRequest, svcs.Board.CreateBoard, csil.EncodeBoard, "Board"),
-			"update-board":        routeFallible(csil.DecodeUpdateBoardRequest, svcs.Board.UpdateBoard, csil.EncodeBoard, "Board"),
-			"archive-board":       routeFallible(csil.DecodeBoardArchiveBoardRequest, svcs.Board.ArchiveBoard, csil.EncodeEmpty, "Empty"),
-			"set-board-member":    routeFallible(csil.DecodeSetBoardMemberRequest, svcs.Board.SetBoardMember, csil.EncodeEmpty, "Empty"),
-			"remove-board-member": routeFallible(csil.DecodeRemoveBoardMemberRequest, svcs.Board.RemoveBoardMember, csil.EncodeEmpty, "Empty"),
+			"list-boards":         route(csil.DecodeListBoardsRequest, svcs.Board.ListBoards, single("BoardPage", csil.EncodeBoardPage)),
+			"get-board":           route(csil.DecodeBoardGetBoardRequest, svcs.Board.GetBoard, fallible(csil.EncodeBoardGetBoardReply)),
+			"create-board":        route(csil.DecodeCreateBoardRequest, svcs.Board.CreateBoard, fallible(csil.EncodeBoardCreateBoardReply)),
+			"update-board":        route(csil.DecodeUpdateBoardRequest, svcs.Board.UpdateBoard, fallible(csil.EncodeBoardUpdateBoardReply)),
+			"archive-board":       route(csil.DecodeBoardArchiveBoardRequest, svcs.Board.ArchiveBoard, fallible(csil.EncodeBoardArchiveBoardReply)),
+			"set-board-member":    route(csil.DecodeSetBoardMemberRequest, svcs.Board.SetBoardMember, fallible(csil.EncodeBoardSetBoardMemberReply)),
+			"remove-board-member": route(csil.DecodeRemoveBoardMemberRequest, svcs.Board.RemoveBoardMember, fallible(csil.EncodeBoardRemoveBoardMemberReply)),
 		},
 		"category": {
-			"list-board-categories": routeInfallible(csil.DecodeCategoryListBoardCategoriesRequest, svcs.Category.ListBoardCategories, csil.EncodeCategoryList, "CategoryList"),
-			"create-category":       routeFallible(csil.DecodeCreateCategoryRequest, svcs.Category.CreateCategory, csil.EncodeCategory, "Category"),
-			"update-category":       routeFallible(csil.DecodeUpdateCategoryRequest, svcs.Category.UpdateCategory, csil.EncodeCategory, "Category"),
-			"delete-category":       routeFallible(csil.DecodeDeleteCategoryRequest, svcs.Category.DeleteCategory, csil.EncodeEmpty, "Empty"),
-			"list-categories":       routeInfallible(csil.DecodeEmpty, svcs.Category.ListCategories, csil.EncodeCategoryList, "CategoryList"),
+			"list-board-categories": route(csil.DecodeCategoryListBoardCategoriesRequest, svcs.Category.ListBoardCategories, single("CategoryList", csil.EncodeCategoryList)),
+			"create-category":       route(csil.DecodeCreateCategoryRequest, svcs.Category.CreateCategory, fallible(csil.EncodeCategoryCreateCategoryReply)),
+			"update-category":       route(csil.DecodeUpdateCategoryRequest, svcs.Category.UpdateCategory, fallible(csil.EncodeCategoryUpdateCategoryReply)),
+			"delete-category":       route(csil.DecodeDeleteCategoryRequest, svcs.Category.DeleteCategory, fallible(csil.EncodeCategoryDeleteCategoryReply)),
+			"list-categories":       route(csil.DecodeEmpty, svcs.Category.ListCategories, single("CategoryList", csil.EncodeCategoryList)),
 		},
 		"thread": {
-			"list-posts":     routeInfallible(csil.DecodeListPostsRequest, svcs.Thread.ListPosts, csil.EncodePostPage, "PostPage"),
-			"get-thread":     routeInfallible(csil.DecodeGetThreadRequest, svcs.Thread.GetThread, csil.EncodeThread, "Thread"),
-			"create-post":    routeFallible(csil.DecodeCreatePostRequest, svcs.Thread.CreatePost, csil.EncodePost, "Post"),
-			"create-comment": routeFallible(csil.DecodeCreateCommentRequest, svcs.Thread.CreateComment, csil.EncodeComment, "Comment"),
-			"edit-post":      routeFallible(csil.DecodeEditPostRequest, svcs.Thread.EditPost, csil.EncodePost, "Post"),
-			"edit-comment":   routeFallible(csil.DecodeEditCommentRequest, svcs.Thread.EditComment, csil.EncodeComment, "Comment"),
-			"list-revisions": routeInfallible(csil.DecodeTargetRef, svcs.Thread.ListRevisions, csil.EncodeRevisionList, "RevisionList"),
-			"delete-post":    routeFallible(csil.DecodeThreadDeletePostRequest, svcs.Thread.DeletePost, csil.EncodeEmpty, "Empty"),
-			"delete-comment": routeFallible(csil.DecodeThreadDeleteCommentRequest, svcs.Thread.DeleteComment, csil.EncodeEmpty, "Empty"),
+			"list-posts":     route(csil.DecodeListPostsRequest, svcs.Thread.ListPosts, single("PostPage", csil.EncodePostPage)),
+			"get-thread":     route(csil.DecodeGetThreadRequest, svcs.Thread.GetThread, single("Thread", csil.EncodeThread)),
+			"create-post":    route(csil.DecodeCreatePostRequest, svcs.Thread.CreatePost, fallible(csil.EncodeThreadCreatePostReply)),
+			"create-comment": route(csil.DecodeCreateCommentRequest, svcs.Thread.CreateComment, fallible(csil.EncodeThreadCreateCommentReply)),
+			"edit-post":      route(csil.DecodeEditPostRequest, svcs.Thread.EditPost, fallible(csil.EncodeThreadEditPostReply)),
+			"edit-comment":   route(csil.DecodeEditCommentRequest, svcs.Thread.EditComment, fallible(csil.EncodeThreadEditCommentReply)),
+			"list-revisions": route(csil.DecodeTargetRef, svcs.Thread.ListRevisions, single("RevisionList", csil.EncodeRevisionList)),
+			"delete-post":    route(csil.DecodeThreadDeletePostRequest, svcs.Thread.DeletePost, fallible(csil.EncodeThreadDeletePostReply)),
+			"delete-comment": route(csil.DecodeThreadDeleteCommentRequest, svcs.Thread.DeleteComment, fallible(csil.EncodeThreadDeleteCommentReply)),
 		},
 		"endorsement": {
-			"endorse":           routeFallible(csil.DecodeEndorseRequest, svcs.Endorsement.Endorse, csil.EncodeEndorsement, "Endorsement"),
-			"retract":           routeFallible(csil.DecodeEndorseRequest, svcs.Endorsement.Retract, csil.EncodeEmpty, "Empty"),
-			"list-endorsements": routeInfallible(csil.DecodeTargetRef, svcs.Endorsement.ListEndorsements, csil.EncodeEndorsementList, "EndorsementList"),
+			"endorse":           route(csil.DecodeEndorseRequest, svcs.Endorsement.Endorse, fallible(csil.EncodeEndorsementEndorseReply)),
+			"retract":           route(csil.DecodeEndorseRequest, svcs.Endorsement.Retract, fallible(csil.EncodeEndorsementRetractReply)),
+			"list-endorsements": route(csil.DecodeTargetRef, svcs.Endorsement.ListEndorsements, single("EndorsementList", csil.EncodeEndorsementList)),
 		},
 		"settings": {
-			"get-settings":        routeInfallible(csil.DecodeEmpty, svcs.Settings.GetSettings, csil.EncodeUserSettings, "UserSettings"),
-			"update-settings":     routeFallible(csil.DecodeUpdateSettingsRequest, svcs.Settings.UpdateSettings, csil.EncodeUserSettings, "UserSettings"),
-			"list-mention-grants": routeInfallible(csil.DecodeEmpty, svcs.Settings.ListMentionGrants, csil.EncodeMentionGrantList, "MentionGrantList"),
-			"grant-mention":       routeFallible(csil.DecodeSettingsGrantMentionRequest, svcs.Settings.GrantMention, csil.EncodeEmpty, "Empty"),
-			"revoke-mention":      routeFallible(csil.DecodeSettingsRevokeMentionRequest, svcs.Settings.RevokeMention, csil.EncodeEmpty, "Empty"),
+			"get-settings":        route(csil.DecodeEmpty, svcs.Settings.GetSettings, single("UserSettings", csil.EncodeUserSettings)),
+			"update-settings":     route(csil.DecodeUpdateSettingsRequest, svcs.Settings.UpdateSettings, fallible(csil.EncodeSettingsUpdateSettingsReply)),
+			"list-mention-grants": route(csil.DecodeEmpty, svcs.Settings.ListMentionGrants, single("MentionGrantList", csil.EncodeMentionGrantList)),
+			"grant-mention":       route(csil.DecodeSettingsGrantMentionRequest, svcs.Settings.GrantMention, fallible(csil.EncodeSettingsGrantMentionReply)),
+			"revoke-mention":      route(csil.DecodeSettingsRevokeMentionRequest, svcs.Settings.RevokeMention, fallible(csil.EncodeSettingsRevokeMentionReply)),
 		},
 		"social": {
-			"list-friend-groups":  routeInfallible(csil.DecodeEmpty, svcs.Social.ListFriendGroups, csil.EncodeFriendGroupList, "FriendGroupList"),
-			"create-friend-group": routeFallible(csil.DecodeCreateFriendGroupRequest, svcs.Social.CreateFriendGroup, csil.EncodeFriendGroup, "FriendGroup"),
-			"delete-friend-group": routeFallible(csil.DecodeSocialDeleteFriendGroupRequest, svcs.Social.DeleteFriendGroup, csil.EncodeEmpty, "Empty"),
-			"add-friend":          routeFallible(csil.DecodeAddFriendRequest, svcs.Social.AddFriend, csil.EncodeEmpty, "Empty"),
-			"remove-friend":       routeFallible(csil.DecodeRemoveFriendRequest, svcs.Social.RemoveFriend, csil.EncodeEmpty, "Empty"),
-			"resolve-user":        routeFallible(csil.DecodeSocialResolveUserRequest, svcs.Social.ResolveUser, csil.EncodeUserProfile, "UserProfile"),
+			"list-friend-groups":  route(csil.DecodeEmpty, svcs.Social.ListFriendGroups, single("FriendGroupList", csil.EncodeFriendGroupList)),
+			"create-friend-group": route(csil.DecodeCreateFriendGroupRequest, svcs.Social.CreateFriendGroup, fallible(csil.EncodeSocialCreateFriendGroupReply)),
+			"delete-friend-group": route(csil.DecodeSocialDeleteFriendGroupRequest, svcs.Social.DeleteFriendGroup, fallible(csil.EncodeSocialDeleteFriendGroupReply)),
+			"add-friend":          route(csil.DecodeAddFriendRequest, svcs.Social.AddFriend, fallible(csil.EncodeSocialAddFriendReply)),
+			"remove-friend":       route(csil.DecodeRemoveFriendRequest, svcs.Social.RemoveFriend, fallible(csil.EncodeSocialRemoveFriendReply)),
+			"resolve-user":        route(csil.DecodeSocialResolveUserRequest, svcs.Social.ResolveUser, fallible(csil.EncodeSocialResolveUserReply)),
 		},
 		"subscription": {
-			"subscribe":          routeFallible(csil.DecodeTargetRef, svcs.Subscription.Subscribe, csil.EncodeSubscription, "Subscription"),
-			"unsubscribe":        routeFallible(csil.DecodeTargetRef, svcs.Subscription.Unsubscribe, csil.EncodeEmpty, "Empty"),
-			"set-muted":          routeFallible(csil.DecodeSetMutedRequest, svcs.Subscription.SetMuted, csil.EncodeSubscription, "Subscription"),
-			"list-subscriptions": routeInfallible(csil.DecodeEmpty, svcs.Subscription.ListSubscriptions, csil.EncodeSubscriptionList, "SubscriptionList"),
+			"subscribe":          route(csil.DecodeTargetRef, svcs.Subscription.Subscribe, fallible(csil.EncodeSubscriptionSubscribeReply)),
+			"unsubscribe":        route(csil.DecodeTargetRef, svcs.Subscription.Unsubscribe, fallible(csil.EncodeSubscriptionUnsubscribeReply)),
+			"set-muted":          route(csil.DecodeSetMutedRequest, svcs.Subscription.SetMuted, fallible(csil.EncodeSubscriptionSetMutedReply)),
+			"list-subscriptions": route(csil.DecodeEmpty, svcs.Subscription.ListSubscriptions, single("SubscriptionList", csil.EncodeSubscriptionList)),
 		},
 		"read": {
-			"mark-read":      routeInfallible(csil.DecodeTargetRef, svcs.Read.MarkRead, csil.EncodeEmpty, "Empty"),
-			"mark-unread":    routeInfallible(csil.DecodeTargetRef, svcs.Read.MarkUnread, csil.EncodeEmpty, "Empty"),
-			"unread-summary": routeInfallible(csil.DecodeEmpty, svcs.Read.UnreadSummary, csil.EncodeUnreadSummary, "UnreadSummary"),
+			"mark-read":      route(csil.DecodeTargetRef, svcs.Read.MarkRead, single("Empty", csil.EncodeEmpty)),
+			"mark-unread":    route(csil.DecodeTargetRef, svcs.Read.MarkUnread, single("Empty", csil.EncodeEmpty)),
+			"unread-summary": route(csil.DecodeEmpty, svcs.Read.UnreadSummary, single("UnreadSummary", csil.EncodeUnreadSummary)),
 		},
 		"notification": {
-			"list-notifications":     routeInfallible(csil.DecodeListNotificationsRequest, svcs.Notification.ListNotifications, csil.EncodeNotificationPage, "NotificationPage"),
-			"mark-notification-read": routeInfallible(csil.DecodeNotificationMarkNotificationReadRequest, svcs.Notification.MarkNotificationRead, csil.EncodeEmpty, "Empty"),
-			"mark-all-read":          routeInfallible(csil.DecodeEmpty, svcs.Notification.MarkAllRead, csil.EncodeEmpty, "Empty"),
+			"list-notifications":     route(csil.DecodeListNotificationsRequest, svcs.Notification.ListNotifications, single("NotificationPage", csil.EncodeNotificationPage)),
+			"mark-notification-read": route(csil.DecodeNotificationMarkNotificationReadRequest, svcs.Notification.MarkNotificationRead, single("Empty", csil.EncodeEmpty)),
+			"mark-all-read":          route(csil.DecodeEmpty, svcs.Notification.MarkAllRead, single("Empty", csil.EncodeEmpty)),
 		},
 		"integration": {
-			"create-github-mapping": routeFallible(csil.DecodeCreateMappingRequest, svcs.Integration.CreateGithubMapping, csil.EncodeGithubMapping, "GithubMapping"),
-			"list-github-mappings":  routeInfallible(csil.DecodeEmpty, svcs.Integration.ListGithubMappings, csil.EncodeMappingList, "MappingList"),
-			"delete-github-mapping": routeFallible(csil.DecodeIntegrationDeleteGithubMappingRequest, svcs.Integration.DeleteGithubMapping, csil.EncodeEmpty, "Empty"),
-			"add-trusted-domain":    routeFallible(csil.DecodeIntegrationAddTrustedDomainRequest, svcs.Integration.AddTrustedDomain, csil.EncodeEmpty, "Empty"),
-			"remove-trusted-domain": routeFallible(csil.DecodeIntegrationRemoveTrustedDomainRequest, svcs.Integration.RemoveTrustedDomain, csil.EncodeEmpty, "Empty"),
-			"list-trusted-domains":  routeInfallible(csil.DecodeEmpty, svcs.Integration.ListTrustedDomains, csil.EncodeDomainList, "DomainList"),
+			"create-github-mapping": route(csil.DecodeCreateMappingRequest, svcs.Integration.CreateGithubMapping, fallible(csil.EncodeIntegrationCreateGithubMappingReply)),
+			"list-github-mappings":  route(csil.DecodeEmpty, svcs.Integration.ListGithubMappings, single("MappingList", csil.EncodeMappingList)),
+			"delete-github-mapping": route(csil.DecodeIntegrationDeleteGithubMappingRequest, svcs.Integration.DeleteGithubMapping, fallible(csil.EncodeIntegrationDeleteGithubMappingReply)),
+			"add-trusted-domain":    route(csil.DecodeIntegrationAddTrustedDomainRequest, svcs.Integration.AddTrustedDomain, fallible(csil.EncodeIntegrationAddTrustedDomainReply)),
+			"remove-trusted-domain": route(csil.DecodeIntegrationRemoveTrustedDomainRequest, svcs.Integration.RemoveTrustedDomain, fallible(csil.EncodeIntegrationRemoveTrustedDomainReply)),
+			"list-trusted-domains":  route(csil.DecodeEmpty, svcs.Integration.ListTrustedDomains, single("DomainList", csil.EncodeDomainList)),
 		},
 	}
 }

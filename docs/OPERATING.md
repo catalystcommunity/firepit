@@ -38,7 +38,6 @@ the ones marked **required**.
 | `FIREPIT_LINKKEYS_TCP_ALLOW_INSECURE` | `false` | Dev-only escape hatch for the `tcp` transport. |
 | `FIREPIT_LINKKEYS_IDP_DOMAIN` | `""` | **Required** — the single linkkeys identity domain this instance's login flow accepts (v1 is single-IDP). First deployment: `linkkeys.todandlorna.com` (PLANDOC.md §1). |
 | `FIREPIT_LINKKEYS_IDP_URL` | `""` | **Required** — that IDP's browser-facing URL (`begin-login` redirects here). |
-| `FIREPIT_LINKKEYS_APPLICATION_ID` | `""` | `tcp` transport only. Sent as `application_id` in `Rp/sign-request` (LinkKeys 0.16.7+). Empty: the RP uses the API-key account username. Set it when the username is not 1-128 of `A-Z a-z 0-9 - _ .`. A change makes each user consent again. |
 | `FIREPIT_APP_CALLBACK_URL` | `""` | **Required** — the absolute URL the IDP redirects back to: `https://<your-host>/auth/callback`. NOT a SPA route. |
 | `FIREPIT_SESSION_NONCE_SECRET` | *(random per-process)* | HMACs the login nonce. **Set this explicitly** for any deployment with more than one replica or that restarts often — an unset value works for a single dev process but a value that changes between two replicas (or across a restart) makes in-flight logins fail nonce verification. Not a secret an attacker can use to forge sessions on its own (see `api/internal/config/config.go`'s doc comment), but treat it as sensitive anyway. |
 | `FIREPIT_POST_LOGIN_REDIRECT_URL` | `/` | Where `GET /auth/callback` 302s the browser after minting a session cookie. |
@@ -224,26 +223,23 @@ the chart's secrets around it is a Kubernetes/Helm concern owned by
 **helm_chart/README.md** — specifically its "Required secrets" section
 (#2: linkkeys RP API key, #3: RP domain key passphrase) and "First-deploy
 runbook" steps 2–5 (bring the chart up with no API key yet → `linkkeys
-domain init` → `linkkeys user create ... --api-key` inside the RP pod →
+domain init` → `linkkeys user create ... --application-id firepit --relation api_access` inside the RP pod →
 feed the minted key back in as `linkkeys.pki.apiKey` → re-deploy). Follow
 that runbook rather than duplicating it here; the short version is:
 
 1. The RP needs its own domain key initialized (`linkkeys domain init`)
    before it can do anything.
 2. firepit's own Bearer API key against the RP is minted **by the RP
-   itself** (`linkkeys user create firepit-api "Firepit API" --api-key`) —
+   itself** (`linkkeys user create firepit-api "Firepit API" --application-id firepit --relation api_access`) —
    there's no way to generate it ahead of time, which is why first deploy
    is a two-step dance (deploy without it, mint it, redeploy with it).
 3. Once minted, that key becomes `FIREPIT_LINKKEYS_PKI_API_KEY` (§1).
 
-LinkKeys 0.16.7 and later name the API-key account in each signed login
-request. The IDP consent screen shows the account display name (`"Firepit
-API"` above), so give the account a name that users recognize. The IDP keys
-standing consent by user, RP domain, and application. The application ID is
-the account username, or `FIREPIT_LINKKEYS_APPLICATION_ID` when it is set.
-The account username must be 1-128 of `A-Z a-z 0-9 - _ .`, or sign-request
-fails. Each user sees the consent screen one more time after the RP and IDP
-upgrade to 0.16.7, because older grants have no application.
+LinkKeys 0.16.11 gets the application ID from the account that owns the API key.
+The consent screen shows the account display name. If you previously set
+`FIREPIT_LINKKEYS_APPLICATION_ID`, set that ID on the LinkKeys application
+account before you upgrade. LinkKeys migrates active API-key-only accounts
+with their username as the application ID.
 
 The `http` transport calls `/v1alpha/*.json` routes. LinkKeys does not serve
 these routes. Use the `tcp` transport.

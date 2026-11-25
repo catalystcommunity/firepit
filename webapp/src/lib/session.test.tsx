@@ -8,7 +8,7 @@
 import { render, waitFor } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserProfile } from "~/gen/types.gen";
-import { FirepitServiceError, ServiceErrorCode } from "./errors";
+import { ServiceErrorRefusal, ServiceErrorCode } from "./errors";
 
 const { whoami, beginLogin, logout } = vi.hoisted(() => ({
   whoami: vi.fn(),
@@ -34,7 +34,7 @@ const PROFILE: UserProfile = {
 };
 
 const unauthenticated = () =>
-  Promise.reject(new FirepitServiceError({ code: ServiceErrorCode.Unauthenticated, message: "no active session" }));
+  Promise.reject(new ServiceErrorRefusal({ code: ServiceErrorCode.Unauthenticated, message: "no active session" }));
 
 // Renders nothing visible; hands the live session object out via `onReady`
 // so tests can drive login()/logout()/refresh() and assert on the signals

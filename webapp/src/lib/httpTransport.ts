@@ -1,5 +1,5 @@
 // The browser transport sends one CBOR envelope per call to `/csil/v1/rpc`.
-// It converts transport failures and ServiceError responses to typed errors.
+// The generated client decodes the reply variant and payload.
 //
 // Wire conventions this follows (api/internal/server/dispatch.go,
 // api/internal/server/server.go):
@@ -16,11 +16,10 @@
 //   - the session lives in an httpOnly cookie (`credentials: "same-origin"`
 //     is what rides it along; there is no bearer token to attach here).
 import type { AsyncServiceTransport } from "~/gen/client.async.gen";
-import { fromServiceErrorCbor } from "~/gen/codec.gen";
 import { Status, statusName } from "~/transport/csil/conventions";
 import { RpcRequest, RpcResponse } from "~/transport/csil/rpc";
-import { FirepitServiceError, FirepitTransportError } from "./errors";
-import { methodToOp, serviceToWire } from "./opNaming";
+import { FirepitTransportError } from "./errors";
+import { methodToOp } from "./opNaming";
 
 export const RPC_ENDPOINT = "/csil/v1/rpc";
 
@@ -34,58 +33,59 @@ export function createHttpTransport(opts: HttpTransportOptions = {}): AsyncServi
   const endpoint = opts.endpoint ?? RPC_ENDPOINT;
   const doFetch = opts.fetchImpl ?? fetch;
 
+  async function callReply(service: string, op: string, payload: Uint8Array): Promise<RpcResponse> {
+    const envelope = new RpcRequest(service, methodToOp(op), payload).encode();
+
+    let res: Response;
+    try {
+      res = await doFetch(endpoint, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/cbor",
+          Accept: "application/cbor",
+        },
+        // lib.dom's `BodyInit` wants a `Uint8Array<ArrayBuffer>` under this
+        // TS/lib combination; the codec's `Uint8Array<ArrayBufferLike>`
+        // return type is structurally the same bytes on every runtime that
+        // matters (browser, Node, happy-dom) but doesn't satisfy the
+        // stricter generic, so this is a type-only cast.
+        body: envelope as unknown as BodyInit,
+      });
+    } catch (e) {
+      throw new FirepitTransportError(
+        `network error calling ${service}/${op}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+
+    const bodyBuf = new Uint8Array(await res.arrayBuffer());
+
+    let resp: RpcResponse;
+    try {
+      resp = RpcResponse.decode(bodyBuf);
+    } catch {
+      throw new FirepitTransportError(
+        res.ok
+          ? `undecodable response envelope for ${service}/${op}`
+          : `${service}/${op}: ${res.status} ${res.statusText}`,
+        res.ok ? undefined : res.status,
+      );
+    }
+
+    if (resp.status !== Status.Ok) {
+      throw new FirepitTransportError(
+        resp.error ?? `transport status ${statusName(resp.status)} calling ${service}/${op}`,
+        resp.status,
+      );
+    }
+
+    return resp;
+  }
+
   return {
-    async call(service: string, op: string, payload: Uint8Array): Promise<Uint8Array> {
-      const envelope = new RpcRequest(serviceToWire(service), methodToOp(op), payload).encode();
-
-      let res: Response;
-      try {
-        res = await doFetch(endpoint, {
-          method: "POST",
-          credentials: "same-origin",
-          headers: {
-            "Content-Type": "application/cbor",
-            Accept: "application/cbor",
-          },
-          // lib.dom's `BodyInit` wants a `Uint8Array<ArrayBuffer>` under this
-          // TS/lib combination; the codec's `Uint8Array<ArrayBufferLike>`
-          // return type is structurally the same bytes on every runtime that
-          // matters (browser, Node, happy-dom) but doesn't satisfy the
-          // stricter generic, so this is a type-only cast.
-          body: envelope as unknown as BodyInit,
-        });
-      } catch (e) {
-        throw new FirepitTransportError(
-          `network error calling ${service}/${op}: ${e instanceof Error ? e.message : String(e)}`,
-        );
-      }
-
-      const bodyBuf = new Uint8Array(await res.arrayBuffer());
-
-      let resp: RpcResponse;
-      try {
-        resp = RpcResponse.decode(bodyBuf);
-      } catch {
-        throw new FirepitTransportError(
-          res.ok
-            ? `undecodable response envelope for ${service}/${op}`
-            : `${service}/${op}: ${res.status} ${res.statusText}`,
-          res.ok ? undefined : res.status,
-        );
-      }
-
-      if (resp.status !== Status.Ok) {
-        throw new FirepitTransportError(
-          resp.error ?? `transport status ${statusName(resp.status)} calling ${service}/${op}`,
-          resp.status,
-        );
-      }
-
-      if (resp.variant === "ServiceError") {
-        throw new FirepitServiceError(fromServiceErrorCbor(resp.payload));
-      }
-
-      return resp.payload;
+    callReply,
+    async call(service, op, payload) {
+      return (await callReply(service, op, payload)).payload;
     },
   };
 }

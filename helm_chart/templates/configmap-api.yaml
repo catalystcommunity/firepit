@@ -30,11 +30,10 @@ data:
   FIREPIT_LINKKEYS_TRANSPORT: {{ .Values.linkkeys.transport | quote }}
   {{- if .Values.linkkeys.tcpAddr }}
   FIREPIT_LINKKEYS_TCP_ADDR: {{ .Values.linkkeys.tcpAddr | quote }}
+  {{- else if and .Values.linkkeysRp.enabled (eq .Values.linkkeys.transport "tcp") }}
+  FIREPIT_LINKKEYS_TCP_ADDR: {{ printf "%s-linkkeys-rp:%v" (include "firepit.fullname" .) .Values.linkkeysRp.tcpPort | quote }}
   {{- end }}
   {{- if .Values.linkkeys.tcpFingerprints }}
   FIREPIT_LINKKEYS_TCP_FINGERPRINTS: {{ .Values.linkkeys.tcpFingerprints | quote }}
   {{- end }}
   FIREPIT_LINKKEYS_TCP_ALLOW_INSECURE: {{ .Values.linkkeys.tcpAllowInsecure | quote }}
-  {{- if .Values.linkkeys.applicationId }}
-  FIREPIT_LINKKEYS_APPLICATION_ID: {{ .Values.linkkeys.applicationId | quote }}
-  {{- end }}

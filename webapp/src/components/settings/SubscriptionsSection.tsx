@@ -7,7 +7,7 @@
 import { createSignal, For, onMount, Show, type Component } from "solid-js";
 import type { Subscription, TargetType } from "~/gen/types.gen";
 import { api } from "~/lib/api";
-import { FirepitServiceError } from "~/lib/errors";
+import { ServiceErrorRefusal } from "~/lib/errors";
 import { createPostSummaryResolver } from "~/lib/notifications";
 
 const GROUP_ORDER: readonly TargetType[] = ["board", "post", "comment"];
@@ -26,7 +26,7 @@ const SubscriptionsSection: Component = () => {
   const [busyId, setBusyId] = createSignal<string | null>(null);
 
   const describe = (err: unknown, fallback: string): string =>
-    err instanceof FirepitServiceError ? err.message : fallback;
+    err instanceof ServiceErrorRefusal ? err.value.message : fallback;
 
   const labelKey = (s: Subscription): string => `${s.targetType}:${s.targetId}`;
 

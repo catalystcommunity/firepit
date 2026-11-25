@@ -16,7 +16,7 @@ const BoardIndexList: Component<BoardIndexListProps> = (props) => {
   const [boardPage] = createResource(() => api.board.listBoards({}));
   // Only fetch the caller's own subscriptions once logged in — an
   // unauthenticated `list-subscriptions` call is a guaranteed
-  // FirepitServiceError (Unauthenticated), same as `whoami`.
+  // ServiceErrorRefusal (Unauthenticated), same as `whoami`.
   const [subsResource, { mutate: mutateSubs }] = createResource(
     () => (session.user() ? session.user()!.id : undefined),
     () => api.subscription.listSubscriptions({}),

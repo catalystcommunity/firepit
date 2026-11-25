@@ -9,7 +9,7 @@ import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Category, ListPostsRequest, Post, UnreadSummary } from "~/gen/types.gen";
-import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
+import { ServiceErrorRefusal, ServiceErrorCode } from "~/lib/errors";
 
 const { whoami, listPosts } = vi.hoisted(() => ({ whoami: vi.fn(), listPosts: vi.fn() }));
 
@@ -21,7 +21,7 @@ const { SessionProvider } = await import("~/lib/session");
 const { default: PostList } = await import("./PostList");
 
 const unauthenticated = () =>
-  Promise.reject(new FirepitServiceError({ code: ServiceErrorCode.Unauthenticated, message: "no active session" }));
+  Promise.reject(new ServiceErrorRefusal({ code: ServiceErrorCode.Unauthenticated, message: "no active session" }));
 
 const post = (id: string, overrides: Partial<Post> = {}): Post => ({
   id,

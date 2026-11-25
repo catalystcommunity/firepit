@@ -1,3 +1,4 @@
+import { errorMessage } from "~/lib/errors";
 // Preserve server order because endorsement order depends on the viewer.
 // Roll back optimistic endorse and retract actions when a request fails.
 //
@@ -50,7 +51,7 @@ const Endorsements: Component<EndorsementsProps> = (props) => {
         await api.endorsement.retract(target);
       } catch (err) {
         mutate({ endorsements: before }); // rollback
-        setError(err instanceof Error ? err.message : String(err));
+        setError(errorMessage(err));
       } finally {
         setPending(false);
       }
@@ -74,7 +75,7 @@ const Endorsements: Component<EndorsementsProps> = (props) => {
       mutate({ endorsements: [...before, real] });
     } catch (err) {
       mutate({ endorsements: before }); // rollback
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errorMessage(err));
     } finally {
       setPending(false);
     }

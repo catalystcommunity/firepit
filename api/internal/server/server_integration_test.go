@@ -103,7 +103,8 @@ func TestServerEndToEnd(t *testing.T) {
 	t.Run("AppError round-trips ServiceError over HTTP", func(t *testing.T) {
 		// This is a stable typed-error case because create-board requires an
 		// administrator session.
-		payload := csil.EncodeBoardCreateBoardRequest(csil.CreateBoardRequest{Slug: "general", Title: "General", Kind: "discussion"})
+		payload, err := csil.EncodeCreateBoardRequest(csil.CreateBoardRequest{Slug: "general", Title: "General", Kind: "discussion"})
+		require.NoError(t, err)
 		envelope, err := transport.NewRpcRequest("board", "create-board", payload).Encode()
 		require.NoError(t, err)
 

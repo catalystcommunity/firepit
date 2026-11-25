@@ -2,7 +2,7 @@
 // The session itself is httpOnly-cookie-based (PLANDOC.md §3: "Sessions are
 // firepit's; linkkeys only verifies identity") — there is no token this
 // module can read, so `whoami` on boot is the *only* source of truth for
-// "who is logged in, if anyone." A `FirepitServiceError` with code
+// "who is logged in, if anyone." A `ServiceErrorRefusal` with code
 // `Unauthenticated` is the expected shape of "nobody's logged in" (see
 // `api/internal/csilservices/auth.go`'s `Whoami`) and is never surfaced as
 // an error to the UI; any other failure (network down, 500, ...) is kept
@@ -18,7 +18,7 @@ import {
 } from "solid-js";
 import type { UserProfile } from "~/gen/types.gen";
 import { api } from "./api";
-import { isUnauthenticated } from "./errors";
+import { errorMessage, isUnauthenticated } from "./errors";
 
 export interface SessionContextValue {
   /** The caller's profile, or `null` while logged out (a supported, normal state — anonymous read). */
@@ -52,7 +52,7 @@ export const SessionProvider: ParentComponent = (props) => {
       setUser(null);
       // Anonymous is a normal, expected outcome — only a genuinely
       // unexpected failure (network/5xx/etc.) is surfaced via `error`.
-      setError(isUnauthenticated(err) ? null : err instanceof Error ? err.message : String(err));
+      setError(isUnauthenticated(err) ? null : errorMessage(err));
     } finally {
       setLoading(false);
     }

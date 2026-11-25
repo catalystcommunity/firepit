@@ -62,7 +62,7 @@ Commands:
 EOF
 }
 
-cmd_gen() {
+cmd_gen() (
     log_status "gen"
 
     local SPEC="$SCRIPT_DIR/csil/firepit.csil"
@@ -74,15 +74,23 @@ cmd_gen() {
 
     # Non-interactive shells do not always include these user install paths.
     if [ -d "$HOME/.local/bin" ]; then
-        export PATH="$HOME/.local/bin:$PATH"
+        export PATH="$PATH:$HOME/.local/bin"
     fi
     if [ -d "$HOME/.cargo/bin" ]; then
-        export PATH="$HOME/.cargo/bin:$PATH"
+        export PATH="$PATH:$HOME/.cargo/bin"
     fi
 
     if ! command -v csilgen >/dev/null 2>&1; then
         err "csilgen not on PATH (looked in \$PATH, ~/.local/bin, ~/.cargo/bin)"
         err "install it from the catalystcommunity/csilgen repo (see its README) and re-run"
+        exit 1
+    fi
+
+    local required_version="0.3.3"
+    local installed_version
+    installed_version="$(csilgen --version)"
+    if [ "$installed_version" != "csilgen $required_version" ]; then
+        err "generation requires csilgen $required_version (found $installed_version)"
         exit 1
     fi
 
@@ -121,13 +129,12 @@ cmd_gen() {
     # longhouse's clients/regenerate.sh.
     log_status "gen: full clients -> clients/{go,typescript}"
 
-    # The spliced per-language specs must live alongside firepit.csil (not in
-    # /tmp) so their relative `include "types/...csil"` paths still resolve —
-    # csilgen resolves includes relative to the including file's own
-    # directory. Cleaned up unconditionally on return.
-    local TMPDIR="$SCRIPT_DIR/csil"
-    _cleanup_spliced() { rm -f "$TMPDIR"/.gen-tmp-*.csil; }
-    trap _cleanup_spliced RETURN
+    # Use the public schema name for each package descriptor.
+    local spec_dir
+    spec_dir="$(mktemp -d)"
+    trap 'rm -rf "$spec_dir"' EXIT
+    cp -R "$SCRIPT_DIR/csil/types" "$spec_dir/types"
+    local client_spec="$spec_dir/firepit.csil"
 
     _splice_options() {
         # $1 = extra options (comma-joined, no trailing comma), $2 = output path
@@ -159,27 +166,25 @@ cmd_gen() {
     # package name, and this module's own last segment is "go" (a reserved
     # word — `package go` doesn't parse). package_name alone (with no
     # go_package to override it) names the package "firepitclient" instead.
-    local go_spec="$TMPDIR/.gen-tmp-go-client.csil"
-    _splice_options "emit_packages: [\"go\"], package_name: \"firepitclient\", go_module: \"github.com/catalystcommunity/firepit/clients/go\"" "$go_spec"
+    _splice_options "emit_packages: [\"go\"], package_name: \"firepitclient\", go_module: \"github.com/catalystcommunity/firepit/clients/go\"" "$client_spec"
     rm -rf "$CLIENTS_OUT/go"
     mkdir -p "$CLIENTS_OUT/go"
-    csilgen generate --input "$go_spec" --target go-client --output "$CLIENTS_OUT/go" --readme-csil-rpc
+    csilgen generate --input "$client_spec" --target go-client --output "$CLIENTS_OUT/go" --readme-csil-rpc
     if command -v gofmt >/dev/null 2>&1; then
         gofmt -w "$CLIENTS_OUT/go"
     fi
 
-    local ts_spec="$TMPDIR/.gen-tmp-ts-client.csil"
-    _splice_options "emit_packages: [\"typescript\"], package_name: \"@firepit/client\"" "$ts_spec"
+    _splice_options "emit_packages: [\"typescript\"], package_name: \"@firepit/client\"" "$client_spec"
     rm -rf "$CLIENTS_OUT/typescript"
     mkdir -p "$CLIENTS_OUT/typescript"
-    csilgen generate --input "$ts_spec" --target typescript-client --output "$CLIENTS_OUT/typescript" --readme-csil-rpc
+    csilgen generate --input "$client_spec" --target typescript-client --output "$CLIENTS_OUT/typescript" --readme-csil-rpc
 
     log_status "gen: done"
     echo "  api/internal/csil:   $(ls "$GO_SERVER_OUT"/*.gen.go 2>/dev/null | wc -l) file(s)"
     echo "  webapp/src/gen:      $(ls "$TS_CLIENT_OUT"/*.gen.ts 2>/dev/null | wc -l) file(s)"
     echo "  clients/go:          $(find "$CLIENTS_OUT/go" -type f 2>/dev/null | wc -l) file(s)"
     echo "  clients/typescript:  $(find "$CLIENTS_OUT/typescript" -type f 2>/dev/null | wc -l) file(s)"
-}
+)
 
 cmd_test_go() {
     log_status "go test ./... (api)"

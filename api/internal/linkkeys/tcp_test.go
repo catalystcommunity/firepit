@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -90,14 +91,13 @@ func TestTCPClient_SignRequest_RoundTrip(t *testing.T) {
 		if err := cbor.Unmarshal(req.Payload, &in); err != nil {
 			return transport.Transport(transport.StatusInternal, err.Error())
 		}
-		// No ApplicationID configured: the field must be absent so the
-		// RP uses the API-key account username.
+		// The RP gets the application from the API key.
 		var raw map[string]any
 		if err := cbor.Unmarshal(req.Payload, &raw); err != nil {
 			return transport.Transport(transport.StatusInternal, err.Error())
 		}
 		if _, ok := raw["application_id"]; ok {
-			return transport.Transport(transport.StatusInternal, "application_id sent but not configured")
+			return transport.Transport(transport.StatusInternal, "sign-request contained the obsolete application_id")
 		}
 		b, _ := cbor.Marshal(map[string]string{"signed_request": "signed:" + in.CallbackURL + ":" + in.Nonce})
 		return transport.Reply("RpSignResponse", b)
@@ -127,33 +127,29 @@ func TestTCPClient_SignRequest_RoundTrip(t *testing.T) {
 	}
 }
 
-func TestTCPClient_SignRequest_SendsApplicationID(t *testing.T) {
-	t.Parallel()
-	_, tlsCert, _ := newTestCert(t)
-	handler := func(req *transport.RpcRequest) transport.HandlerOutcome {
-		var in struct {
-			ApplicationID *string `cbor:"application_id"`
-		}
-		if err := cbor.Unmarshal(req.Payload, &in); err != nil {
-			return transport.Transport(transport.StatusInternal, err.Error())
-		}
-		if in.ApplicationID == nil {
-			return transport.Transport(transport.StatusInternal, "application_id missing")
-		}
-		b, _ := cbor.Marshal(map[string]string{"signed_request": "app:" + *in.ApplicationID})
-		return transport.Reply("RpSignResponse", b)
-	}
-	addr := startTestRPCServer(t, tlsCert, handler)
-	c, err := NewTCPClient(TCPConfig{Addr: addr, Insecure: true, APIKey: "k", ApplicationID: " firepit-web "})
-	if err != nil {
-		t.Fatalf("NewTCPClient: %v", err)
-	}
-	got, err := c.SignRequest("https://app/callback", "n")
-	if err != nil {
-		t.Fatalf("SignRequest: %v", err)
-	}
-	if want := "app:firepit-web"; got != want {
-		t.Fatalf("SignRequest = %q, want %q", got, want)
+func TestTCPClient_SignRequest_RejectsErrorAndUnknownVariant(t *testing.T) {
+	for _, variant := range []string{"RpError", "RpDecryptResponse"} {
+		t.Run(variant, func(t *testing.T) {
+			_, cert, _ := newTestCert(t)
+			addr := startTestRPCServer(t, cert, func(*transport.RpcRequest) transport.HandlerOutcome {
+				payload, err := cbor.Marshal(map[string]any{"code": 2, "message": "application mismatch"})
+				if err != nil {
+					return transport.Transport(transport.StatusInternal, err.Error())
+				}
+				return transport.Reply(variant, payload)
+			})
+			c, err := NewTCPClient(TCPConfig{Addr: addr, Insecure: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = c.SignRequest("https://app/callback", "n")
+			if err == nil {
+				t.Fatalf("accepted %s", variant)
+			}
+			if variant == "RpError" && !strings.Contains(err.Error(), "RP error 2: application mismatch") {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 
@@ -173,8 +169,8 @@ func TestTCPClient_VerifyAssertion_RoundTrip(t *testing.T) {
 				"domain":            in.ExpectedDomain,
 				"audience":          "rp.example",
 				"nonce":             "n1",
-				"issued_at":         "2026-01-01T00:00:00Z",
-				"expires_at":        "2026-01-01T00:10:00Z",
+				"issued_at":         cbor.Tag{Number: 0, Content: "2026-01-01T00:00:00Z"},
+				"expires_at":        cbor.Tag{Number: 0, Content: "2026-01-01T00:10:00Z"},
 				"authorized_claims": []string{"email"}, // unknown to Assertion; must be ignored
 				"display_name":      "Ada",
 			},
@@ -190,7 +186,7 @@ func TestTCPClient_VerifyAssertion_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyAssertion: %v", err)
 	}
-	if a.UserID != "u1" || a.Domain != "idp.example" || a.DisplayName != "Ada" {
+	if a.UserID != "u1" || a.Domain != "idp.example" || a.DisplayName != "Ada" || a.ExpiresAt != "2026-01-01T00:10:00Z" {
 		t.Fatalf("assertion decoded wrong: %+v", a)
 	}
 }
