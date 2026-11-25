@@ -1,3 +1,4 @@
+import { errorMessage } from "~/lib/errors";
 import { createSignal, type Component } from "solid-js";
 import { useSession } from "~/lib/session";
 
@@ -19,7 +20,7 @@ const Login: Component = () => {
     try {
       await session.login(d);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errorMessage(err));
       setSubmitting(false);
     }
   };

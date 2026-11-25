@@ -4,7 +4,7 @@ import { A, useNavigate } from "@solidjs/router";
 import { createSignal, For, Show, type Component } from "solid-js";
 import type { Category, Post } from "~/gen/types.gen";
 import { api } from "~/lib/api";
-import { FirepitServiceError } from "~/lib/errors";
+import { ServiceErrorRefusal } from "~/lib/errors";
 import { renderMarkdown } from "~/lib/markdown";
 import { useSession } from "~/lib/session";
 import "./composer.css";
@@ -79,8 +79,8 @@ const PostComposer: Component<PostComposerProps> = (props) => {
       props.onCreated?.(post);
       navigate(`/b/${props.boardSlug}/p/${post.id}`);
     } catch (err) {
-      if (err instanceof FirepitServiceError) {
-        setFieldError({ field: err.field, message: err.message });
+      if (err instanceof ServiceErrorRefusal) {
+        setFieldError({ field: err.value.field, message: err.value.message });
       } else {
         setFieldError({ message: err instanceof Error ? err.message : "Couldn't create the post." });
       }

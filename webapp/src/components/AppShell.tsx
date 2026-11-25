@@ -17,6 +17,7 @@ import "~/components/board-list/board-list.css";
 import FlameMark from "~/components/FlameMark";
 import NotificationBell from "~/components/notifications/NotificationBell";
 import ThemeToggle from "~/components/ThemeToggle";
+import { errorMessage } from "~/lib/errors";
 import { api } from "~/lib/api";
 import { useSession } from "~/lib/session";
 import { boardUnreadCount, startUnreadPoller } from "~/lib/unread";
@@ -122,7 +123,7 @@ const AppShell: ParentComponent = (props) => {
         </nav>
 
         <main class="page">
-          <ErrorBoundary fallback={(err) => <p class="page-error">Something went wrong: {String(err)}</p>}>
+          <ErrorBoundary fallback={(err) => <p class="page-error">Something went wrong: {errorMessage(err)}</p>}>
             <Suspense fallback={<p class="page-status">Loading…</p>}>{props.children}</Suspense>
           </ErrorBoundary>
         </main>

@@ -10,7 +10,7 @@ import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Post, UserProfile } from "~/gen/types.gen";
-import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
+import { ServiceErrorRefusal, ServiceErrorCode } from "~/lib/errors";
 
 const { whoami, createPost } = vi.hoisted(() => ({ whoami: vi.fn(), createPost: vi.fn() }));
 
@@ -24,7 +24,7 @@ const submitButton = { name: "Start thread" };
 const bodyPlaceholder = /Add background, links, decisions needed/;
 
 const unauthenticated = () =>
-  Promise.reject(new FirepitServiceError({ code: ServiceErrorCode.Unauthenticated, message: "no active session" }));
+  Promise.reject(new ServiceErrorRefusal({ code: ServiceErrorCode.Unauthenticated, message: "no active session" }));
 
 const USER: UserProfile = {
   id: "u1",
@@ -77,7 +77,7 @@ describe("PostComposer", () => {
   it("renders a ServiceError's message next to the field it names", async () => {
     whoami.mockResolvedValue(USER);
     createPost.mockRejectedValue(
-      new FirepitServiceError({ code: ServiceErrorCode.Validation, field: "title", message: "That title is taken." }),
+      new ServiceErrorRefusal({ code: ServiceErrorCode.Validation, field: "title", message: "That title is taken." }),
     );
     renderWithRouter(() => <PostComposer boardId="b1" boardSlug="board" />);
 

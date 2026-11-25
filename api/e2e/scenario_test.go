@@ -73,10 +73,11 @@ import (
 // failure (malformed envelope, unknown op, ...) always fails the test
 // outright via require, since none of this suite's calls are expected to hit
 // one.
-func rpcCall[Req any, Resp any](t *testing.T, ts *httptest.Server, sessionToken, service, op string, req Req, encode func(Req) []byte, decode func([]byte) (Resp, error)) (Resp, *csil.ServiceError) {
+func rpcCall[Req any, Resp any](t *testing.T, ts *httptest.Server, sessionToken, service, op string, req Req, encode func(Req) ([]byte, error), decode func([]byte) (Resp, error)) (Resp, *csil.ServiceError) {
 	t.Helper()
 
-	payload := encode(req)
+	payload, err := encode(req)
+	require.NoError(t, err)
 	envelope, err := transport.NewRpcRequest(service, op, payload).Encode()
 	require.NoError(t, err)
 
@@ -114,7 +115,7 @@ func rpcCall[Req any, Resp any](t *testing.T, ts *httptest.Server, sessionToken,
 
 // mustRPC is rpcCall for the common case: the caller asserts success and
 // only wants the decoded response.
-func mustRPC[Req any, Resp any](t *testing.T, ts *httptest.Server, sessionToken, service, op string, req Req, encode func(Req) []byte, decode func([]byte) (Resp, error)) Resp {
+func mustRPC[Req any, Resp any](t *testing.T, ts *httptest.Server, sessionToken, service, op string, req Req, encode func(Req) ([]byte, error), decode func([]byte) (Resp, error)) Resp {
 	t.Helper()
 	resp, svcErr := rpcCall(t, ts, sessionToken, service, op, req, encode, decode)
 	require.Nil(t, svcErr, "%s/%s: unexpected ServiceError: %+v", service, op, svcErr)
@@ -368,7 +369,7 @@ func TestFirepitEndToEnd(t *testing.T) {
 
 		beginResp := mustRPC(t, ts, "", "auth", "begin-login",
 			csil.BeginLoginRequest{Domain: idpDomain},
-			csil.EncodeAuthBeginLoginRequest, csil.DecodeAuthBeginLoginResponse)
+			csil.EncodeBeginLoginRequest, csil.DecodeBeginLoginResponse)
 		require.Contains(t, beginResp.RedirectUrl, "https://idp.example/auth/authorize?signed_request=")
 		nonce := rp.takeLastNonce(t)
 
@@ -395,7 +396,7 @@ func TestFirepitEndToEnd(t *testing.T) {
 		require.NotEmpty(t, rawSessionToken, "expected a firepit_session cookie to be set")
 
 		profile = mustRPC(t, ts, rawSessionToken, "auth", "whoami",
-			csil.Empty{}, csil.EncodeAuthWhoamiRequest, csil.DecodeAuthWhoamiResponse)
+			csil.Empty{}, csil.EncodeEmpty, csil.DecodeUserProfile)
 		return rawSessionToken, profile
 	}
 
@@ -430,7 +431,7 @@ func TestFirepitEndToEnd(t *testing.T) {
 		// Confirm the bootstrap actually took over the wire, not just in
 		// the DB: a fresh whoami reflects the new role.
 		aProfile = mustRPC(t, ts, aToken, "auth", "whoami",
-			csil.Empty{}, csil.EncodeAuthWhoamiRequest, csil.DecodeAuthWhoamiResponse)
+			csil.Empty{}, csil.EncodeEmpty, csil.DecodeUserProfile)
 		require.Equal(t, []string{"admin"}, aProfile.Roles)
 	})
 
@@ -438,17 +439,17 @@ func TestFirepitEndToEnd(t *testing.T) {
 		createReq := csil.CreateBoardRequest{Slug: "e2e-general", Title: "E2E General", Description: strPtr("the scenario's one board"), Kind: "discussion"}
 
 		_, anonErr := rpcCall(t, ts, "", "board", "create-board", createReq,
-			csil.EncodeBoardCreateBoardRequest, csil.DecodeBoardCreateBoardResponse)
+			csil.EncodeCreateBoardRequest, csil.DecodeBoard)
 		require.NotNil(t, anonErr, "anonymous create-board must fail")
 		require.Equal(t, csilservices.CodeUnauthenticated, anonErr.Code)
 
 		_, nonAdminErr := rpcCall(t, ts, bToken, "board", "create-board", createReq,
-			csil.EncodeBoardCreateBoardRequest, csil.DecodeBoardCreateBoardResponse)
+			csil.EncodeCreateBoardRequest, csil.DecodeBoard)
 		require.NotNil(t, nonAdminErr, "non-admin create-board must fail")
 		require.Equal(t, csilservices.CodeForbidden, nonAdminErr.Code)
 
 		board = mustRPC(t, ts, aToken, "board", "create-board", createReq,
-			csil.EncodeBoardCreateBoardRequest, csil.DecodeBoardCreateBoardResponse)
+			csil.EncodeCreateBoardRequest, csil.DecodeBoard)
 		require.Equal(t, "e2e-general", board.Slug)
 		require.Equal(t, aProfile.Id, board.CreatedBy)
 	})
@@ -456,23 +457,23 @@ func TestFirepitEndToEnd(t *testing.T) {
 	t.Run("c_post_and_deep_reply_thread", func(t *testing.T) {
 		post = mustRPC(t, ts, aToken, "thread", "create-post",
 			csil.CreatePostRequest{BoardId: board.Id, Title: "Welcome to the forum", BodyMd: "First post, let's see if threading works."},
-			csil.EncodeThreadCreatePostRequest, csil.DecodeThreadCreatePostResponse)
+			csil.EncodeCreatePostRequest, csil.DecodePost)
 		require.NotNil(t, post.AuthorHandle)
 		require.Equal(t, aProfile.Handle, *post.AuthorHandle)
 
 		c1 = mustRPC(t, ts, bToken, "thread", "create-comment",
 			csil.CreateCommentRequest{PostId: post.Id, BodyMd: "Level 1 reply."},
-			csil.EncodeThreadCreateCommentRequest, csil.DecodeThreadCreateCommentResponse)
+			csil.EncodeCreateCommentRequest, csil.DecodeComment)
 		c2 = mustRPC(t, ts, bToken, "thread", "create-comment",
 			csil.CreateCommentRequest{PostId: post.Id, ParentCommentId: &c1.Id, BodyMd: "Level 2 reply."},
-			csil.EncodeThreadCreateCommentRequest, csil.DecodeThreadCreateCommentResponse)
+			csil.EncodeCreateCommentRequest, csil.DecodeComment)
 		c3 = mustRPC(t, ts, bToken, "thread", "create-comment",
 			csil.CreateCommentRequest{PostId: post.Id, ParentCommentId: &c2.Id, BodyMd: "Level 3 reply."},
-			csil.EncodeThreadCreateCommentRequest, csil.DecodeThreadCreateCommentResponse)
+			csil.EncodeCreateCommentRequest, csil.DecodeComment)
 
 		thread := mustRPC(t, ts, bToken, "thread", "get-thread",
 			csil.GetThreadRequest{PostId: post.Id},
-			csil.EncodeThreadGetThreadRequest, csil.DecodeThreadGetThreadResponse)
+			csil.EncodeGetThreadRequest, csil.DecodeThread)
 
 		require.Equal(t, post.Id, thread.Post.Id)
 		require.NotNil(t, thread.Post.AuthorHandle)
@@ -492,13 +493,13 @@ func TestFirepitEndToEnd(t *testing.T) {
 
 		edited := mustRPC(t, ts, bToken, "thread", "edit-comment",
 			csil.EditCommentRequest{Id: c2.Id, BodyMd: "Level 2 reply, corrected."},
-			csil.EncodeThreadEditCommentRequest, csil.DecodeThreadEditCommentResponse)
+			csil.EncodeEditCommentRequest, csil.DecodeComment)
 		require.NotNil(t, edited.EditedAt, "edited flag must be set on the response")
 		c2 = edited
 
 		revisions := mustRPC(t, ts, bToken, "thread", "list-revisions",
 			csil.TargetRef{TargetType: "comment", TargetId: string(c2.Id)},
-			csil.EncodeThreadListRevisionsRequest, csil.DecodeThreadListRevisionsResponse)
+			csil.EncodeTargetRef, csil.DecodeRevisionList)
 		require.Len(t, revisions.Revisions, 1)
 		require.Equal(t, originalBody, revisions.Revisions[0].PrevBodyMd)
 		require.Equal(t, csil.TargetType("comment"), revisions.Revisions[0].TargetType)
@@ -508,7 +509,7 @@ func TestFirepitEndToEnd(t *testing.T) {
 		// just present on edit-comment's own response.
 		thread := mustRPC(t, ts, bToken, "thread", "get-thread",
 			csil.GetThreadRequest{PostId: post.Id},
-			csil.EncodeThreadGetThreadRequest, csil.DecodeThreadGetThreadResponse)
+			csil.EncodeGetThreadRequest, csil.DecodeThread)
 		require.NotNil(t, thread.Comments[1].EditedAt)
 		require.Equal(t, "Level 2 reply, corrected.", thread.Comments[1].BodyMd)
 	})
@@ -516,24 +517,24 @@ func TestFirepitEndToEnd(t *testing.T) {
 	t.Run("e_subscribe_and_endorse", func(t *testing.T) {
 		_ = mustRPC(t, ts, bToken, "subscription", "subscribe",
 			csil.TargetRef{TargetType: "board", TargetId: string(board.Id)},
-			csil.EncodeSubscriptionSubscribeRequest, csil.DecodeSubscriptionSubscribeResponse)
+			csil.EncodeTargetRef, csil.DecodeSubscription)
 
 		endorsement := mustRPC(t, ts, aToken, "endorsement", "endorse",
 			csil.EndorseRequest{TargetType: "comment", TargetId: string(c1.Id)},
-			csil.EncodeEndorsementEndorseRequest, csil.DecodeEndorsementEndorseResponse)
+			csil.EncodeEndorseRequest, csil.DecodeEndorsement)
 		require.NotNil(t, endorsement.AuthorHandle)
 		require.Equal(t, aProfile.Handle, *endorsement.AuthorHandle)
 
 		list := mustRPC(t, ts, bToken, "endorsement", "list-endorsements",
 			csil.TargetRef{TargetType: "comment", TargetId: string(c1.Id)},
-			csil.EncodeEndorsementListEndorsementsRequest, csil.DecodeEndorsementListEndorsementsResponse)
+			csil.EncodeTargetRef, csil.DecodeEndorsementList)
 		require.Len(t, list.Endorsements, 1, "server-ordered endorser list")
 		require.NotNil(t, list.Endorsements[0].AuthorHandle)
 		require.Equal(t, aProfile.Handle, *list.Endorsements[0].AuthorHandle)
 
 		notifs := mustRPC(t, ts, bToken, "notification", "list-notifications",
 			csil.ListNotificationsRequest{},
-			csil.EncodeNotificationListNotificationsRequest, csil.DecodeNotificationListNotificationsResponse)
+			csil.EncodeListNotificationsRequest, csil.DecodeNotificationPage)
 		found := findNotification(notifs.Notifications, "endorsed", string(c1.Id))
 		require.NotNil(t, found, "B must be notified of A's endorsement")
 		require.NotNil(t, found.ActorHandle)
@@ -543,36 +544,36 @@ func TestFirepitEndToEnd(t *testing.T) {
 	t.Run("f_mention_and_read_state", func(t *testing.T) {
 		mentionComment = mustRPC(t, ts, aToken, "thread", "create-comment",
 			csil.CreateCommentRequest{PostId: post.Id, BodyMd: "Hey @" + bProfile.Handle + ", take a look at this thread."},
-			csil.EncodeThreadCreateCommentRequest, csil.DecodeThreadCreateCommentResponse)
+			csil.EncodeCreateCommentRequest, csil.DecodeComment)
 
 		notifs := mustRPC(t, ts, bToken, "notification", "list-notifications",
 			csil.ListNotificationsRequest{},
-			csil.EncodeNotificationListNotificationsRequest, csil.DecodeNotificationListNotificationsResponse)
+			csil.EncodeListNotificationsRequest, csil.DecodeNotificationPage)
 		mentionNotif := findNotification(notifs.Notifications, "mention", string(mentionComment.Id))
 		require.NotNil(t, mentionNotif, "B's default 'subscribed' mention_policy + board subscription from (e) must notify")
 		require.NotNil(t, mentionNotif.ActorHandle)
 		require.Equal(t, aProfile.Handle, *mentionNotif.ActorHandle)
 
 		summary := mustRPC(t, ts, bToken, "read", "unread-summary",
-			csil.Empty{}, csil.EncodeReadUnreadSummaryRequest, csil.DecodeReadUnreadSummaryResponse)
+			csil.Empty{}, csil.EncodeEmpty, csil.DecodeUnreadSummary)
 		unread := findBoardUnread(summary.Boards, board.Id)
 		require.NotNil(t, unread, "the new mention comment must show up as unread for B")
 		require.Contains(t, unread.UnreadPostIds, post.Id)
 
 		_ = mustRPC(t, ts, bToken, "read", "mark-read",
 			csil.TargetRef{TargetType: "post", TargetId: string(post.Id)},
-			csil.EncodeReadMarkReadRequest, csil.DecodeReadMarkReadResponse)
+			csil.EncodeTargetRef, csil.DecodeEmpty)
 
 		summary = mustRPC(t, ts, bToken, "read", "unread-summary",
-			csil.Empty{}, csil.EncodeReadUnreadSummaryRequest, csil.DecodeReadUnreadSummaryResponse)
+			csil.Empty{}, csil.EncodeEmpty, csil.DecodeUnreadSummary)
 		require.Nil(t, findBoardUnread(summary.Boards, board.Id), "mark-read on the post must clear the board's unread entry")
 
 		_ = mustRPC(t, ts, bToken, "read", "mark-unread",
 			csil.TargetRef{TargetType: "comment", TargetId: string(mentionComment.Id)},
-			csil.EncodeReadMarkUnreadRequest, csil.DecodeReadMarkUnreadResponse)
+			csil.EncodeTargetRef, csil.DecodeEmpty)
 
 		summary = mustRPC(t, ts, bToken, "read", "unread-summary",
-			csil.Empty{}, csil.EncodeReadUnreadSummaryRequest, csil.DecodeReadUnreadSummaryResponse)
+			csil.Empty{}, csil.EncodeEmpty, csil.DecodeUnreadSummary)
 		unread = findBoardUnread(summary.Boards, board.Id)
 		require.NotNil(t, unread, "an explicit mark-unread override must bring the board back")
 		require.Contains(t, unread.UnreadPostIds, post.Id)
@@ -592,7 +593,7 @@ func TestFirepitEndToEnd(t *testing.T) {
 				SecretRef:  secretEnvVar,
 				ThreadMode: "post_per_issue",
 			},
-			csil.EncodeIntegrationCreateGithubMappingRequest, csil.DecodeIntegrationCreateGithubMappingResponse)
+			csil.EncodeCreateMappingRequest, csil.DecodeGithubMapping)
 		require.Equal(t, board.Id, mapping.BoardId)
 
 		body := github.FixtureIssuesOpened
@@ -610,7 +611,7 @@ func TestFirepitEndToEnd(t *testing.T) {
 
 		posts := mustRPC(t, ts, bToken, "thread", "list-posts",
 			csil.ListPostsRequest{BoardId: board.Id},
-			csil.EncodeThreadListPostsRequest, csil.DecodeThreadListPostsResponse)
+			csil.EncodeListPostsRequest, csil.DecodePostPage)
 		var githubPost *csil.Post
 		for i := range posts.Posts {
 			if posts.Posts[i].Origin == "github" {
@@ -623,7 +624,7 @@ func TestFirepitEndToEnd(t *testing.T) {
 
 		notifs := mustRPC(t, ts, bToken, "notification", "list-notifications",
 			csil.ListNotificationsRequest{},
-			csil.EncodeNotificationListNotificationsRequest, csil.DecodeNotificationListNotificationsResponse)
+			csil.EncodeListNotificationsRequest, csil.DecodeNotificationPage)
 		newPostNotif := findNotification(notifs.Notifications, "new_post", string(githubPost.Id))
 		require.NotNil(t, newPostNotif, "B (a board subscriber) must be notified of the system post")
 		require.NotNil(t, newPostNotif.ActorHandle)
@@ -638,19 +639,19 @@ func TestFirepitEndToEnd(t *testing.T) {
 	t.Run("h_resolve_user_and_session_lifecycle", func(t *testing.T) {
 		resolved := mustRPC(t, ts, aToken, "social", "resolve-user",
 			csil.Handle(bProfile.Handle),
-			csil.EncodeSocialResolveUserRequest, csil.DecodeSocialResolveUserResponse)
+			csil.EncodeSocialResolveUserRequest, csil.DecodeUserProfile)
 		require.Equal(t, bProfile.Id, resolved.Id)
 		require.Equal(t, bProfile.Handle, resolved.Handle)
 
 		who := mustRPC(t, ts, aToken, "auth", "whoami",
-			csil.Empty{}, csil.EncodeAuthWhoamiRequest, csil.DecodeAuthWhoamiResponse)
+			csil.Empty{}, csil.EncodeEmpty, csil.DecodeUserProfile)
 		require.Equal(t, aProfile.Id, who.Id)
 
 		_ = mustRPC(t, ts, aToken, "auth", "logout",
-			csil.Empty{}, csil.EncodeAuthLogoutRequest, csil.DecodeAuthLogoutResponse)
+			csil.Empty{}, csil.EncodeEmpty, csil.DecodeEmpty)
 
 		_, svcErr := rpcCall(t, ts, aToken, "auth", "whoami",
-			csil.Empty{}, csil.EncodeAuthWhoamiRequest, csil.DecodeAuthWhoamiResponse)
+			csil.Empty{}, csil.EncodeEmpty, csil.DecodeUserProfile)
 		require.NotNil(t, svcErr, "the session must be gone after logout")
 		require.Equal(t, csilservices.CodeUnauthenticated, svcErr.Code)
 	})

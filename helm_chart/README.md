@@ -39,7 +39,7 @@ api container — no fallback, no chart-owned Postgres.
 ### 2. linkkeys RP API key — `linkkeys.pki.apiKey`
 
 There's no way to generate this ahead of time: it's minted **by the RP
-itself** the first time you run `linkkeys user create ... --api-key`
+itself** the first time you run `linkkeys user create ... --application-id firepit --relation api_access`
 against it (see the runbook below). Once minted, feed it back in as
 `linkkeys.pki.apiKey` via a values overlay or `--set-string` (never commit
 the real value) — the chart turns it into a key
@@ -134,15 +134,14 @@ Before enabling this, confirm:
 
    ```sh
    kubectl exec -n linkkeys-catalystsquad deploy/linkkeys-catalystsquad -- \
-     linkkeys user create firepit "Firepit Forum" --api-key
+     linkkeys user create firepit "Firepit Forum" --application-id firepit --relation api_access
    # store the printed key as catalystsquad/firepit:linkkeys_api_key in
    # the reactorcide vault (set-secrets.sh prompts for it)
    ```
 
-   LinkKeys 0.16.7+ shows the account display name (`"Firepit Forum"`) on
-   the consent screen. The account username (`firepit`) is the default
-   application ID for standing consent. It must be 1-128 of
-   `A-Z a-z 0-9 - _ .`. To use a different ID, set `linkkeys.applicationId`.
+   LinkKeys uses the application ID of the account that owns the API key.
+   The consent screen shows the account display name. If you previously used
+   `linkkeys.applicationId`, set that ID on the LinkKeys account before the upgrade.
 
    `.reactorcide/jobs/deploy.yaml` supplies it to the trusted deploy plugin from
    `${secret:catalystsquad/firepit:linkkeys_api_key}` on every
@@ -150,7 +149,7 @@ Before enabling this, confirm:
 
    *(Self-hosted variant — only when a deployment really does run its own
    RP with `linkkeysRp.enabled: true`: deploy once keyless, then
-   `linkkeys domain init` + `linkkeys user create ... --api-key` inside
+   `linkkeys domain init` + `linkkeys user create ... --application-id firepit --relation api_access` inside
    the RP pod, publish the domain's DNS TXT records per
    `linkkeys domain dns-check`, feed the key back in, and redeploy.)*
 

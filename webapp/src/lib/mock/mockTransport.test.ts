@@ -20,7 +20,7 @@ describe("mock transport", () => {
   });
 
   it("starts logged out: whoami rejects Unauthenticated", async () => {
-    await expect(api.auth.whoami({})).rejects.toMatchObject({ name: "FirepitServiceError", code: 3 });
+    await expect(api.auth.whoami({})).rejects.toMatchObject({ value: { code: 3 } });
   });
 
   it("begin-login logs the fixture user in; whoami then succeeds", async () => {
@@ -40,7 +40,7 @@ describe("mock transport", () => {
     const board = await api.board.getBoard("firepit");
     expect(board.title).toBe("Firepit Meta");
 
-    await expect(api.board.getBoard("does-not-exist")).rejects.toMatchObject({ resourceType: "board" });
+    await expect(api.board.getBoard("does-not-exist")).rejects.toMatchObject({ value: { resourceType: "board" } });
   });
 
   it("creates, updates, and deletes category configuration", async () => {
@@ -62,7 +62,7 @@ describe("mock transport", () => {
     expect((await api.category.listBoardCategories(boards.boards[1].id)).categories).toContainEqual(updated);
 
     await expect(api.category.deleteCategory({ id: created.id, removeFromPosts: false })).rejects.toMatchObject({
-      field: "removeFromPosts",
+      value: { field: "removeFromPosts" },
     });
     await api.category.deleteCategory({ id: created.id, removeFromPosts: true });
     expect((await api.category.listBoardCategories(boards.boards[0].id)).categories.some((item) => item.id === created.id)).toBe(false);
@@ -112,8 +112,7 @@ describe("mock transport", () => {
     const post = await api.thread.createPost({ boardId: board.id, title: "mine", bodyMd: "body" });
 
     await expect(api.endorsement.endorse({ targetType: "post", targetId: post.id })).rejects.toMatchObject({
-      name: "FirepitServiceError",
-      code: 4, // Forbidden
+      value: { code: 4 }, // Forbidden
     });
 
     const list = await api.endorsement.listEndorsements({ targetType: "post", targetId: post.id });
@@ -154,11 +153,10 @@ describe("mock transport", () => {
     expect(group.members).toEqual([]);
 
     await expect(api.social.addFriend({ groupId: group.id, userId: me.id })).rejects.toMatchObject({
-      name: "FirepitServiceError",
-      code: 2, // Validation — can't add yourself to your own friend group
+      value: { code: 2 }, // Validation — can't add yourself to your own friend group
     });
     await expect(api.social.addFriend({ groupId: group.id, userId: "no-such-user" })).rejects.toMatchObject({
-      resourceType: "user",
+      value: { resourceType: "user" },
     });
 
     await api.social.addFriend({ groupId: group.id, userId: seeded.groups[0].members[0] });

@@ -2,7 +2,7 @@
 import { createSignal, For, onMount, Show, type Component } from "solid-js";
 import type { MentionPolicy, UserSettings } from "~/gen/types.gen";
 import { api } from "~/lib/api";
-import { FirepitServiceError } from "~/lib/errors";
+import { ServiceErrorRefusal } from "~/lib/errors";
 
 interface PolicyOption {
   value: MentionPolicy;
@@ -49,7 +49,7 @@ const PreferencesSection: Component = () => {
   const [savingEndorse, setSavingEndorse] = createSignal(false);
 
   const describe = (err: unknown, fallback: string): string =>
-    err instanceof FirepitServiceError ? err.message : fallback;
+    err instanceof ServiceErrorRefusal ? err.value.message : fallback;
 
   onMount(async () => {
     try {

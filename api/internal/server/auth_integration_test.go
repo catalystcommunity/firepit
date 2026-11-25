@@ -119,7 +119,8 @@ func TestAuthLoginFlow(t *testing.T) {
 	// captured for this call (see mockRP.SignRequest).
 	beginLogin := func(t *testing.T) string {
 		t.Helper()
-		payload := csil.EncodeAuthBeginLoginRequest(csil.BeginLoginRequest{Domain: idpDomain})
+		payload, err := csil.EncodeBeginLoginRequest(csil.BeginLoginRequest{Domain: idpDomain})
+		require.NoError(t, err)
 		envelope, err := transport.NewRpcRequest("auth", "begin-login", payload).Encode()
 		require.NoError(t, err)
 
@@ -134,7 +135,7 @@ func TestAuthLoginFlow(t *testing.T) {
 		require.NoError(t, rpcResp.AsTransportError())
 		require.Equal(t, "BeginLoginResponse", *rpcResp.Variant)
 
-		beginResp, err := csil.DecodeAuthBeginLoginResponse(rpcResp.Payload)
+		beginResp, err := csil.DecodeBeginLoginResponse(rpcResp.Payload)
 		require.NoError(t, err)
 		require.Contains(t, beginResp.RedirectUrl, "https://idp.example/auth/authorize?signed_request=")
 
@@ -163,7 +164,8 @@ func TestAuthLoginFlow(t *testing.T) {
 	// token as the firepit_session cookie.
 	whoami := func(t *testing.T, rawSessionToken string) transport.RpcResponse {
 		t.Helper()
-		payload := csil.EncodeAuthWhoamiRequest(csil.Empty{})
+		payload, err := csil.EncodeEmpty(csil.Empty{})
+		require.NoError(t, err)
 		envelope, err := transport.NewRpcRequest("auth", "whoami", payload).Encode()
 		require.NoError(t, err)
 
@@ -211,7 +213,7 @@ func TestAuthLoginFlow(t *testing.T) {
 		rpcResp := whoami(t, rawToken)
 		require.NoError(t, rpcResp.AsTransportError())
 		require.Equal(t, "UserProfile", *rpcResp.Variant)
-		profile, err := csil.DecodeAuthWhoamiResponse(rpcResp.Payload)
+		profile, err := csil.DecodeUserProfile(rpcResp.Payload)
 		require.NoError(t, err)
 		require.Equal(t, idpDomain, profile.LinkkeysDomain)
 		require.Equal(t, "Ada Example", profile.DisplayName)

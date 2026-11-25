@@ -9,7 +9,7 @@ import { render, screen, waitFor } from "@solidjs/testing-library";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Board, Notification, Thread, UserProfile } from "~/gen/types.gen";
-import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
+import { ServiceErrorRefusal, ServiceErrorCode } from "~/lib/errors";
 import { SessionProvider } from "~/lib/session";
 
 const { whoami, listNotifications, markNotificationRead, markAllRead, getThread, listBoards } = vi.hoisted(() => ({
@@ -158,7 +158,7 @@ describe("NotificationsPage", () => {
 
   it("renders an inline ServiceError and doesn't crash when the inbox fails to load", async () => {
     listNotifications.mockRejectedValue(
-      new FirepitServiceError({ code: ServiceErrorCode.Internal, message: "the server is on fire" }),
+      new ServiceErrorRefusal({ code: ServiceErrorCode.Internal, message: "the server is on fire" }),
     );
 
     renderPage();

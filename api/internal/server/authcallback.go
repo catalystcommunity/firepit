@@ -67,7 +67,7 @@ func (s *Server) handleAuthCallback(w http.ResponseWriter, r *http.Request) {
 // verbatim; any other error is an unexpected internal failure whose detail
 // stays server-side-only (already logged by the caller), matching the same
 // "typed failures are opt-in, everything else is opaque" contract
-// api/internal/server/dispatch.go's routeFallible enforces for CSIL ops.
+// the dispatcher enforces for CSIL operations.
 func authCallbackErrorResponse(err error) (int, string) {
 	var appErr *csilservices.AppError
 	if errors.As(err, &appErr) {

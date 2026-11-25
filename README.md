@@ -52,6 +52,9 @@ the same CBOR CSIL-RPC wire.
 Run `./tools.sh help` for all commands. The list includes separate Go and web
 test and lint commands.
 
+To install the CLI and generators, run `./tools.sh install-all csilgen/v0.3.3` in a csilgen checkout.
+In Firepit, run `./tools.sh gen` after you edit `csil/`.
+
 ## Architecture, one page
 
 ```

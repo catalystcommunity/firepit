@@ -10,6 +10,9 @@ import (
 
 // ValidateBeginLoginRequest validates the BeginLoginRequest struct
 func (v *BeginLoginRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("BeginLoginRequest is nil")
+	}
 	if len(v.Domain) < 1 {
 		return fmt.Errorf("field 'Domain' must have at least 1 elements")
 	}
@@ -21,6 +24,9 @@ func (v *BeginLoginRequest) Validate() error {
 
 // ValidateBoard validates the Board struct
 func (v *Board) Validate() error {
+	if v == nil {
+		return fmt.Errorf("Board is nil")
+	}
 	if len(v.Slug) < 1 {
 		return fmt.Errorf("field 'Slug' must have at least 1 elements")
 	}
@@ -52,6 +58,9 @@ func (v *Board) Validate() error {
 
 // ValidateListBoardsRequest validates the ListBoardsRequest struct
 func (v *ListBoardsRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("ListBoardsRequest is nil")
+	}
 	if v.Limit != nil {
 		if (*v.Limit) > 200 {
 			return fmt.Errorf("field 'Limit' must be <= 200")
@@ -62,6 +71,9 @@ func (v *ListBoardsRequest) Validate() error {
 
 // ValidateCreateBoardRequest validates the CreateBoardRequest struct
 func (v *CreateBoardRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("CreateBoardRequest is nil")
+	}
 	if len(v.Slug) < 1 {
 		return fmt.Errorf("field 'Slug' must have at least 1 elements")
 	}
@@ -98,6 +110,9 @@ func (v *CreateBoardRequest) Validate() error {
 
 // ValidateUpdateBoardRequest validates the UpdateBoardRequest struct
 func (v *UpdateBoardRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("UpdateBoardRequest is nil")
+	}
 	if v.Title != nil {
 		if len((*v.Title)) < 1 {
 			return fmt.Errorf("field 'Title' must have at least 1 elements")
@@ -128,6 +143,9 @@ func (v *UpdateBoardRequest) Validate() error {
 
 // ValidatePost validates the Post struct
 func (v *Post) Validate() error {
+	if v == nil {
+		return fmt.Errorf("Post is nil")
+	}
 	if len(v.Title) < 1 {
 		return fmt.Errorf("field 'Title' must have at least 1 elements")
 	}
@@ -145,6 +163,9 @@ func (v *Post) Validate() error {
 
 // ValidateComment validates the Comment struct
 func (v *Comment) Validate() error {
+	if v == nil {
+		return fmt.Errorf("Comment is nil")
+	}
 	if len(v.BodyMd) < 1 {
 		return fmt.Errorf("field 'BodyMd' must have at least 1 elements")
 	}
@@ -156,6 +177,9 @@ func (v *Comment) Validate() error {
 
 // ValidateListPostsRequest validates the ListPostsRequest struct
 func (v *ListPostsRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("ListPostsRequest is nil")
+	}
 	if v.Limit != nil {
 		if (*v.Limit) > 200 {
 			return fmt.Errorf("field 'Limit' must be <= 200")
@@ -166,6 +190,9 @@ func (v *ListPostsRequest) Validate() error {
 
 // ValidateCreatePostRequest validates the CreatePostRequest struct
 func (v *CreatePostRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("CreatePostRequest is nil")
+	}
 	if len(v.Title) < 1 {
 		return fmt.Errorf("field 'Title' must have at least 1 elements")
 	}
@@ -183,6 +210,9 @@ func (v *CreatePostRequest) Validate() error {
 
 // ValidateCreateCommentRequest validates the CreateCommentRequest struct
 func (v *CreateCommentRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("CreateCommentRequest is nil")
+	}
 	if len(v.BodyMd) < 1 {
 		return fmt.Errorf("field 'BodyMd' must have at least 1 elements")
 	}
@@ -194,6 +224,9 @@ func (v *CreateCommentRequest) Validate() error {
 
 // ValidateEditPostRequest validates the EditPostRequest struct
 func (v *EditPostRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("EditPostRequest is nil")
+	}
 	if len(v.Title) < 1 {
 		return fmt.Errorf("field 'Title' must have at least 1 elements")
 	}
@@ -211,6 +244,9 @@ func (v *EditPostRequest) Validate() error {
 
 // ValidateEditCommentRequest validates the EditCommentRequest struct
 func (v *EditCommentRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("EditCommentRequest is nil")
+	}
 	if len(v.BodyMd) < 1 {
 		return fmt.Errorf("field 'BodyMd' must have at least 1 elements")
 	}
@@ -222,6 +258,9 @@ func (v *EditCommentRequest) Validate() error {
 
 // ValidateFriendGroup validates the FriendGroup struct
 func (v *FriendGroup) Validate() error {
+	if v == nil {
+		return fmt.Errorf("FriendGroup is nil")
+	}
 	if len(v.Name) < 1 {
 		return fmt.Errorf("field 'Name' must have at least 1 elements")
 	}
@@ -233,6 +272,9 @@ func (v *FriendGroup) Validate() error {
 
 // ValidateCreateFriendGroupRequest validates the CreateFriendGroupRequest struct
 func (v *CreateFriendGroupRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("CreateFriendGroupRequest is nil")
+	}
 	if len(v.Name) < 1 {
 		return fmt.Errorf("field 'Name' must have at least 1 elements")
 	}
@@ -244,6 +286,9 @@ func (v *CreateFriendGroupRequest) Validate() error {
 
 // ValidateListNotificationsRequest validates the ListNotificationsRequest struct
 func (v *ListNotificationsRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("ListNotificationsRequest is nil")
+	}
 	if v.Limit != nil {
 		if (*v.Limit) > 200 {
 			return fmt.Errorf("field 'Limit' must be <= 200")
@@ -254,6 +299,9 @@ func (v *ListNotificationsRequest) Validate() error {
 
 // ValidateGithubMapping validates the GithubMapping struct
 func (v *GithubMapping) Validate() error {
+	if v == nil {
+		return fmt.Errorf("GithubMapping is nil")
+	}
 	if len(v.Repo) < 3 {
 		return fmt.Errorf("field 'Repo' must have at least 3 elements")
 	}
@@ -269,6 +317,9 @@ func (v *GithubMapping) Validate() error {
 
 // ValidateCreateMappingRequest validates the CreateMappingRequest struct
 func (v *CreateMappingRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("CreateMappingRequest is nil")
+	}
 	if len(v.Repo) < 3 {
 		return fmt.Errorf("field 'Repo' must have at least 3 elements")
 	}
@@ -290,6 +341,9 @@ func (v *CreateMappingRequest) Validate() error {
 
 // ValidateDomainEntry validates the DomainEntry struct
 func (v *DomainEntry) Validate() error {
+	if v == nil {
+		return fmt.Errorf("DomainEntry is nil")
+	}
 	if len(v.Domain) < 1 {
 		return fmt.Errorf("field 'Domain' must have at least 1 elements")
 	}
@@ -301,6 +355,9 @@ func (v *DomainEntry) Validate() error {
 
 // ValidateCategory validates the Category struct
 func (v *Category) Validate() error {
+	if v == nil {
+		return fmt.Errorf("Category is nil")
+	}
 	if len(v.Slug) < 1 {
 		return fmt.Errorf("field 'Slug' must have at least 1 elements")
 	}
@@ -332,6 +389,9 @@ func (v *Category) Validate() error {
 
 // ValidateCreateCategoryRequest validates the CreateCategoryRequest struct
 func (v *CreateCategoryRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("CreateCategoryRequest is nil")
+	}
 	if len(v.Slug) < 1 {
 		return fmt.Errorf("field 'Slug' must have at least 1 elements")
 	}
@@ -363,6 +423,9 @@ func (v *CreateCategoryRequest) Validate() error {
 
 // ValidateUpdateCategoryRequest validates the UpdateCategoryRequest struct
 func (v *UpdateCategoryRequest) Validate() error {
+	if v == nil {
+		return fmt.Errorf("UpdateCategoryRequest is nil")
+	}
 	if v.Name != nil {
 		if len((*v.Name)) < 1 {
 			return fmt.Errorf("field 'Name' must have at least 1 elements")

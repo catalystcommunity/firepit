@@ -9,7 +9,7 @@ import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-lib
 import type { JSX } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Board, SubscriptionList, UserProfile } from "~/gen/types.gen";
-import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
+import { ServiceErrorRefusal, ServiceErrorCode } from "~/lib/errors";
 import type { UnreadPoller } from "~/lib/unread";
 
 const { whoami, listBoards, listSubscriptions, subscribe, unsubscribe } = vi.hoisted(() => ({
@@ -32,7 +32,7 @@ const { SessionProvider } = await import("~/lib/session");
 const { default: BoardIndexList } = await import("./BoardIndexList");
 
 const unauthenticated = () =>
-  Promise.reject(new FirepitServiceError({ code: ServiceErrorCode.Unauthenticated, message: "no active session" }));
+  Promise.reject(new ServiceErrorRefusal({ code: ServiceErrorCode.Unauthenticated, message: "no active session" }));
 
 const USER: UserProfile = {
   id: "u1",

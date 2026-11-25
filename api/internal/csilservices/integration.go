@@ -104,12 +104,8 @@ func (s *integrationService) CreateGithubMapping(ctx context.Context, req csil.C
 	return mappingToWire(*m), nil
 }
 
-// ListGithubMappings has no declared ServiceError arm (see dispatch.go's
-// routeInfallible and the csilservices package doc comment), so it can't
-// return a typed Forbidden to a non-admin caller. Per that doc comment's
-// own guidance ("an expected 'nothing to show' case is a normal empty-page
-// reply, not an error"), a non-admin caller here gets an empty list rather
-// than an opaque internal-error transport failure.
+// ListGithubMappings returns an empty list for callers without admin access.
+// The operation only declares a MappingList reply.
 func (s *integrationService) ListGithubMappings(ctx context.Context, req csil.Empty) (csil.MappingList, error) {
 	if _, aerr := requireAdmin(ctx); aerr != nil {
 		return csil.MappingList{}, nil

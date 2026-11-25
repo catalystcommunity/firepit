@@ -6,7 +6,7 @@ import { render, screen, waitFor } from "@solidjs/testing-library";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MentionGrantList, UserProfile } from "~/gen/types.gen";
-import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
+import { ServiceErrorRefusal, ServiceErrorCode } from "~/lib/errors";
 
 const { listMentionGrants, grantMention, revokeMention, resolveUser } = vi.hoisted(() => ({
   listMentionGrants: vi.fn(),
@@ -59,7 +59,7 @@ describe("MentionGrantsSection", () => {
   });
 
   it("an unresolvable handle shows an inline NotFound error and never calls grant-mention", async () => {
-    resolveUser.mockRejectedValue(new FirepitServiceError({ code: ServiceErrorCode.NotFound, message: 'no user with that handle' }));
+    resolveUser.mockRejectedValue(new ServiceErrorRefusal({ code: ServiceErrorCode.NotFound, message: 'no user with that handle' }));
     const user = userEvent.setup();
 
     render(() => <MentionGrantsSection />);
@@ -75,7 +75,7 @@ describe("MentionGrantsSection", () => {
 
   it("a failed grant (after a successful resolve) rolls back the optimistic row and shows the ServiceError", async () => {
     resolveUser.mockResolvedValue(CAROL_PROFILE);
-    grantMention.mockRejectedValue(new FirepitServiceError({ code: ServiceErrorCode.Conflict, message: "already granted" }));
+    grantMention.mockRejectedValue(new ServiceErrorRefusal({ code: ServiceErrorCode.Conflict, message: "already granted" }));
     const user = userEvent.setup();
 
     render(() => <MentionGrantsSection />);

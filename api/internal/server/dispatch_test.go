@@ -31,17 +31,17 @@ func testServices() Services {
 	}
 }
 
-// TestDispatchFallibleOpReturnsServiceError exercises the routeFallible path:
-// an op with a declared `/ ServiceError` arm whose implementation returns an
-// *AppError should return a typed ServiceError reply, not a transport error.
-// A zero-value config leaves auth/begin-login without a configured RP, which
-// provides a stable CodeInternal result.
+// A missing RP configuration makes begin-login return a declared service error.
 func TestDispatchFallibleOpReturnsServiceError(t *testing.T) {
 	routes := buildRoutes(testServices())
+	payload, err := csil.EncodeBeginLoginRequest(csil.BeginLoginRequest{Domain: "example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	req := &transport.RpcRequest{
-		Service: "auth",
+		Service: "AuthService",
 		Op:      "begin-login",
-		Payload: csil.EncodeBeginLoginRequest(csil.BeginLoginRequest{Domain: "example.com"}),
+		Payload: payload,
 	}
 
 	outcome := dispatch(context.Background(), routes, req)
@@ -75,18 +75,18 @@ func (failingNotificationService) MarkAllRead(context.Context, csil.Empty) (csil
 	return csil.Empty{}, context.DeadlineExceeded // any non-*AppError error
 }
 
-// TestDispatchInfallibleOpReturnsTransportError exercises the
-// routeInfallible path: an op with NO declared error arm whose
-// implementation returns an error has no typed channel to carry it, so it
-// must surface as a transport-level internal failure.
 func TestDispatchInfallibleOpReturnsTransportError(t *testing.T) {
 	svcs := testServices()
 	svcs.Notification = failingNotificationService{svcs.Notification}
 	routes := buildRoutes(svcs)
+	payload, err := csil.EncodeEmpty(csil.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	req := &transport.RpcRequest{
 		Service: "notification",
 		Op:      "mark-all-read",
-		Payload: csil.EncodeEmpty(csil.Empty{}),
+		Payload: payload,
 	}
 
 	outcome := dispatch(context.Background(), routes, req)
@@ -95,6 +95,21 @@ func TestDispatchInfallibleOpReturnsTransportError(t *testing.T) {
 	}
 	if outcome.Status != transport.StatusInternal {
 		t.Errorf("status = %v, want %v", outcome.Status, transport.StatusInternal)
+	}
+}
+
+// An unset user kind makes the generated encoder reject the profile.
+func TestResponseEncodeFailureReturnsInternalStatus(t *testing.T) {
+	handler := route(csil.DecodeEmpty, func(context.Context, csil.Empty) (csil.UserProfile, error) {
+		return csil.UserProfile{}, nil
+	}, fallible(csil.EncodeAuthWhoamiReply))
+	request, err := csil.EncodeEmpty(csil.Empty{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := handler(context.Background(), request)
+	if got.IsReply || got.Status != transport.StatusInternal || got.Message != "internal error" {
+		t.Fatalf("unexpected outcome for an invalid profile: %+v", got)
 	}
 }
 

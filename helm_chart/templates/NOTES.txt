@@ -16,7 +16,7 @@ linkkeys-rp (this release's own RP instance):
   If this is the FIRST install, the RP has no domain keys or API-key users
   yet — login will fail until you run the one-time init runbook in
   helm_chart/README.md ("First deploy" section): `linkkeys domain init`
-  inside the pod, then `linkkeys user create ... --api-key` and feed the
+  inside the pod, then `linkkeys user create ... --application-id firepit --relation api_access` and feed the
   printed key back in as linkkeys.pki.apiKey (a values overlay/
   `--set-string`, re-run `helm upgrade`).
 {{- end }}

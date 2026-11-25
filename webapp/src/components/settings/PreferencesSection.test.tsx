@@ -4,7 +4,7 @@ import { render, screen, waitFor } from "@solidjs/testing-library";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { UserSettings } from "~/gen/types.gen";
-import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
+import { ServiceErrorRefusal, ServiceErrorCode } from "~/lib/errors";
 
 const { getSettings, updateSettings } = vi.hoisted(() => ({
   getSettings: vi.fn(),
@@ -43,7 +43,7 @@ describe("PreferencesSection", () => {
   });
 
   it("rolls back the radio selection and shows an inline error when the update fails", async () => {
-    updateSettings.mockRejectedValue(new FirepitServiceError({ code: ServiceErrorCode.Validation, message: "nope, try again" }));
+    updateSettings.mockRejectedValue(new ServiceErrorRefusal({ code: ServiceErrorCode.Validation, message: "nope, try again" }));
     const user = userEvent.setup();
 
     render(() => <PreferencesSection />);

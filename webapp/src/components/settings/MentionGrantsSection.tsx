@@ -8,7 +8,7 @@
 import { createSignal, For, onMount, Show, type Component } from "solid-js";
 import type { MentionGrant } from "~/gen/types.gen";
 import { api } from "~/lib/api";
-import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
+import { ServiceErrorRefusal, ServiceErrorCode } from "~/lib/errors";
 
 const MentionGrantsSection: Component = () => {
   const [grants, setGrants] = createSignal<MentionGrant[]>([]);
@@ -19,7 +19,7 @@ const MentionGrantsSection: Component = () => {
   const [revokingId, setRevokingId] = createSignal<string | null>(null);
 
   const describe = (err: unknown, fallback: string): string =>
-    err instanceof FirepitServiceError ? err.message : fallback;
+    err instanceof ServiceErrorRefusal ? err.value.message : fallback;
 
   const load = async (): Promise<void> => {
     try {
@@ -53,7 +53,7 @@ const MentionGrantsSection: Component = () => {
       }
     } catch (err) {
       setError(
-        err instanceof FirepitServiceError && err.code === ServiceErrorCode.NotFound
+        err instanceof ServiceErrorRefusal && err.value.code === ServiceErrorCode.NotFound
           ? `No user found with handle "${typed}".`
           : describe(err, "Couldn't look up that handle."),
       );

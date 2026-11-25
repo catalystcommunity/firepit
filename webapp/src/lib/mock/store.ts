@@ -38,7 +38,7 @@ import type {
   UserProfile,
   UserSettings,
 } from "~/gen/types.gen";
-import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
+import { ServiceErrorRefusal, ServiceErrorCode } from "~/lib/errors";
 import { createSeed, MOCK_USER_ID, OTHER_USER_IDS, OTHER_USERS, type Seed } from "./fixtures";
 
 // The mock's entire "does this user exist" universe: the caller
@@ -50,7 +50,7 @@ import { createSeed, MOCK_USER_ID, OTHER_USER_IDS, OTHER_USERS, type Seed } from
 const KNOWN_USER_IDS = new Set<string>([MOCK_USER_ID, ...OTHER_USER_IDS]);
 
 function serviceError(code: number, message: string, extra: { field?: string; resourceType?: string } = {}) {
-  return new FirepitServiceError({ code, message, ...extra });
+  return new ServiceErrorRefusal({ code, message, ...extra });
 }
 
 const notFound = (resourceType: string, message: string) =>

@@ -8,7 +8,7 @@ import { A } from "@solidjs/router";
 import { createSignal, Show, type Component } from "solid-js";
 import type { Subscription, TargetType } from "~/gen/types.gen";
 import { api } from "~/lib/api";
-import { FirepitServiceError } from "~/lib/errors";
+import { ServiceErrorRefusal } from "~/lib/errors";
 import { useSession } from "~/lib/session";
 import "./board-list.css";
 
@@ -40,7 +40,7 @@ const SubscribeToggle: Component<SubscribeToggleProps> = (props) => {
         props.onChange(sub);
       }
     } catch (err) {
-      setError(err instanceof FirepitServiceError ? err.message : "Couldn't update subscription.");
+      setError(err instanceof ServiceErrorRefusal ? err.value.message : "Couldn't update subscription.");
     } finally {
       setPending(false);
     }
@@ -58,7 +58,7 @@ const SubscribeToggle: Component<SubscribeToggleProps> = (props) => {
       });
       props.onChange(next);
     } catch (err) {
-      setError(err instanceof FirepitServiceError ? err.message : "Couldn't update mute.");
+      setError(err instanceof ServiceErrorRefusal ? err.value.message : "Couldn't update mute.");
     } finally {
       setPending(false);
     }

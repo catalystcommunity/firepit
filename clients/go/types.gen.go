@@ -40,8 +40,13 @@ type MappingID string
 // PageCursor is a type alias
 type PageCursor string
 
-// TargetType is a type alias
 type TargetType string
+
+const (
+	TargetTypeBoard   TargetType = "board"
+	TargetTypePost    TargetType = "post"
+	TargetTypeComment TargetType = "comment"
+)
 
 // TargetRef represents a structured data type
 type TargetRef struct {
@@ -49,8 +54,13 @@ type TargetRef struct {
 	TargetId   string     `json:"target_id" yaml:"target_id"`
 }
 
-// OriginKind is a type alias
 type OriginKind string
+
+const (
+	OriginKindUser   OriginKind = "user"
+	OriginKindGithub OriginKind = "github"
+	OriginKindSystem OriginKind = "system"
+)
 
 // Empty represents a structured data type
 type Empty struct {
@@ -64,8 +74,12 @@ type ServiceError struct {
 	ResourceType *string `json:"resource_type,omitempty" yaml:"resource_type,omitempty"`
 }
 
-// UserKind is a type alias
 type UserKind string
+
+const (
+	UserKindHuman  UserKind = "human"
+	UserKindSystem UserKind = "system"
+)
 
 // BeginLoginRequest represents a structured data type
 type BeginLoginRequest struct {
@@ -79,35 +93,54 @@ type BeginLoginResponse struct {
 
 // UserProfile represents a structured data type
 type UserProfile struct {
-	Id             UserID    `json:"id" yaml:"id"`
-	LinkkeysDomain string    `json:"linkkeys_domain" yaml:"linkkeys_domain"`
-	Handle         string    `json:"handle" yaml:"handle"`
-	DisplayName    string    `json:"display_name" yaml:"display_name"`
-	Kind           UserKind  `json:"kind" yaml:"kind"`
-	Roles          []string  `json:"roles" yaml:"roles"`
-	CreatedAt      time.Time `json:"created_at" yaml:"created_at"`
+	// receive-only
+	Id UserID `json:"id" yaml:"id"`
+	// receive-only
+	LinkkeysDomain string `json:"linkkeys_domain" yaml:"linkkeys_domain"`
+	// receive-only
+	Handle string `json:"handle" yaml:"handle"`
+	// receive-only
+	DisplayName string `json:"display_name" yaml:"display_name"`
+	// receive-only
+	Kind UserKind `json:"kind" yaml:"kind"`
+	// receive-only
+	Roles []string `json:"roles" yaml:"roles"`
+	// receive-only
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
-// BoardKind is a type alias
 type BoardKind string
 
-// BoardRole is a type alias
+const (
+	BoardKindDiscussion BoardKind = "discussion"
+	BoardKindAnnounce   BoardKind = "announce"
+)
+
 type BoardRole string
+
+const (
+	BoardRoleMaintainer BoardRole = "maintainer"
+	BoardRoleModerator  BoardRole = "moderator"
+)
 
 // BoardSlug is a type alias
 type BoardSlug string
 
 // Board represents a structured data type
 type Board struct {
-	Id            BoardID    `json:"id" yaml:"id"`
-	Slug          string     `json:"slug" yaml:"slug"`
-	Title         string     `json:"title" yaml:"title"`
-	Description   *string    `json:"description,omitempty" yaml:"description,omitempty"`
-	Kind          BoardKind  `json:"kind" yaml:"kind"`
-	CategoryLimit uint64     `json:"category_limit" yaml:"category_limit"`
-	CreatedBy     UserID     `json:"created_by" yaml:"created_by"`
-	ArchivedAt    *time.Time `json:"archived_at,omitempty" yaml:"archived_at,omitempty"`
-	CreatedAt     time.Time  `json:"created_at" yaml:"created_at"`
+	// receive-only
+	Id            BoardID   `json:"id" yaml:"id"`
+	Slug          string    `json:"slug" yaml:"slug"`
+	Title         string    `json:"title" yaml:"title"`
+	Description   *string   `json:"description,omitempty" yaml:"description,omitempty"`
+	Kind          BoardKind `json:"kind" yaml:"kind"`
+	CategoryLimit uint64    `json:"category_limit" yaml:"category_limit"`
+	// receive-only
+	CreatedBy UserID `json:"created_by" yaml:"created_by"`
+	// receive-only
+	ArchivedAt *time.Time `json:"archived_at,omitempty" yaml:"archived_at,omitempty"`
+	// receive-only
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
 // ListBoardsRequest represents a structured data type
@@ -154,35 +187,54 @@ type RemoveBoardMemberRequest struct {
 
 // Post represents a structured data type
 type Post struct {
-	Id             PostID       `json:"id" yaml:"id"`
-	BoardId        BoardID      `json:"board_id" yaml:"board_id"`
-	CategoryIds    []CategoryID `json:"category_ids" yaml:"category_ids"`
-	AuthorId       UserID       `json:"author_id" yaml:"author_id"`
-	AuthorHandle   *string      `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
-	Title          string       `json:"title" yaml:"title"`
-	BodyMd         string       `json:"body_md" yaml:"body_md"`
-	Origin         OriginKind   `json:"origin" yaml:"origin"`
-	OriginRef      *string      `json:"origin_ref,omitempty" yaml:"origin_ref,omitempty"`
-	CommentCount   uint64       `json:"comment_count" yaml:"comment_count"`
-	LastActivityAt time.Time    `json:"last_activity_at" yaml:"last_activity_at"`
-	EditedAt       *time.Time   `json:"edited_at,omitempty" yaml:"edited_at,omitempty"`
-	DeletedAt      *time.Time   `json:"deleted_at,omitempty" yaml:"deleted_at,omitempty"`
-	CreatedAt      time.Time    `json:"created_at" yaml:"created_at"`
+	// receive-only
+	Id          PostID       `json:"id" yaml:"id"`
+	BoardId     BoardID      `json:"board_id" yaml:"board_id"`
+	CategoryIds []CategoryID `json:"category_ids" yaml:"category_ids"`
+	// receive-only
+	AuthorId UserID `json:"author_id" yaml:"author_id"`
+	// receive-only
+	AuthorHandle *string `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
+	Title        string  `json:"title" yaml:"title"`
+	BodyMd       string  `json:"body_md" yaml:"body_md"`
+	// receive-only
+	Origin OriginKind `json:"origin" yaml:"origin"`
+	// receive-only
+	OriginRef *string `json:"origin_ref,omitempty" yaml:"origin_ref,omitempty"`
+	// receive-only
+	CommentCount uint64 `json:"comment_count" yaml:"comment_count"`
+	// receive-only
+	LastActivityAt time.Time `json:"last_activity_at" yaml:"last_activity_at"`
+	// receive-only
+	EditedAt *time.Time `json:"edited_at,omitempty" yaml:"edited_at,omitempty"`
+	// receive-only
+	DeletedAt *time.Time `json:"deleted_at,omitempty" yaml:"deleted_at,omitempty"`
+	// receive-only
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
 // Comment represents a structured data type
 type Comment struct {
-	Id              CommentID  `json:"id" yaml:"id"`
-	PostId          PostID     `json:"post_id" yaml:"post_id"`
+	// receive-only
+	Id     CommentID `json:"id" yaml:"id"`
+	PostId PostID    `json:"post_id" yaml:"post_id"`
+	// receive-only
 	ParentCommentId *CommentID `json:"parent_comment_id,omitempty" yaml:"parent_comment_id,omitempty"`
-	AuthorId        UserID     `json:"author_id" yaml:"author_id"`
-	AuthorHandle    *string    `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
-	BodyMd          string     `json:"body_md" yaml:"body_md"`
-	Origin          OriginKind `json:"origin" yaml:"origin"`
-	OriginRef       *string    `json:"origin_ref,omitempty" yaml:"origin_ref,omitempty"`
-	EditedAt        *time.Time `json:"edited_at,omitempty" yaml:"edited_at,omitempty"`
-	DeletedAt       *time.Time `json:"deleted_at,omitempty" yaml:"deleted_at,omitempty"`
-	CreatedAt       time.Time  `json:"created_at" yaml:"created_at"`
+	// receive-only
+	AuthorId UserID `json:"author_id" yaml:"author_id"`
+	// receive-only
+	AuthorHandle *string `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
+	BodyMd       string  `json:"body_md" yaml:"body_md"`
+	// receive-only
+	Origin OriginKind `json:"origin" yaml:"origin"`
+	// receive-only
+	OriginRef *string `json:"origin_ref,omitempty" yaml:"origin_ref,omitempty"`
+	// receive-only
+	EditedAt *time.Time `json:"edited_at,omitempty" yaml:"edited_at,omitempty"`
+	// receive-only
+	DeletedAt *time.Time `json:"deleted_at,omitempty" yaml:"deleted_at,omitempty"`
+	// receive-only
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
 // ListPostsRequest represents a structured data type
@@ -242,13 +294,18 @@ type EditCommentRequest struct {
 
 // Revision represents a structured data type
 type Revision struct {
+	// receive-only
 	Id         RevisionID `json:"id" yaml:"id"`
 	TargetType TargetType `json:"target_type" yaml:"target_type"`
 	TargetId   string     `json:"target_id" yaml:"target_id"`
-	EditorId   UserID     `json:"editor_id" yaml:"editor_id"`
-	PrevTitle  *string    `json:"prev_title,omitempty" yaml:"prev_title,omitempty"`
-	PrevBodyMd string     `json:"prev_body_md" yaml:"prev_body_md"`
-	CreatedAt  time.Time  `json:"created_at" yaml:"created_at"`
+	// receive-only
+	EditorId UserID `json:"editor_id" yaml:"editor_id"`
+	// receive-only
+	PrevTitle *string `json:"prev_title,omitempty" yaml:"prev_title,omitempty"`
+	// receive-only
+	PrevBodyMd string `json:"prev_body_md" yaml:"prev_body_md"`
+	// receive-only
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
 // RevisionList represents a structured data type
@@ -264,13 +321,18 @@ type EndorseRequest struct {
 
 // Endorsement represents a structured data type
 type Endorsement struct {
-	Id           EndorsementID `json:"id" yaml:"id"`
-	UserId       UserID        `json:"user_id" yaml:"user_id"`
-	AuthorHandle *string       `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
-	TargetType   TargetType    `json:"target_type" yaml:"target_type"`
-	TargetId     string        `json:"target_id" yaml:"target_id"`
-	RoleBadge    *string       `json:"role_badge,omitempty" yaml:"role_badge,omitempty"`
-	CreatedAt    time.Time     `json:"created_at" yaml:"created_at"`
+	// receive-only
+	Id EndorsementID `json:"id" yaml:"id"`
+	// receive-only
+	UserId UserID `json:"user_id" yaml:"user_id"`
+	// receive-only
+	AuthorHandle *string    `json:"author_handle,omitempty" yaml:"author_handle,omitempty"`
+	TargetType   TargetType `json:"target_type" yaml:"target_type"`
+	TargetId     string     `json:"target_id" yaml:"target_id"`
+	// receive-only
+	RoleBadge *string `json:"role_badge,omitempty" yaml:"role_badge,omitempty"`
+	// receive-only
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
 // EndorsementList represents a structured data type
@@ -278,14 +340,21 @@ type EndorsementList struct {
 	Endorsements []Endorsement `json:"endorsements" yaml:"endorsements"`
 }
 
-// MentionPolicy is a type alias
 type MentionPolicy string
+
+const (
+	MentionPolicySubscribed MentionPolicy = "subscribed"
+	MentionPolicyEveryone   MentionPolicy = "everyone"
+	MentionPolicyAuthorized MentionPolicy = "authorized"
+	MentionPolicyNobody     MentionPolicy = "nobody"
+)
 
 // UserSettings represents a structured data type
 type UserSettings struct {
 	MentionPolicy   MentionPolicy `json:"mention_policy" yaml:"mention_policy"`
 	NotifyOnEndorse bool          `json:"notify_on_endorse" yaml:"notify_on_endorse"`
-	UpdatedAt       *time.Time    `json:"updated_at,omitempty" yaml:"updated_at,omitempty"`
+	// receive-only
+	UpdatedAt *time.Time `json:"updated_at,omitempty" yaml:"updated_at,omitempty"`
 }
 
 // UpdateSettingsRequest represents a structured data type
@@ -296,7 +365,8 @@ type UpdateSettingsRequest struct {
 
 // MentionGrant represents a structured data type
 type MentionGrant struct {
-	UserId    UserID    `json:"user_id" yaml:"user_id"`
+	UserId UserID `json:"user_id" yaml:"user_id"`
+	// receive-only
 	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
@@ -310,9 +380,12 @@ type Handle string
 
 // FriendGroup represents a structured data type
 type FriendGroup struct {
-	Id        GroupID   `json:"id" yaml:"id"`
-	Name      string    `json:"name" yaml:"name"`
-	Members   []UserID  `json:"members" yaml:"members"`
+	// receive-only
+	Id   GroupID `json:"id" yaml:"id"`
+	Name string  `json:"name" yaml:"name"`
+	// receive-only
+	Members []UserID `json:"members" yaml:"members"`
+	// receive-only
 	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
@@ -340,11 +413,13 @@ type RemoveFriendRequest struct {
 
 // Subscription represents a structured data type
 type Subscription struct {
+	// receive-only
 	Id         SubscriptionID `json:"id" yaml:"id"`
 	TargetType TargetType     `json:"target_type" yaml:"target_type"`
 	TargetId   string         `json:"target_id" yaml:"target_id"`
 	Muted      bool           `json:"muted" yaml:"muted"`
-	CreatedAt  time.Time      `json:"created_at" yaml:"created_at"`
+	// receive-only
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
 // SetMutedRequest represents a structured data type
@@ -371,21 +446,38 @@ type UnreadSummary struct {
 	Boards []BoardUnread `json:"boards" yaml:"boards"`
 }
 
-// NotificationEvent is a type alias
 type NotificationEvent string
+
+const (
+	NotificationEventNewPost     NotificationEvent = "new_post"
+	NotificationEventNewComment  NotificationEvent = "new_comment"
+	NotificationEventMention     NotificationEvent = "mention"
+	NotificationEventGithubEvent NotificationEvent = "github_event"
+	NotificationEventEndorsed    NotificationEvent = "endorsed"
+)
 
 // Notification represents a structured data type
 type Notification struct {
-	Id               NotificationID    `json:"id" yaml:"id"`
-	Event            NotificationEvent `json:"event" yaml:"event"`
-	ActorId          *UserID           `json:"actor_id,omitempty" yaml:"actor_id,omitempty"`
-	ActorHandle      *string           `json:"actor_handle,omitempty" yaml:"actor_handle,omitempty"`
-	ActorDisplayName *string           `json:"actor_display_name,omitempty" yaml:"actor_display_name,omitempty"`
-	TargetType       TargetType        `json:"target_type" yaml:"target_type"`
-	TargetId         string            `json:"target_id" yaml:"target_id"`
-	PostId           PostID            `json:"post_id" yaml:"post_id"`
-	ReadAt           *time.Time        `json:"read_at,omitempty" yaml:"read_at,omitempty"`
-	CreatedAt        time.Time         `json:"created_at" yaml:"created_at"`
+	// receive-only
+	Id NotificationID `json:"id" yaml:"id"`
+	// receive-only
+	Event NotificationEvent `json:"event" yaml:"event"`
+	// receive-only
+	ActorId *UserID `json:"actor_id,omitempty" yaml:"actor_id,omitempty"`
+	// receive-only
+	ActorHandle *string `json:"actor_handle,omitempty" yaml:"actor_handle,omitempty"`
+	// receive-only
+	ActorDisplayName *string `json:"actor_display_name,omitempty" yaml:"actor_display_name,omitempty"`
+	// receive-only
+	TargetType TargetType `json:"target_type" yaml:"target_type"`
+	// receive-only
+	TargetId string `json:"target_id" yaml:"target_id"`
+	// receive-only
+	PostId PostID `json:"post_id" yaml:"post_id"`
+	// receive-only
+	ReadAt *time.Time `json:"read_at,omitempty" yaml:"read_at,omitempty"`
+	// receive-only
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
 // ListNotificationsRequest represents a structured data type
@@ -404,18 +496,26 @@ type NotificationPage struct {
 // NotificationIDs is a type alias
 type NotificationIDs []NotificationID
 
-// ThreadMode is a type alias
 type ThreadMode string
+
+const (
+	ThreadModePostPerIssue       ThreadMode = "post_per_issue"
+	ThreadModePostPerRelease     ThreadMode = "post_per_release"
+	ThreadModePostPerPullRequest ThreadMode = "post_per_pull_request"
+)
 
 // GithubMapping represents a structured data type
 type GithubMapping struct {
+	// receive-only
 	Id         MappingID  `json:"id" yaml:"id"`
 	BoardId    BoardID    `json:"board_id" yaml:"board_id"`
 	Repo       string     `json:"repo" yaml:"repo"`
 	Events     []string   `json:"events" yaml:"events"`
 	ThreadMode ThreadMode `json:"thread_mode" yaml:"thread_mode"`
-	CreatedBy  UserID     `json:"created_by" yaml:"created_by"`
-	CreatedAt  time.Time  `json:"created_at" yaml:"created_at"`
+	// receive-only
+	CreatedBy UserID `json:"created_by" yaml:"created_by"`
+	// receive-only
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
 // CreateMappingRequest represents a structured data type
@@ -437,8 +537,10 @@ type Domain string
 
 // DomainEntry represents a structured data type
 type DomainEntry struct {
-	Domain    string    `json:"domain" yaml:"domain"`
-	AddedBy   UserID    `json:"added_by" yaml:"added_by"`
+	Domain string `json:"domain" yaml:"domain"`
+	// receive-only
+	AddedBy UserID `json:"added_by" yaml:"added_by"`
+	// receive-only
 	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
@@ -452,13 +554,15 @@ type CategoryID string
 
 // Category represents a structured data type
 type Category struct {
+	// receive-only
 	Id                CategoryID `json:"id" yaml:"id"`
 	Slug              string     `json:"slug" yaml:"slug"`
 	Name              string     `json:"name" yaml:"name"`
 	Description       *string    `json:"description,omitempty" yaml:"description,omitempty"`
 	CrossBoardPosting bool       `json:"cross_board_posting" yaml:"cross_board_posting"`
 	BoardIds          []BoardID  `json:"board_ids" yaml:"board_ids"`
-	CreatedAt         time.Time  `json:"created_at" yaml:"created_at"`
+	// receive-only
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
 }
 
 // CategoryList represents a structured data type

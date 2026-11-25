@@ -1,3 +1,4 @@
+import { errorMessage } from "~/lib/errors";
 // Replies and edits share this component so that preview, mention, and error
 // behavior stays consistent. The caller owns authorization and submission.
 import { createMemo, createSignal, Show, type Component } from "solid-js";
@@ -73,7 +74,7 @@ const Composer: Component<ComposerProps> = (props) => {
     try {
       await props.onSubmit({ title: props.showTitle ? title().trim() : undefined, bodyMd: body().trim() });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errorMessage(err));
     } finally {
       setSubmitting(false);
     }

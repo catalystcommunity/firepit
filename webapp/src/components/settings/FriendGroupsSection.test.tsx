@@ -6,7 +6,7 @@ import { render, screen, waitFor, within } from "@solidjs/testing-library";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FriendGroup, FriendGroupList, UserProfile } from "~/gen/types.gen";
-import { FirepitServiceError, ServiceErrorCode } from "~/lib/errors";
+import { ServiceErrorRefusal, ServiceErrorCode } from "~/lib/errors";
 
 const { listFriendGroups, createFriendGroup, deleteFriendGroup, addFriend, removeFriend, resolveUser } = vi.hoisted(() => ({
   listFriendGroups: vi.fn(),
@@ -82,7 +82,7 @@ describe("FriendGroupsSection", () => {
   });
 
   it("an unresolvable handle shows an inline NotFound error and never calls add-friend", async () => {
-    resolveUser.mockRejectedValue(new FirepitServiceError({ code: ServiceErrorCode.NotFound, message: "no user with that handle" }));
+    resolveUser.mockRejectedValue(new ServiceErrorRefusal({ code: ServiceErrorCode.NotFound, message: "no user with that handle" }));
     const user = userEvent.setup();
 
     render(() => <FriendGroupsSection />);

@@ -36,7 +36,7 @@ image:
   linkkeysRp:
     repository: containers.catalystsquad.com/public/catalystcommunity/linkkeys
     pullPolicy: IfNotPresent
-    tag: "0.16.7"
+    tag: "0.16.11"
 
 # Pulled from containers.catalystsquad.com — a private registry, so a
 # regcred-style docker-registry Secret is required in the release
@@ -113,18 +113,10 @@ linkkeys:
   # at linkkeys.catalystsquad.com instead.
   idpDomain: ""
   idpUrl: ""
-  transport: "http" # "http" (the RP's HTTPS PKI endpoint) or "tcp" (CSIL-RPC/TLS)
+  transport: "tcp" # Use "http" only with a legacy JSON PKI adapter.
   tcpAddr: ""
   tcpFingerprints: ""
   tcpAllowInsecure: false
-  # RpSignRequest.application_id (LinkKeys 0.16.7+, tcp transport only).
-  # LinkKeys keys standing consent by (user, RP domain, application) and
-  # shows the API-key account display name on the consent screen. Empty:
-  # the RP uses the API-key account username (for example `firepit`).
-  # Set it when the username is not 1-128 of A-Z a-z 0-9 - _ . (sign-request
-  # then fails), or to match an act-as ApplicationRef. A change makes every
-  # user consent again.
-  applicationId: ""
   pki:
     # RP sign-request/decrypt-token/verify-assertion/userinfo endpoint.
     # Leave blank when linkkeysRp.enabled is true to use this chart's own
@@ -135,7 +127,7 @@ linkkeys:
     allowInvalidCerts: false
     # Bearer API key firepit-api authenticates to the RP with. There is no
     # way to generate this ahead of time — it's minted BY the RP itself via
-    # `linkkeys user create <name> --api-key` after the RP's first boot
+    # `linkkeys user create <name> --application-id firepit --relation api_access` after the RP's first boot
     # (see helm_chart/README.md's first-deploy runbook). Supplied via a
     # values overlay/`--set-string` at deploy time — reactorcide's
     # deploy.yaml sources it from `${secret:catalystsquad/firepit:...}`

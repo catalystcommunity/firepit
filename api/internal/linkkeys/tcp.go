@@ -55,11 +55,8 @@ type TCPConfig struct {
 	Addr         string   // optional host:port override (else DNS-discovered)
 	Fingerprints []string // optional pinned SPKI sha256 hex (else DNS-discovered)
 	Insecure     bool     // dev only: skip server-cert fingerprint pinning
-	// ApplicationID is the optional RpSignRequest.application_id. Empty:
-	// the RP uses the API-key account username as the application ID.
-	ApplicationID string
-	DialTimeout   time.Duration
-	IOTimeout     time.Duration
+	DialTimeout  time.Duration
+	IOTimeout    time.Duration
 }
 
 // TCPClient speaks CSIL-RPC to linkkeys' Rp service over TCP+TLS. It is safe
@@ -74,7 +71,6 @@ type TCPClient struct {
 	insecure     bool
 	apiBase      string
 	domain       string
-	appID        string
 	dialTimeout  time.Duration
 	ioTimeout    time.Duration
 }
@@ -168,28 +164,22 @@ func NewTCPClient(cfg TCPConfig) (*TCPClient, error) {
 		insecure:     cfg.Insecure,
 		apiBase:      cfg.APIBase,
 		domain:       cfg.Domain,
-		appID:        strings.TrimSpace(cfg.ApplicationID),
 		dialTimeout:  dialTimeout,
 		ioTimeout:    ioTimeout,
 	}, nil
 }
 
 // SignRequest asks the RP to sign an AuthRequest bound to callbackURL + nonce.
-// Since LinkKeys 0.16.7 the RP names the calling application in the signed
-// request (API-key account, RP domain, application_id). The IDP shows the
-// account display name on the consent screen and keys standing consent by
-// that application. application_id is omitted when not configured, so the RP
-// uses the account username.
+// LinkKeys takes the application identity from the authenticated account.
 func (c *TCPClient) SignRequest(callbackURL, nonce string) (string, error) {
 	var out struct {
 		SignedRequest string `cbor:"signed_request"`
 	}
 	in := struct {
-		CallbackURL   string `cbor:"callback_url"`
-		Nonce         string `cbor:"nonce"`
-		ApplicationID string `cbor:"application_id,omitempty"`
-	}{callbackURL, nonce, c.appID}
-	if err := c.call(opSignRequest, in, &out); err != nil {
+		CallbackURL string `cbor:"callback_url"`
+		Nonce       string `cbor:"nonce"`
+	}{callbackURL, nonce}
+	if err := c.call(opSignRequest, "RpSignResponse", in, &out); err != nil {
 		return "", err
 	}
 	return out.SignedRequest, nil
@@ -204,7 +194,7 @@ func (c *TCPClient) DecryptToken(encryptedToken string) (string, error) {
 	in := struct {
 		EncryptedToken string `cbor:"encrypted_token"`
 	}{encryptedToken}
-	if err := c.call(opDecryptTok, in, &out); err != nil {
+	if err := c.call(opDecryptTok, "RpDecryptResponse", in, &out); err != nil {
 		return "", err
 	}
 	return out.SignedAssertion, nil
@@ -221,7 +211,7 @@ func (c *TCPClient) VerifyAssertion(signedAssertion, expectedDomain string) (*As
 		SignedAssertion string `cbor:"signed_assertion"`
 		ExpectedDomain  string `cbor:"expected_domain"`
 	}{signedAssertion, expectedDomain}
-	if err := c.call(opVerifyAsrt, in, &out); err != nil {
+	if err := c.call(opVerifyAsrt, "RpVerifyResponse", in, &out); err != nil {
 		return nil, err
 	}
 	if !out.Verified {
@@ -245,7 +235,7 @@ func (c *TCPClient) FetchUserInfo(token, domain string) (*UserInfo, error) {
 		APIBase string `cbor:"api_base"`
 		Domain  string `cbor:"domain"`
 	}{token, c.apiBase, domain}
-	if err := c.call(opUserInfo, in, &out); err != nil {
+	if err := c.call(opUserInfo, "UserInfo", in, &out); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -253,7 +243,7 @@ func (c *TCPClient) FetchUserInfo(token, domain string) (*UserInfo, error) {
 
 // call marshals reqBody, runs one Rp/<op> round-trip over a fresh TLS
 // connection, and unmarshals the typed reply into respBody.
-func (c *TCPClient) call(op string, reqBody, respBody any) error {
+func (c *TCPClient) call(op, successVariant string, reqBody, respBody any) error {
 	payload, err := cbor.Marshal(reqBody)
 	if err != nil {
 		return fmt.Errorf("linkkeys tcp: encode %s/%s: %w", rpService, op, err)
@@ -282,10 +272,25 @@ func (c *TCPClient) call(op string, reqBody, respBody any) error {
 	if err != nil {
 		return fmt.Errorf("linkkeys tcp: %s/%s: %w", rpService, op, err)
 	}
-	if respBody != nil {
+	if resp.Variant == nil {
+		return fmt.Errorf("linkkeys tcp: %s/%s: missing reply variant", rpService, op)
+	}
+	switch *resp.Variant {
+	case "RpError":
+		var refusal struct {
+			Code    uint64 `cbor:"code"`
+			Message string `cbor:"message"`
+		}
+		if err := cbor.Unmarshal(resp.Payload, &refusal); err != nil {
+			return fmt.Errorf("linkkeys tcp: decode %s/%s RpError: %w", rpService, op, err)
+		}
+		return fmt.Errorf("linkkeys tcp: %s/%s: RP error %d: %s", rpService, op, refusal.Code, refusal.Message)
+	case successVariant:
 		if err := cbor.Unmarshal(resp.Payload, respBody); err != nil {
 			return fmt.Errorf("linkkeys tcp: decode %s/%s reply: %w", rpService, op, err)
 		}
+	default:
+		return fmt.Errorf("linkkeys tcp: %s/%s: unexpected reply variant %q", rpService, op, *resp.Variant)
 	}
 	return nil
 }
