@@ -8,5 +8,4 @@ job:
   working_dir: /job
   disable_run_local: true
 environment:
-  REACTORCIDE_REPO: catalystcommunity/firepit
   GITHUB_PAT: "${secret:catalystcommunity/ci:githubpat}"
